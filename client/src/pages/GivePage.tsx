@@ -6,11 +6,24 @@ import { insertDonationSchema } from "@shared/schema";
 import { useCreateDonation } from "@/hooks/use-donations";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Heart, CreditCard, ShieldCheck } from "lucide-react";
 
 // Frontend only schema enhancement for amount input as string then coerce
@@ -64,23 +77,28 @@ export default function GivePage() {
     <div className="min-h-screen bg-background pb-20">
       <div className="bg-primary text-primary-foreground py-20">
         <div className="container px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-display font-bold mb-6">Generosity</h1>
+          <h1 className="text-4xl md:text-5xl font-display font-bold mb-6">
+            Generosity
+          </h1>
           <p className="text-xl opacity-90 max-w-2xl mx-auto">
-            "Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver."
+            "Each of you should give what you have decided in your heart to
+            give, not reluctantly or under compulsion, for God loves a cheerful
+            giver."
           </p>
           <p className="mt-4 opacity-75">2 Corinthians 9:7</p>
         </div>
       </div>
 
-      <div className="container px-4 -mt-10 relative z-10">
+      <div className="container px-4 mt-20 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
           {/* Donation Form */}
           <div className="lg:col-span-7">
             <Card className="shadow-xl border-none">
               <CardHeader>
                 <CardTitle>Make a Donation</CardTitle>
-                <CardDescription>Secure, simple, and impactful.</CardDescription>
+                <CardDescription>
+                  Secure, simple, and impactful.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="one-time" onValueChange={setGivingType}>
@@ -88,15 +106,22 @@ export default function GivePage() {
                     <TabsTrigger value="one-time">One-Time</TabsTrigger>
                     <TabsTrigger value="recurring">Recurring</TabsTrigger>
                   </TabsList>
-                  
+
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <form
+                      onSubmit={form.handleSubmit(onSubmit)}
+                      className="space-y-6"
+                    >
                       <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-6">
                         {predefinedAmounts.map((amt) => (
-                          <Button 
-                            key={amt} 
-                            type="button" 
-                            variant={form.watch("amount") === amt ? "default" : "outline"}
+                          <Button
+                            key={amt}
+                            type="button"
+                            variant={
+                              form.watch("amount") === amt
+                                ? "default"
+                                : "outline"
+                            }
                             onClick={() => form.setValue("amount", amt)}
                             className="h-12 text-lg"
                           >
@@ -113,8 +138,14 @@ export default function GivePage() {
                             <FormLabel>Custom Amount ($)</FormLabel>
                             <FormControl>
                               <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                                <Input type="number" className="pl-8 text-lg h-12" {...field} />
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                  $
+                                </span>
+                                <Input
+                                  type="number"
+                                  className="pl-8 text-lg h-12"
+                                  {...field}
+                                />
                               </div>
                             </FormControl>
                             <FormMessage />
@@ -122,12 +153,19 @@ export default function GivePage() {
                         )}
                       />
 
-                      <Button type="submit" size="lg" className="w-full text-lg h-14" disabled={isPending}>
-                        {isPending ? "Processing..." : `Give $${form.watch("amount") || 0} ${givingType === "recurring" ? "Monthly" : "Now"}`}
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className="w-full text-lg h-14"
+                        disabled={isPending}
+                      >
+                        {isPending
+                          ? "Processing..."
+                          : `Give $${form.watch("amount") || 0} ${givingType === "recurring" ? "Monthly" : "Now"}`}
                       </Button>
                     </form>
                   </Form>
-                  
+
                   <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <ShieldCheck size={16} />
                     <span>Secure 256-bit SSL Encryption</span>
@@ -144,7 +182,9 @@ export default function GivePage() {
                 <Heart className="text-primary" /> Why We Give
               </h3>
               <p className="text-muted-foreground mb-4">
-                Giving is an act of worship. It's a way to show God that He is first in our lives and to support the work He is doing through our church.
+                Giving is an act of worship. It's a way to show God that He is
+                first in our lives and to support the work He is doing through
+                our church.
               </p>
             </div>
 
@@ -159,7 +199,6 @@ export default function GivePage() {
               </ul>
             </div>
           </div>
-
         </div>
       </div>
     </div>
