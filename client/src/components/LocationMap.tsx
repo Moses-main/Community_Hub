@@ -3,7 +3,7 @@ interface LocationMapProps {
 }
 
 export function LocationMap({ className = "" }: LocationMapProps) {
-  // Google Maps embed URL for Winners Chapel Lagos address (using search mode - no API key required)
+  // Google Maps embed URL for Watchman Catholic Charismatic Renewal Movement, Lagos address (using search mode - no API key required)
   const address =
     "7 Silverbird Road, Jakande First Gate, Lekki, Lagos State, Nigeria";
   const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`;
@@ -17,9 +17,9 @@ export function LocationMap({ className = "" }: LocationMapProps) {
             Visit Our Church
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Join us for worship and fellowship at Winners Chapel Lagos. We're
-            located in the heart of Lekki and would love to welcome you to our
-            community.
+            Join us for worship and fellowship at Watchman Catholic Charismatic
+            Renewal Movement, Lagos. We're located in the heart of Lekki and
+            would love to welcome you to our community.
           </p>
         </div>
 
@@ -32,7 +32,7 @@ export function LocationMap({ className = "" }: LocationMapProps) {
             allowFullScreen
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
-            title="Winners Chapel Lagos Location"
+            title="Watchman Catholic Charismatic Renewal Movement, Lagos Location"
           />
 
           {/* Address Info Bar */}
@@ -40,7 +40,7 @@ export function LocationMap({ className = "" }: LocationMapProps) {
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="text-center md:text-left">
                 <h3 className="text-xl font-semibold mb-2">
-                  Winners Chapel Lagos
+                  Watchman Catholic Charismatic Renewal Movement, Lagos
                 </h3>
                 <p className="opacity-90">
                   📍 7 Silverbird Road, Jakande First Gate, Lekki, Lagos State

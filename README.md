@@ -1,6 +1,6 @@
 # 🏛️ WCCRM Lagos - Resource Management
 
-A modern, comprehensive church resource management system built with React, Express.js, and PostgreSQL. Specifically designed for Winners Chapel Lagos to strengthen 
+A modern, comprehensive church resource management system built with React, Express.js, and PostgreSQL. Specifically designed for Watchman Catholic Charismatic Renewal Movement Lagos to strengthen 
 connections through seamless digital experiences.
 
 > **Watchman Catholic Charismatic Renewal Movement, Lagos**: This is a comprehensive church resource management platform developed specifically for Watchman Catholic Charismatic Renewal Movement, Lagos.
@@ -89,7 +89,7 @@ git clone git@github.com:Moses-main/WCCRM_Lagos.git
 cd WCCRM_Lagos
 ```
 
-> **Note**: You're cloning the Winners Chapel Lagos Church Resource Management platform.
+> **Note**: You're cloning the Watchman Catholic Charismatic Renewal Movement Lagos Church Resource Management platform.
 
 ### 2. Install Dependencies
 ```bash
@@ -289,7 +289,7 @@ We welcome contributions to the WCCRM Lagos platform!
 5. Push to branch: `git push origin feature/amazing-feature`
 6. Open a Pull Request
 
-This is Winners Chapel Lagos' resource management system - all contributions are welcome!
+This is Watchman Catholic Charismatic Renewal Movement Lagos' resource management system - all contributions are welcome!
 
 ### Development Guidelines
 - Follow TypeScript strict mode
@@ -360,11 +360,11 @@ For support and questions:
 
 ---
 
-**Made with ❤️ by Moses-main for Winners Chapel Lagos and church communities seeking to connect, grow, and serve together in the digital age.**
+**Made with ❤️ by Moses for WCCRM Lagos and church communities seeking to connect, grow, and serve together in the digital age.**
 
 ## 📊 Project Status
 
-**🎯 Winners Chapel Lagos**: This WCCRM platform is specifically designed for Winners Chapel Lagos, representing a complete, modern solution for church resource management and community engagement.
+**🎯 WCCRM Lagos**: This WCCRM platform is specifically designed for Watchman Catholic Charismatic Renewal Movement, Lagos, representing a complete, modern solution for church resource management and community engagement.
 
 ---
 
