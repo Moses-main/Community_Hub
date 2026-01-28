@@ -1,0 +1,147 @@
+Build a production-ready church community platform with a modern, engaging UI inspired by top church websites such as Life.Church, Elevation Church, and Passion City Church — known for clean layouts, easy navigation, clear calls-to-action (e.g., watch sermons, give, plan a visit), and integration of events, sermons, and donation tools.
+
+The platform will serve church admins and members with the features below.
+
+🔧 STACK & ARCHITECTURE
+
+Frontend: Vite (fast static + dynamic islands) with plain JavaScript, Tailwind CSS.
+
+Vite ensures extremely fast page loads by default and invites interactivity where it matters.
+
+Backend: Node.js + Express (plain JavaScript).
+
+Database: Supabase (PostgreSQL) — fast, hosted, secure, built-in auth, row-level security.
+
+Real-time: Supabase Realtime or WebSockets for prayer wall & live chat.
+
+Storage: Supabase Storage for media (sermons, music).
+
+Payments: Stripe for donations.
+
+🛡️ SECURITY & READINESS
+
+All APIs protected with JWT auth, role-based access (admin, member).
+
+Input validation and sanitization.
+
+Configurable CORS and rate limiting on public routes.
+
+Secure media access via signed URLs.
+
+Email verification and password recovery.
+
+⚙️ CORE FEATURES (API + FRONTEND)
+1️⃣ Branding & Custom Appearance
+
+Store theme settings (colors, logo, fonts) in DB.
+
+APIs: GET /branding, POST /branding (Admin only).
+
+2️⃣ Analytics & Insights
+
+Track user activity (logins, sermon views, donations, attendance).
+
+APIs: GET /analytics (Admin).
+
+3️⃣ Member Directory with Search
+
+Model: Members (name, email, photo, role, bio).
+
+API: GET /members?query=....
+
+4️⃣ Secure Online Donations
+
+Integrate Stripe Checkout & webhook for payments.
+
+Track Donation records.
+
+API: POST /donations, GET /donations (Admin).
+
+5️⃣ Devotionals & Reading Plans
+
+Daily devotional content.
+
+Track user progress.
+
+API: GET /devotionals/today, POST /devotionals/progress.
+
+6️⃣ Groups & Calendar Sharing
+
+Group chats, file uploads.
+
+API: POST /groups, GET /groups.
+
+Calendar sync with external calendar (Google Calendar API).
+
+7️⃣ Prayer Requests (Real-Time)
+
+Users post prayer requests, comments.
+
+Live updates via WebSockets/Supabase Realtime.
+
+API: POST /prayer, GET /prayer.
+
+8️⃣ Events & RSVP
+
+CRUD for events with RSVP logic.
+
+Push notifications for event reminders.
+
+API: GET /events, POST /events, POST /events/:id/rsvp.
+
+9️⃣ Music Library
+
+Streaming and secure downloads.
+
+Playlist support.
+
+API: GET /music/:id, POST /playlists.
+
+🔟 Sermon Archive
+
+Upload & manage sermon media.
+
+API: GET /sermons, POST /sermons, DELETE /sermons/:id.
+
+1️⃣1️⃣ Live Streaming Integration
+
+Integrate YouTube Live or external RTMP service.
+
+APIs: POST /stream/start, GET /stream/join/:id.
+
+📌 NAVIGATION & UX RECOMMENDATIONS
+
+Your UI should follow the patterns seen at great church sites:
+
+Homepage
+
+Hero with clear CTAs: “Watch Sermon,” “Give Now,” “Plan a Visit.”
+
+Upcoming events, latest sermon, and donation highlights.
+
+High-quality imagery or soft motion backgrounds for atmosphere.
+
+Media Section
+
+Sermon library with filters and thumbnails.
+
+Music playlists with playback controls.
+
+Newcomer Flow
+
+Dedicated “New Here?” page guiding service times, values, and next steps.
+
+Navigation
+
+Simple, sticky header with menu items (Home, About, Sermons, Events, Give, Members, Login).
+
+📂 DELIVERABLES CHECKLIST (V0)
+
+✅ Vite + Tailwind frontend with responsive layout
+✅ Express backend with RESTful APIs and auth
+✅ Supabase database & storage
+✅ Stripe donation integration + webhook handling
+✅ Realtime prayer wall & group chat
+✅ Events with RSVP + notifications
+✅ Media library (sermons + music)
+✅ Searchable member directory
