@@ -1,16 +1,21 @@
-import { z } from 'zod';
-import { 
-  insertBrandingSchema, 
-  insertEventSchema, 
-  insertSermonSchema, 
+import { z } from "zod";
+import {
+  insertBrandingSchema,
+  insertEventSchema,
+  insertSermonSchema,
   insertPrayerRequestSchema,
   insertDonationSchema,
   branding,
   events,
   sermons,
   prayerRequests,
-  donations
-} from './schema';
+  donations,
+  type InsertBranding,
+  type InsertEvent,
+  type InsertSermon,
+  type InsertPrayerRequest,
+  type InsertDonation,
+} from "./schema";
 
 export const errorSchemas = {
   validation: z.object({
@@ -31,16 +36,16 @@ export const errorSchemas = {
 export const api = {
   branding: {
     get: {
-      method: 'GET' as const,
-      path: '/api/branding',
+      method: "GET" as const,
+      path: "/api/branding",
       responses: {
         200: z.custom<typeof branding.$inferSelect>(),
         404: errorSchemas.notFound,
       },
     },
     update: {
-      method: 'POST' as const,
-      path: '/api/branding',
+      method: "POST" as const,
+      path: "/api/branding",
       input: insertBrandingSchema,
       responses: {
         200: z.custom<typeof branding.$inferSelect>(),
@@ -51,23 +56,23 @@ export const api = {
   },
   events: {
     list: {
-      method: 'GET' as const,
-      path: '/api/events',
+      method: "GET" as const,
+      path: "/api/events",
       responses: {
         200: z.array(z.custom<typeof events.$inferSelect>()),
       },
     },
     get: {
-      method: 'GET' as const,
-      path: '/api/events/:id',
+      method: "GET" as const,
+      path: "/api/events/:id",
       responses: {
         200: z.custom<typeof events.$inferSelect>(),
         404: errorSchemas.notFound,
       },
     },
     create: {
-      method: 'POST' as const,
-      path: '/api/events',
+      method: "POST" as const,
+      path: "/api/events",
       input: insertEventSchema,
       responses: {
         201: z.custom<typeof events.$inferSelect>(),
@@ -76,8 +81,8 @@ export const api = {
       },
     },
     rsvp: {
-      method: 'POST' as const,
-      path: '/api/events/:id/rsvp',
+      method: "POST" as const,
+      path: "/api/events/:id/rsvp",
       responses: {
         200: z.object({ message: z.string() }),
         404: errorSchemas.notFound,
@@ -87,23 +92,23 @@ export const api = {
   },
   sermons: {
     list: {
-      method: 'GET' as const,
-      path: '/api/sermons',
+      method: "GET" as const,
+      path: "/api/sermons",
       responses: {
         200: z.array(z.custom<typeof sermons.$inferSelect>()),
       },
     },
     get: {
-      method: 'GET' as const,
-      path: '/api/sermons/:id',
+      method: "GET" as const,
+      path: "/api/sermons/:id",
       responses: {
         200: z.custom<typeof sermons.$inferSelect>(),
         404: errorSchemas.notFound,
       },
     },
     create: {
-      method: 'POST' as const,
-      path: '/api/sermons',
+      method: "POST" as const,
+      path: "/api/sermons",
       input: insertSermonSchema,
       responses: {
         201: z.custom<typeof sermons.$inferSelect>(),
@@ -114,15 +119,15 @@ export const api = {
   },
   prayer: {
     list: {
-      method: 'GET' as const,
-      path: '/api/prayer-requests',
+      method: "GET" as const,
+      path: "/api/prayer-requests",
       responses: {
         200: z.array(z.custom<typeof prayerRequests.$inferSelect>()),
       },
     },
     create: {
-      method: 'POST' as const,
-      path: '/api/prayer-requests',
+      method: "POST" as const,
+      path: "/api/prayer-requests",
       input: insertPrayerRequestSchema,
       responses: {
         201: z.custom<typeof prayerRequests.$inferSelect>(),
@@ -131,8 +136,8 @@ export const api = {
       },
     },
     pray: {
-      method: 'POST' as const,
-      path: '/api/prayer-requests/:id/pray',
+      method: "POST" as const,
+      path: "/api/prayer-requests/:id/pray",
       responses: {
         200: z.custom<typeof prayerRequests.$inferSelect>(),
         404: errorSchemas.notFound,
@@ -141,8 +146,8 @@ export const api = {
   },
   donations: {
     create: {
-      method: 'POST' as const,
-      path: '/api/donations',
+      method: "POST" as const,
+      path: "/api/donations",
       input: insertDonationSchema,
       responses: {
         201: z.custom<typeof donations.$inferSelect>(),
@@ -152,7 +157,10 @@ export const api = {
   },
 };
 
-export function buildUrl(path: string, params?: Record<string, string | number>): string {
+export function buildUrl(
+  path: string,
+  params?: Record<string, string | number>,
+): string {
   let url = path;
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -163,3 +171,12 @@ export function buildUrl(path: string, params?: Record<string, string | number>)
   }
   return url;
 }
+
+// Export types for use in hooks
+export type {
+  InsertBranding,
+  InsertEvent,
+  InsertSermon,
+  InsertPrayerRequest,
+  InsertDonation,
+};
