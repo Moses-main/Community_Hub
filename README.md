@@ -1,8 +1,9 @@
-# 🏛️ WCCRM Lagos - Winners Chapel Church Resource Management
+# 🏛️ WCCRM Lagos - Resource Management
 
-A modern, comprehensive church resource management system built with React, Express.js, and PostgreSQL. Specifically designed for Winners Chapel Lagos to strengthen community connections through seamless digital experiences.
+A modern, comprehensive church resource management system built with React, Express.js, and PostgreSQL. Specifically designed for Winners Chapel Lagos to strengthen 
+connections through seamless digital experiences.
 
-> **Winners Chapel Lagos**: This is a comprehensive church resource management platform developed specifically for Winners Chapel Lagos by Moses-main.
+> **Watchman Catholic Charismatic Renewal Movement, Lagos**: This is a comprehensive church resource management platform developed specifically for Watchman Catholic Charismatic Renewal Movement, Lagos.
 
 ![WCCRM Lagos Banner](https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&h=400&fit=crop&q=80)
 

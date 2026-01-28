@@ -1,11 +1,11 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Menu, User, Church } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -27,21 +27,28 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-display font-bold text-xl tracking-tight">
+        <Link
+          href="/"
+          className="flex items-center gap-2 font-display font-bold text-xl tracking-tight"
+        >
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
             <Church size={20} />
           </div>
-          <span>Grace<span className="text-primary">Community</span></span>
+          <span>
+            WCCRM<span className="text-primary"> Lagos</span>
+          </span>
         </Link>
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <Link 
-              key={link.href} 
+            <Link
+              key={link.href}
               href={link.href}
               className={`text-sm font-medium transition-colors hover:text-primary ${
-                isActive(link.href) ? "text-primary font-semibold" : "text-muted-foreground"
+                isActive(link.href)
+                  ? "text-primary font-semibold"
+                  : "text-muted-foreground"
               }`}
             >
               {link.label}
@@ -68,7 +75,12 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button asChild variant="outline" size="sm" className="hidden md:flex">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="hidden md:flex"
+            >
               <a href="/api/login">Sign In</a>
             </Button>
           )}
@@ -83,11 +95,13 @@ export function Navbar() {
             <SheetContent>
               <div className="flex flex-col gap-4 mt-8">
                 {navLinks.map((link) => (
-                  <Link 
-                    key={link.href} 
+                  <Link
+                    key={link.href}
                     href={link.href}
                     className={`text-lg font-medium p-2 rounded-md transition-colors ${
-                      isActive(link.href) ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/50"
+                      isActive(link.href)
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground hover:bg-secondary/50"
                     }`}
                   >
                     {link.label}
