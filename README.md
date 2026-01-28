@@ -1,10 +1,10 @@
-# 🏛️ Community Hub - Church Management Platform
+# 🏛️ WCCRM Lagos - Winners Chapel Church Resource Management
 
-A modern, comprehensive church community management system built with React, Express.js, and PostgreSQL. Designed to strengthen community connections through seamless digital experiences.
+A modern, comprehensive church resource management system built with React, Express.js, and PostgreSQL. Specifically designed for Winners Chapel Lagos to strengthen community connections through seamless digital experiences.
 
-> **Independent Project**: This is an original, standalone church management platform developed by Moses-main. It is not affiliated with any other repository or organization.
+> **Winners Chapel Lagos**: This is a comprehensive church resource management platform developed specifically for Winners Chapel Lagos by Moses-main.
 
-![Community Hub Banner](https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&h=400&fit=crop&q=80)
+![WCCRM Lagos Banner](https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&h=400&fit=crop&q=80)
 
 ## ✨ Features Overview
 
@@ -84,11 +84,11 @@ A modern, comprehensive church community management system built with React, Exp
 
 ### 1. Clone Repository
 ```bash
-git clone git@github.com:Moses-main/Lekki_Church.git
-cd Lekki_Church
+git clone git@github.com:Moses-main/WCCRM_Lagos.git
+cd WCCRM_Lagos
 ```
 
-> **Note**: This is an independent project. You're cloning the original Community Hub platform.
+> **Note**: You're cloning the Winners Chapel Lagos Church Resource Management platform.
 
 ### 2. Install Dependencies
 ```bash
@@ -144,7 +144,7 @@ Visit `http://localhost:5000` to access the application.
 ## 🏗️ Project Structure
 
 ```
-Community-Hub/
+WCCRM_Lagos/
 ├── client/                 # React Frontend
 │   ├── src/
 │   │   ├── components/     # Reusable UI components
@@ -279,7 +279,7 @@ CMD ["npm", "start"]
 
 ## 🤝 Contributing
 
-We welcome contributions to the Community Hub platform!
+We welcome contributions to the WCCRM Lagos platform!
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
@@ -288,7 +288,7 @@ We welcome contributions to the Community Hub platform!
 5. Push to branch: `git push origin feature/amazing-feature`
 6. Open a Pull Request
 
-This is an independent open-source project - all contributions are welcome!
+This is Winners Chapel Lagos' resource management system - all contributions are welcome!
 
 ### Development Guidelines
 - Follow TypeScript strict mode
@@ -359,11 +359,11 @@ For support and questions:
 
 ---
 
-**Made with ❤️ by Moses-main for church communities seeking to connect, grow, and serve together in the digital age.**
+**Made with ❤️ by Moses-main for Winners Chapel Lagos and church communities seeking to connect, grow, and serve together in the digital age.**
 
 ## 📊 Project Status
 
-**🎯 Independent Project**: This Community Hub platform is an original creation, developed independently to serve church communities worldwide. It represents a complete, modern solution for church management and community engagement.
+**🎯 Winners Chapel Lagos**: This WCCRM platform is specifically designed for Winners Chapel Lagos, representing a complete, modern solution for church resource management and community engagement.
 
 ---
 
