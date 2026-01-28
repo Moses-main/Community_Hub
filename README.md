@@ -2,6 +2,8 @@
 
 A modern, comprehensive church community management system built with React, Express.js, and PostgreSQL. Designed to strengthen community connections through seamless digital experiences.
 
+> **Independent Project**: This is an original, standalone church management platform developed by Moses-main. It is not affiliated with any other repository or organization.
+
 ![Community Hub Banner](https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1200&h=400&fit=crop&q=80)
 
 ## ✨ Features Overview
@@ -85,6 +87,8 @@ A modern, comprehensive church community management system built with React, Exp
 git clone git@github.com:Moses-main/Lekki_Church.git
 cd Lekki_Church
 ```
+
+> **Note**: This is an independent project. You're cloning the original Community Hub platform.
 
 ### 2. Install Dependencies
 ```bash
@@ -275,12 +279,16 @@ CMD ["npm", "start"]
 
 ## 🤝 Contributing
 
+We welcome contributions to the Community Hub platform!
+
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes
 4. Commit changes: `git commit -m 'Add amazing feature'`
 5. Push to branch: `git push origin feature/amazing-feature`
 6. Open a Pull Request
+
+This is an independent open-source project - all contributions are welcome!
 
 ### Development Guidelines
 - Follow TypeScript strict mode
@@ -351,7 +359,11 @@ For support and questions:
 
 ---
 
-**Made with ❤️ for church communities seeking to connect, grow, and serve together in the digital age.**
+**Made with ❤️ by Moses-main for church communities seeking to connect, grow, and serve together in the digital age.**
+
+## 📊 Project Status
+
+**🎯 Independent Project**: This Community Hub platform is an original creation, developed independently to serve church communities worldwide. It represents a complete, modern solution for church management and community engagement.
 
 ---
 
