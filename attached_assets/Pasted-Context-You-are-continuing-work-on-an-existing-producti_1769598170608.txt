@@ -1,0 +1,294 @@
+Context
+You are continuing work on an existing production-grade Church Management & Engagement Platform already started in this Replit project.
+The landing page and some features exist, but admin authentication and admin-only dashboards are missing or incomplete.
+
+Your task
+Read the current codebase carefully.
+Identify implemented vs missing features.
+Continue building the platform without breaking existing functionality.
+
+🔐 AUTHENTICATION & AUTHORIZATION (PRIORITY)
+
+Implement secure authentication using Node.js + Express + JavaScript:
+
+Email + password login
+
+Password hashing (bcrypt)
+
+JWT-based auth
+
+Role-based access control:
+
+admin
+
+leader
+
+member
+
+Required endpoints
+
+POST /auth/register (admin can create leaders/admins)
+
+POST /auth/login
+
+GET /auth/me
+
+Middleware
+
+requireAuth
+
+requireAdmin
+
+🧭 ADMIN DASHBOARD (REQUIRED)
+
+Create a protected admin dashboard accessible only by admins:
+
+Admin login page
+
+Admin sidebar navigation
+
+Overview metrics (members, donations, events, sermons)
+
+Admin can:
+
+Manage members
+
+Manage branding/theme
+
+View analytics
+
+Manage events
+
+Manage sermons & music
+
+View donations
+
+🗂 DATABASE
+
+Use the existing database setup (Supabase/Postgres or Mongo if already configured).
+Create missing schemas/tables only if they do not already exist.
+
+⚙️ CONTINUE FEATURE IMPLEMENTATION
+
+Implement only missing features from the platform specification below.
+If a feature exists partially, complete it.
+
+🛡 SECURITY REQUIREMENTS
+
+Validate all inputs
+
+Protect admin routes
+
+Rate limit auth & donation routes
+
+Use environment variables for secrets
+
+Secure media access (signed URLs)
+
+📁 CODE QUALITY
+
+Plain JavaScript (no TypeScript)
+
+Clean folder structure
+
+Services separated from routes
+
+Reusable middleware
+
+FINAL INSTRUCTION
+
+Work incrementally:
+
+Implement authentication
+
+Add admin dashboard access
+
+Fill in missing platform features
+
+Ensure everything is production-ready
+
+Do NOT generate dummy data.
+Do NOT remove existing UI.
+Extend what exists.
+
+② COMPLETE FEATURE LIST (FOR GAP DETECTION)
+
+Use this section so Replit AI can compare what exists vs what’s missing.
+
+🔐 AUTH & USERS
+
+ User registration & login
+
+ Password hashing
+
+ JWT auth
+
+ Role-based access control
+
+ Admin-only routes
+
+ Session persistence
+
+ Email verification (optional)
+
+🎨 BRANDING & THEME
+
+ Logo upload
+
+ Primary & accent colors
+
+ Font selection
+
+ Dynamic theme application
+
+ Admin branding editor
+
+ Stored in database
+
+📊 ANALYTICS & INSIGHTS
+
+ Member engagement tracking
+
+ Sermon views tracking
+
+ Event attendance
+
+ Donation analytics
+
+ Admin analytics dashboard
+
+👥 MEMBERS
+
+ Member profiles
+
+ Member search & filtering
+
+ Role assignment
+
+ Profile images
+
+ Admin member management
+
+💳 DONATIONS
+
+ Stripe integration
+
+ Donation records
+
+ Donation receipts
+
+ Admin donation reports
+
+ Webhook handling
+
+📖 DEVOTIONALS & READING PLANS
+
+ Daily devotionals
+
+ Reading plans
+
+ User progress tracking
+
+ Admin devotional management
+
+🧑‍🤝‍🧑 GROUPS & COMMUNITY
+
+ Group creation
+
+ Group membership
+
+ Group chat
+
+ File sharing
+
+ Group calendar
+
+🙏 PRAYER WALL (REAL-TIME)
+
+ Prayer request submission
+
+ Prayer comments
+
+ Live updates
+
+ Moderation tools
+
+ Admin controls
+
+📅 EVENTS
+
+ Event CRUD
+
+ RSVP system
+
+ Attendance tracking
+
+ Event reminders
+
+ Admin event dashboard
+
+🎵 MUSIC & WORSHIP
+
+ Music uploads
+
+ Streaming
+
+ Secure downloads
+
+ Playlists
+
+ Admin music management
+
+🎥 SERMONS
+
+ Sermon uploads
+
+ Video & audio support
+
+ Metadata (speaker, topic)
+
+ Search & filtering
+
+ Cloud storage integration
+
+📡 LIVE STREAMING
+
+ Stream creation
+
+ Join live streams
+
+ Admin-only stream start
+
+ Save streams as sermons
+
+🔔 NOTIFICATIONS
+
+ Event reminders
+
+ New sermon notifications
+
+ Group activity alerts
+
+ Push notifications (FCM)
+
+🧱 INFRASTRUCTURE
+
+ Environment variable setup
+
+ Error handling
+
+ Logging
+
+ Rate limiting
+
+ Production config
+
+🚀 DEPLOYMENT-READY
+
+ No dummy data
+
+ Secure secrets
+
+ Clean README
+
+ Ready for Railway / Render / Fly.io
