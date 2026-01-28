@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className="bg-secondary/30 pt-16 pb-8 border-t border-border">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-12 mb-12">
           <div className="space-y-4">
             <Link
               href="/"
@@ -15,7 +15,7 @@ export function Footer() {
                 <Church size={20} />
               </div>
               <span>
-                WCCRM<span className="text-primary">Lagos</span>
+                WCCRM<span className="text-primary"> Lagos</span>
               </span>
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed">
@@ -100,9 +100,33 @@ export function Footer() {
           <div>
             <h3 className="font-display font-semibold mb-4">Visit Us</h3>
             <div className="space-y-2 text-sm text-muted-foreground">
-              <p>123 Faith Avenue</p>
-              <p>Springfield, ST 12345</p>
-              <p className="pt-2">Sundays at 9:00am & 11:00am</p>
+              <p>7 Silverbird Road,</p>
+              <p> Jakande First Gate, Lekki, Lagos State</p>
+              <p className="pt-2">Sundays at 8:30am - 12:00pm Noon</p>
+              <p className="pt-2">Tuesdays at 6:00pm - 8:00pm</p>
+              <p className="pt-2">Thursdays at 6:00pm - 8:00pm </p>
+              {/*<div className="flex gap-4 pt-4">
+                <a href="#" className="hover:text-primary transition-colors">
+                  <Facebook size={20} />
+                </a>
+                <a href="#" className="hover:text-primary transition-colors">
+                  <Instagram size={20} />
+                </a>
+                <a href="#" className="hover:text-primary transition-colors">
+                  <Youtube size={20} />
+                </a>
+              </div>*/}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-display font-semibold mb-4">Fellowship Days</h3>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              {/*<p>7 Silverbird Road,</p>
+              <p> Jakande First Gate, Lekki, Lagos State</p>*/}
+              <p className="pt-2">Sundays at 8:30am - 12:00pm Noon</p>
+              <p className="pt-2">Tuesdays at 6:00pm - 8:00pm</p>
+              <p className="pt-2">Thursdays at 6:00pm - 8:00pm </p>
               <div className="flex gap-4 pt-4">
                 <a href="#" className="hover:text-primary transition-colors">
                   <Facebook size={20} />
