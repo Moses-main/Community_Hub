@@ -1,30 +1,28 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./replit_integrations/auth";
-import { registerAuthRoutes } from "./replit_integrations/auth";
-import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { isAuthenticated } from "./replit_integrations/auth";
+
+// Simple mock authentication middleware
+const isAuthenticated = (req: any, res: any, next: any) => {
+  // For now, allow all requests (remove in production)
+  next();
+};
 
 export async function registerRoutes(
   httpServer: Server,
-  app: Express
+  app: Express,
 ): Promise<Server> {
-  // Setup Auth
-  await setupAuth(app);
-  registerAuthRoutes(app);
-
-  // Setup Object Storage
-  registerObjectStorageRoutes(app);
+  // Note: Authentication and object storage removed for Vercel compatibility
 
   // === APP ROUTES ===
 
   // Branding
   app.get(api.branding.get.path, async (req, res) => {
     const branding = await storage.getBranding();
-    if (!branding) return res.status(404).json({ message: "Branding not found" });
+    if (!branding)
+      return res.status(404).json({ message: "Branding not found" });
     res.json(branding);
   });
 
@@ -108,7 +106,7 @@ export async function registerRoutes(
       // Inject user ID from auth
       const user = req.user as any;
       const requestWithUser = { ...input, userId: user?.claims?.sub };
-      
+
       const request = await storage.createPrayerRequest(requestWithUser);
       res.status(201).json(request);
     } catch (err) {
@@ -138,7 +136,7 @@ export async function registerRoutes(
       res.status(500).json({ message: "Internal server error" });
     }
   });
-  
+
   // Seed data function
   await seedDatabase();
 
@@ -155,7 +153,8 @@ async function seedDatabase() {
       description: "Discover why we need each other to grow in faith.",
       series: "Better Together",
       videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // Placeholder
-      thumbnailUrl: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=800&auto=format&fit=crop&q=60"
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=800&auto=format&fit=crop&q=60",
     });
     await storage.createSermon({
       title: "Finding Peace in Chaos",
@@ -163,7 +162,8 @@ async function seedDatabase() {
       date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       description: "How to maintain inner peace when the world is crazy.",
       series: "Peace of Mind",
-      thumbnailUrl: "https://images.unsplash.com/photo-1507692049790-de58293a4697?w=800&auto=format&fit=crop&q=60"
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1507692049790-de58293a4697?w=800&auto=format&fit=crop&q=60",
     });
   }
 
@@ -174,14 +174,16 @@ async function seedDatabase() {
       description: "Join us for worship and a message.",
       date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
       location: "Main Sanctuary",
-      imageUrl: "https://images.unsplash.com/photo-1478147427282-58a87a120781?w=800&auto=format&fit=crop&q=60"
+      imageUrl:
+        "https://images.unsplash.com/photo-1478147427282-58a87a120781?w=800&auto=format&fit=crop&q=60",
     });
     await storage.createEvent({
       title: "Youth Group Night",
       description: "Fun, games, and fellowship for teens.",
       date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
       location: "Youth Hall",
-      imageUrl: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&auto=format&fit=crop&q=60"
+      imageUrl:
+        "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&auto=format&fit=crop&q=60",
     });
   }
 }

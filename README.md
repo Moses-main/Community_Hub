@@ -73,7 +73,7 @@ connections through seamless digital experiences.
 ### Development & Deployment
 - **ESBuild** - Fast JavaScript bundler
 - **PostCSS** - CSS processing
-- **Replit** - Cloud development environment
+- **Vercel** - Deployment platform
 
 ## 📋 Prerequisites
 
@@ -104,7 +104,6 @@ Create a `.env` file in the root directory:
 DATABASE_URL=postgresql://username:password@host:port/database?sslmode=require
 
 # Authentication
-REPL_ID=your_replit_app_id
 SESSION_SECRET=your_secure_session_secret
 
 # Optional: Object Storage
@@ -159,8 +158,7 @@ WCCRM_Lagos/
 │   ├── index.ts          # Server entry point
 │   ├── routes.ts         # API route definitions
 │   ├── db.ts             # Database configuration
-│   ├── storage.ts        # Data access layer
-│   └── replit_integrations/ # Authentication & storage
+│   └── storage.ts        # Data access layer
 │
 ├── shared/               # Shared TypeScript types
 │   ├── schema.ts        # Database schema
@@ -254,11 +252,11 @@ await fetch('/api/branding', {
 
 ## 🚀 Deployment Options
 
-### Replit Deployment
-1. Import project to Replit
-2. Configure environment variables
-3. Run `npm run build`
-4. Deploy with one-click
+### Vercel Deployment (Recommended)
+1. Connect your GitHub repository to Vercel
+2. Configure environment variables in Vercel dashboard
+3. Vercel automatically builds and deploys
+4. Zero-configuration deployment
 
 ### Traditional Hosting
 1. Build the application: `npm run build`
