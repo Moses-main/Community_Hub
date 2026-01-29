@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "vite build --config vite.config.ts",
+  "buildCommand": "vite build --config vite.config.js",
   "outputDirectory": "dist/public",
   "installCommand": "npm install",
   "framework": null,
