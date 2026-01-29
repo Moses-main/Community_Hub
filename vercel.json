@@ -1,3 +1,10 @@
 {
-  "version": 2
+  "version": 2,
+  "buildCommand": "vite build --config vite.config.ts",
+  "outputDirectory": "dist/public",
+  "installCommand": "npm install",
+  "framework": null,
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
