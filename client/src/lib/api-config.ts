@@ -1,5 +1,5 @@
 // API configuration for different environments
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '';
 
 // Helper function to build API URLs
 export function buildApiUrl(path: string): string {
