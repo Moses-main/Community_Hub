@@ -1,12 +1,21 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 
+// Extend Express Request type to include user
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+  };
+}
+
 // Simple mock authentication middleware
-const isAuthenticated = (req: any, res: any, next: any) => {
+const isAuthenticated = (req: AuthenticatedRequest, res: any, next: any) => {
   // For now, allow all requests (remove in production)
+  req.user = { id: "mock-user-id", email: "user@example.com" }; // Mock user
   next();
 };
 
@@ -100,12 +109,12 @@ export async function registerRoutes(
     res.json(requests);
   });
 
-  app.post(api.prayer.create.path, isAuthenticated, async (req, res) => {
+  app.post(api.prayer.create.path, isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const input = api.prayer.create.input.parse(req.body);
       // Inject user ID from auth
-      const user = req.user as any;
-      const requestWithUser = { ...input, userId: user?.claims?.sub };
+      const user = req.user;
+      const requestWithUser = { ...input, userId: user?.id };
 
       const request = await storage.createPrayerRequest(requestWithUser);
       res.status(201).json(request);
