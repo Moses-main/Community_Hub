@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Menu, User, Church } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { apiRoutes } from "@/lib/api-routes";
+import { buildApiUrl } from "@/lib/api-config";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -81,7 +83,7 @@ export function Navbar() {
               size="sm"
               className="hidden md:flex"
             >
-              <a href="/api/login">Sign In</a>
+              <a href={buildApiUrl(apiRoutes.auth.login)}>Sign In</a>
             </Button>
           )}
 
@@ -109,7 +111,7 @@ export function Navbar() {
                 ))}
                 {!user && (
                   <Button asChild className="w-full mt-4">
-                    <a href="/api/login">Sign In</a>
+                    <a href={buildApiUrl(apiRoutes.auth.login)}>Sign In</a>
                   </Button>
                 )}
               </div>

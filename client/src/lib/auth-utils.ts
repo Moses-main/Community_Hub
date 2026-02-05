@@ -1,3 +1,6 @@
+import { buildApiUrl } from "@/lib/api-config";
+import { apiRoutes } from "@/lib/api-routes";
+
 export function isUnauthorizedError(error: Error): boolean {
   return /^401: .*Unauthorized/.test(error.message);
 }
@@ -12,6 +15,6 @@ export function redirectToLogin(toast?: (options: { title: string; description: 
     });
   }
   setTimeout(() => {
-    window.location.href = "/api/login";
+    window.location.href = buildApiUrl(apiRoutes.auth.login);
   }, 500);
 }

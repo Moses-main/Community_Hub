@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { Play, Calendar, User } from "lucide-react";
-import type { Sermon } from "@shared/schema";
+import type { Sermon } from "@/types/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 

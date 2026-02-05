@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertPrayerRequestSchema } from "@shared/schema";
 import { useCreatePrayerRequest } from "@/hooks/use-prayer";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -28,6 +27,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PenTool } from "lucide-react";
+
+// Client-side prayer request schema
+const insertPrayerRequestSchema = z.object({
+  content: z.string().min(1, "Content is required"),
+  authorName: z.string().optional(),
+  isAnonymous: z.boolean().optional().default(false),
+  userId: z.number().optional(),
+});
 
 // Extension of the schema to require content
 const formSchema = insertPrayerRequestSchema.extend({
@@ -55,11 +62,10 @@ export function CreatePrayerDialog() {
     // If authenticated, we link the user ID on the backend via session
     // but we can also pass it explicitly if needed, though schema handles it.
     
-    // Zod schema expects authorName string | null | undefined
-    // We ensure we send correct types
+    // Convert user.id to string to match the expected type
     const payload = {
       ...data,
-      userId: user?.id || null, // Optional chaining for safety
+      userId: user?.id ? String(user.id) : undefined,
     };
 
     createRequest(payload, {

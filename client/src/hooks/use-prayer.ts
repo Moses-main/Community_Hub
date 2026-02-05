@@ -1,13 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type InsertPrayerRequest } from "@shared/routes";
+import type { PrayerRequest, InsertPrayerRequest } from "@/types/api";
+import { buildApiUrl } from "@/lib/api-config";
+import { apiRoutes } from "@/lib/api-routes";
 
 export function usePrayerRequests() {
   return useQuery({
-    queryKey: [api.prayer.list.path],
-    queryFn: async () => {
-      const res = await fetch(api.prayer.list.path);
+    queryKey: [apiRoutes.prayer.list],
+    queryFn: async (): Promise<PrayerRequest[]> => {
+      const res = await fetch(buildApiUrl(apiRoutes.prayer.list));
       if (!res.ok) throw new Error("Failed to fetch prayer requests");
-      return api.prayer.list.responses[200].parse(await res.json());
+      return res.json();
     },
   });
 }
@@ -15,18 +17,18 @@ export function usePrayerRequests() {
 export function useCreatePrayerRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: InsertPrayerRequest) => {
-      const res = await fetch(api.prayer.create.path, {
+    mutationFn: async (data: InsertPrayerRequest): Promise<PrayerRequest> => {
+      const res = await fetch(buildApiUrl(apiRoutes.prayer.create), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to create prayer request");
-      return api.prayer.create.responses[201].parse(await res.json());
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.prayer.list.path] });
+      queryClient.invalidateQueries({ queryKey: [apiRoutes.prayer.list] });
     },
   });
 }
@@ -34,17 +36,16 @@ export function useCreatePrayerRequest() {
 export function usePrayForRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      const url = buildUrl(api.prayer.pray.path, { id });
-      const res = await fetch(url, {
+    mutationFn: async (id: number): Promise<PrayerRequest> => {
+      const res = await fetch(buildApiUrl(apiRoutes.prayer.pray(id)), {
         method: "POST",
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to pray for request");
-      return api.prayer.pray.responses[200].parse(await res.json());
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.prayer.list.path] });
+      queryClient.invalidateQueries({ queryKey: [apiRoutes.prayer.list] });
     },
   });
 }

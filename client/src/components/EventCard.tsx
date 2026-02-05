@@ -1,12 +1,14 @@
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { MapPin, Clock } from "lucide-react";
-import type { Event } from "@shared/schema";
+import type { Event } from "@/types/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useRsvpEvent } from "@/hooks/use-events";
 import { useToast } from "@/hooks/use-toast";
+import { apiRoutes } from "@/lib/api-routes";
+import { buildApiUrl } from "@/lib/api-config";
 
 interface EventCardProps {
   event: Event;
@@ -20,7 +22,7 @@ export function EventCard({ event }: EventCardProps) {
 
   const handleRsvp = () => {
     if (!user) {
-      window.location.href = "/api/login";
+      window.location.href = buildApiUrl(apiRoutes.auth.login);
       return;
     }
     rsvp(event.id, {

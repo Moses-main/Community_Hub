@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Heart, User } from "lucide-react";
-import type { PrayerRequest } from "@shared/schema";
+import type { PrayerRequest } from "@/types/api";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { usePrayForRequest } from "@/hooks/use-prayer";

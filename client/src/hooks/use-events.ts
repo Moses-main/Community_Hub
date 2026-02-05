@@ -1,25 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type InsertEvent } from "@shared/routes";
+import type { Event, InsertEvent } from "@/types/api";
+import { buildApiUrl } from "@/lib/api-config";
+import { apiRoutes } from "@/lib/api-routes";
 
 export function useEvents() {
   return useQuery({
-    queryKey: [api.events.list.path],
-    queryFn: async () => {
-      const res = await fetch(api.events.list.path);
+    queryKey: [apiRoutes.events.list],
+    queryFn: async (): Promise<Event[]> => {
+      const res = await fetch(buildApiUrl(apiRoutes.events.list));
       if (!res.ok) throw new Error("Failed to fetch events");
-      return api.events.list.responses[200].parse(await res.json());
+      return res.json();
     },
   });
 }
 
 export function useEvent(id: number) {
   return useQuery({
-    queryKey: [api.events.get.path, id],
-    queryFn: async () => {
-      const url = buildUrl(api.events.get.path, { id });
-      const res = await fetch(url);
+    queryKey: [apiRoutes.events.get(id)],
+    queryFn: async (): Promise<Event> => {
+      const res = await fetch(buildApiUrl(apiRoutes.events.get(id)));
       if (!res.ok) throw new Error("Failed to fetch event");
-      return api.events.get.responses[200].parse(await res.json());
+      return res.json();
     },
     enabled: !!id,
   });
@@ -28,18 +29,18 @@ export function useEvent(id: number) {
 export function useCreateEvent() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: InsertEvent) => {
-      const res = await fetch(api.events.create.path, {
+    mutationFn: async (data: InsertEvent): Promise<Event> => {
+      const res = await fetch(buildApiUrl(apiRoutes.events.create), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to create event");
-      return api.events.create.responses[201].parse(await res.json());
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.events.list.path] });
+      queryClient.invalidateQueries({ queryKey: [apiRoutes.events.list] });
     },
   });
 }
@@ -47,13 +48,12 @@ export function useCreateEvent() {
 export function useRsvpEvent() {
   return useMutation({
     mutationFn: async (id: number) => {
-      const url = buildUrl(api.events.rsvp.path, { id });
-      const res = await fetch(url, {
+      const res = await fetch(buildApiUrl(apiRoutes.events.rsvp(id)), {
         method: "POST",
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to RSVP");
-      return api.events.rsvp.responses[200].parse(await res.json());
+      return res.json();
     },
   });
 }
