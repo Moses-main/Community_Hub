@@ -2,7 +2,115 @@
 
 Complete guide for testing all backend endpoints with proper payloads and examples.
 
-**Base URL**: `http://localhost:5000` (development) or your deployed backend URL
+**Base URL**: `http://localhost:3001/api` (development) or your deployed backend URL
+
+## 🔐 AUTHENTICATION ENDPOINTS
+
+### **POST /auth/signup**
+Register a new user account.
+
+```bash
+curl -X POST http://localhost:3001/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "Moses",
+    "lastName": "Sunday",
+    "email": "moseschizaram8@gmail.com",
+    "password": "Chizaram+"
+  }'
+```
+
+**Expected Response (201 Created):**
+```json
+{
+  "message": "User registered successfully. Please check your email to verify your account.",
+  "user": {
+    "id": "user-id-here",
+    "email": "moseschizaram8@gmail.com",
+    "firstName": "Moses",
+    "lastName": "Sunday",
+    "isVerified": false
+  }
+}
+```
+
+### **GET /auth/verify-email**
+Verify user's email address.
+
+```bash
+curl -X GET "http://localhost:3001/api/auth/verify-email?token=VERIFICATION_TOKEN"
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "message": "Email verified successfully. You can now log in."
+}
+```
+
+### **POST /auth/login**
+Authenticate and log in a user.
+
+```bash
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "moseschizaram8@gmail.com",
+    "password": "Chizaram+"
+  }'
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "token": "jwt-token-here",
+  "user": {
+    "id": "user-id-here",
+    "email": "moseschizaram8@gmail.com",
+    "firstName": "Moses",
+    "lastName": "Sunday",
+    "isVerified": true
+  }
+}
+```
+
+### **GET /auth/user**
+Get current authenticated user's information.
+
+```bash
+curl -X GET http://localhost:3001/api/auth/user \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "id": "user-id-here",
+  "email": "moseschizaram8@gmail.com",
+  "firstName": "Moses",
+  "lastName": "Sunday",
+  "isVerified": true
+}
+```
+
+### **POST /auth/logout**
+Log out the current user.
+
+```bash
+curl -X POST http://localhost:3001/api/auth/logout \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "message": "Successfully logged out"
+}
+```
+
+---
+
+## 🎨 **1. BRANDING ENDPOINTS**
 
 ---
 
