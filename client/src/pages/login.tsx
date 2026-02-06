@@ -40,13 +40,22 @@ export default function AuthPage() {
     setError(null);
 
     try {
-      const endpoint = mode === "login" ? apiRoutes.auth.login : "/api/auth/register";
+      const endpoint = mode === "login" ? apiRoutes.auth.login : "/api/auth/signup";
+      const requestData = mode === "login" 
+        ? { email: formData.email, password: formData.password }
+        : {
+            email: formData.email,
+            password: formData.password,
+            firstName: formData.name?.split(' ')[0] || '',
+            lastName: formData.name?.split(' ').slice(1).join(' ') || ''
+          };
+
       const response = await fetch(buildApiUrl(endpoint), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(requestData),
         credentials: "include",
       });
 
