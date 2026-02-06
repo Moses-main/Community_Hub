@@ -83,7 +83,7 @@ export function Navbar() {
               size="sm"
               className="hidden md:flex"
             >
-              <a href={buildApiUrl(apiRoutes.auth.login)}>Sign In</a>
+              <Link href="/login">Sign In</Link>
             </Button>
           )}
 

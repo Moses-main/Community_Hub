@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
 import NotFound from "@/pages/not-found";
+import { HelmetProvider } from "react-helmet-async";
 
 // Pages
 import HomePage from "@/pages/HomePage";
@@ -12,6 +13,9 @@ import SermonsPage from "@/pages/SermonsPage";
 import EventsPage from "@/pages/EventsPage";
 import PrayerPage from "@/pages/PrayerPage";
 import GivePage from "@/pages/GivePage";
+import AuthPage from "@/pages/login"; // This is our combined auth page
+import LogoutPage from "@/pages/logout";
+import AuthCallbackPage from "@/pages/auth/callback";
 
 function Router() {
   return (
@@ -21,6 +25,10 @@ function Router() {
       <Route path="/events" component={EventsPage} />
       <Route path="/prayer" component={PrayerPage} />
       <Route path="/give" component={GivePage} />
+      {/* Auth routes */}
+      <Route path="/login" component={AuthPage} />
+      <Route path="/logout" component={LogoutPage} />
+      <Route path="/auth/callback" component={AuthCallbackPage} />
       {/* Detail pages could be added here later e.g. /sermons/:id */}
       <Route component={NotFound} />
     </Switch>
@@ -29,16 +37,18 @@ function Router() {
 
 function App() {
   return (
-    <div className="w-full min-h-screen">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Layout>
-            <Router />
-          </Layout>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </div>
+    <HelmetProvider>
+      <div className="w-full min-h-screen">
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Layout>
+              <Router />
+            </Layout>
+            <Toaster />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </div>
+    </HelmetProvider>
   );
 }
 

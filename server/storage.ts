@@ -7,6 +7,12 @@ import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
+  // Users
+  getUserById(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: { email: string; passwordHash: string; firstName: string; lastName: string }): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+
   // Branding
   getBranding(): Promise<Branding | undefined>;
   updateBranding(branding: InsertBranding): Promise<Branding>;
@@ -31,6 +37,31 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Users
+  async getUserById(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(userData: { email: string; passwordHash: string; firstName: string; lastName: string }): Promise<User> {
+    const [user] = await db.insert(users).values({
+      email: userData.email,
+      passwordHash: userData.passwordHash,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+    }).returning();
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
   // Branding
   async getBranding(): Promise<Branding | undefined> {
     const [b] = await db.select().from(branding).limit(1);

@@ -3,19 +3,71 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 // Extend Express Request type to include user
 interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     email: string;
+    firstName?: string;
+    lastName?: string;
+    isAdmin?: boolean;
   };
 }
 
-// Simple mock authentication middleware
-const isAuthenticated = (req: AuthenticatedRequest, res: any, next: any) => {
-  // For now, allow all requests (remove in production)
-  req.user = { id: "mock-user-id", email: "user@example.com" }; // Mock user
+// JWT secret (in production, use a secure environment variable)
+const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
+
+// Authentication schemas
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+const signupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+});
+
+// Authentication middleware
+const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) => {
+  try {
+    const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const user = await storage.getUserById(decoded.userId);
+    
+    if (!user) {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+
+    req.user = {
+      id: user.id,
+      email: user.email!,
+      firstName: user.firstName || undefined,
+      lastName: user.lastName || undefined,
+      isAdmin: user.email === 'admin@wccrm.com' // Simple admin check
+    };
+    
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
+
+// Admin middleware
+const isAdmin = async (req: AuthenticatedRequest, res: any, next: any) => {
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({ message: "Admin access required" });
+  }
   next();
 };
 
@@ -23,7 +75,146 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express,
 ): Promise<Server> {
-  // Note: Authentication and object storage removed for Vercel compatibility
+  // === AUTHENTICATION ROUTES ===
+
+  // Get current user
+  app.get("/api/auth/user", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    res.json(req.user);
+  });
+
+  // Login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = loginSchema.parse(req.body);
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user || !user.passwordHash) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+      
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      res.json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isAdmin: user.email === 'admin@wccrm.com'
+      });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Signup
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = signupSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Create user
+      const user = await storage.createUser({
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+      });
+
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+      
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      res.status(201).json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isAdmin: user.email === 'admin@wccrm.com'
+      });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Logout
+  app.post("/api/auth/logout", (req, res) => {
+    res.clearCookie('token');
+    res.json({ message: "Logged out successfully" });
+  });
+
+  // Legacy login redirect (for compatibility)
+  app.get("/api/login", (req, res) => {
+    res.redirect("/auth/login");
+  });
+
+  app.get("/api/logout", (req, res) => {
+    res.clearCookie('token');
+    res.redirect("/");
+  });
+
+  // === ADMIN ROUTES ===
+
+  // Get all users (admin only)
+  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req, res) => {
+    const users = await storage.getAllUsers();
+    res.json(users.map(user => ({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      createdAt: user.createdAt,
+      isAdmin: user.email === 'admin@wccrm.com'
+    })));
+  });
+
+  // Get user details (admin only)
+  app.get("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    const user = await storage.getUserById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    res.json({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      isAdmin: user.email === 'admin@wccrm.com'
+    });
+  });
 
   // === APP ROUTES ===
 

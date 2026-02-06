@@ -2,8 +2,9 @@
 export const apiRoutes = {
   auth: {
     user: "/api/auth/user",
-    login: "/api/login",
-    logout: "/api/logout",
+    login: "/api/auth/login",
+    register: "/api/auth/register",
+    logout: "/api/auth/logout",
   },
   events: {
     list: "/api/events",
