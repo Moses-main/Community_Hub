@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useBranding, type Branding } from "@/hooks/use-branding";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,98 @@ interface AdminUser {
   lastName?: string;
   createdAt: string;
   isAdmin: boolean;
+}
+
+function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | undefined; onSubmit: (data: Partial<Branding>) => void; isLoading: boolean }) {
+  const [formData, setFormData] = useState({
+    primary: branding?.colors?.primary || "#3b82f6",
+    secondary: branding?.colors?.secondary || "#f8fafc",
+    accent: branding?.colors?.accent || "#10b981",
+    headingFont: branding?.fonts?.heading || "Inter",
+    bodyFont: branding?.fonts?.body || "Inter",
+    logoUrl: branding?.logoUrl || "",
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      colors: {
+        primary: formData.primary,
+        secondary: formData.secondary,
+        accent: formData.accent,
+      },
+      fonts: {
+        heading: formData.headingFont,
+        body: formData.bodyFont,
+      },
+      logoUrl: formData.logoUrl || null,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Label htmlFor="primary">Primary Color</Label>
+          <div className="flex gap-2 mt-1">
+            <Input type="color" value={formData.primary} onChange={e => setFormData({...formData, primary: e.target.value})} className="w-12 h-10 p-1" />
+            <Input value={formData.primary} onChange={e => setFormData({...formData, primary: e.target.value})} className="flex-1" />
+          </div>
+        </div>
+        <div>
+          <Label htmlFor="secondary">Secondary Color</Label>
+          <div className="flex gap-2 mt-1">
+            <Input type="color" value={formData.secondary} onChange={e => setFormData({...formData, secondary: e.target.value})} className="w-12 h-10 p-1" />
+            <Input value={formData.secondary} onChange={e => setFormData({...formData, secondary: e.target.value})} className="flex-1" />
+          </div>
+        </div>
+        <div>
+          <Label htmlFor="accent">Accent Color</Label>
+          <div className="flex gap-2 mt-1">
+            <Input type="color" value={formData.accent} onChange={e => setFormData({...formData, accent: e.target.value})} className="w-12 h-10 p-1" />
+            <Input value={formData.accent} onChange={e => setFormData({...formData, accent: e.target.value})} className="flex-1" />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="headingFont">Heading Font</Label>
+          <Input id="headingFont" value={formData.headingFont} onChange={e => setFormData({...formData, headingFont: e.target.value})} placeholder="e.g., Inter, Poppins" />
+        </div>
+        <div>
+          <Label htmlFor="bodyFont">Body Font</Label>
+          <Input id="bodyFont" value={formData.bodyFont} onChange={e => setFormData({...formData, bodyFont: e.target.value})} placeholder="e.g., Inter, Open Sans" />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="logoUrl">Logo URL</Label>
+        <Input id="logoUrl" value={formData.logoUrl} onChange={e => setFormData({...formData, logoUrl: e.target.value})} placeholder="https://..." />
+      </div>
+
+      <div className="flex items-center gap-4">
+        <Button type="submit" disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Save Branding
+        </Button>
+        <div className="flex gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded" style={{ backgroundColor: formData.primary }} />
+            <span className="text-sm">Primary</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded" style={{ backgroundColor: formData.secondary }} />
+            <span className="text-sm">Secondary</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded" style={{ backgroundColor: formData.accent }} />
+            <span className="text-sm">Accent</span>
+          </div>
+        </div>
+      </div>
+    </form>
+  );
 }
 
 export default function AdminDashboardPage() {
@@ -128,6 +221,27 @@ export default function AdminDashboardPage() {
     },
   });
 
+  const { data: branding, isLoading: isBrandingLoading } = useBranding();
+  const updateBranding = useMutation({
+    mutationFn: async (data: Partial<Branding>) => {
+      const res = await fetch(buildApiUrl("/api/branding"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update branding");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/branding"] });
+      toast({ title: "Branding updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update branding", variant: "destructive" });
+    },
+  });
+
   if (isUserLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -166,7 +280,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" /> Users
             </TabsTrigger>
@@ -175,6 +289,9 @@ export default function AdminDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="sermons" className="gap-2">
               <FileText className="h-4 w-4" /> Sermons
+            </TabsTrigger>
+            <TabsTrigger value="branding" className="gap-2">
+              <Palette className="h-4 w-4" /> Branding
             </TabsTrigger>
             <TabsTrigger value="overview" className="gap-2">
               <Shield className="h-4 w-4" /> Overview
@@ -309,6 +426,29 @@ export default function AdminDashboardPage() {
                       <p className="text-center py-8 text-muted-foreground">No sermons yet</p>
                     )}
                   </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Branding Tab */}
+          <TabsContent value="branding">
+            <Card>
+              <CardHeader>
+                <CardTitle>Branding Settings</CardTitle>
+                <CardDescription>Customize the appearance of your church website</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isBrandingLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <BrandingForm 
+                    branding={branding} 
+                    onSubmit={(data) => updateBranding.mutate(data)}
+                    isLoading={updateBranding.isPending}
+                  />
                 )}
               </CardContent>
             </Card>
