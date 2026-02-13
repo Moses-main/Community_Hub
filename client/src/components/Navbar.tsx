@@ -67,41 +67,45 @@ export function Navbar() {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 px-2 py-1.5 h-auto rounded-full hover:bg-gray-100">
-                  <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold">
+                <Button variant="ghost" className="flex items-center gap-2 px-3 py-2 h-auto rounded-full hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-all">
+                  <div className="w-9 h-9 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold shadow-sm">
                     {user.firstName ? user.firstName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                   </div>
-                  <span className="hidden lg:inline text-sm font-medium">
+                  <span className="hidden lg:inline text-sm font-medium text-gray-700">
                     {user.firstName || user.email.split('@')[0]}
                   </span>
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 z-50 bg-white border-gray-200 shadow-xl rounded-lg">
-                <div className="px-3 py-2 border-b">
-                  <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
-                  <p className="text-xs text-gray-500">{user.email}</p>
+              <DropdownMenuContent align="end" className="w-72 z-50 bg-white border-gray-200 shadow-xl rounded-xl p-1">
+                <div className="px-4 py-3 border-b bg-gray-50 rounded-t-xl">
+                  <p className="text-sm font-semibold text-gray-900">{user.firstName} {user.lastName}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
                 </div>
-                {user.isAdmin ? (
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/admin" className="flex items-center gap-2">
-                      <LayoutDashboard className="w-4 h-4" />
-                      Admin Dashboard
-                    </Link>
+                <div className="py-1">
+                  {user.isAdmin ? (
+                    <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
+                      <Link href="/admin" className="flex items-center gap-3 text-gray-700">
+                        <LayoutDashboard className="w-5 h-5 text-primary" />
+                        <span className="font-medium">Admin Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
+                      <Link href="/dashboard" className="flex items-center gap-3 text-gray-700">
+                        <LayoutDashboard className="w-5 h-5 text-primary" />
+                        <span className="font-medium">My Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                </div>
+                <DropdownMenuSeparator className="my-1" />
+                <div className="py-1">
+                  <DropdownMenuItem onClick={() => logout()} className="cursor-pointer px-4 py-3 hover:bg-red-50 rounded-lg mx-1 text-red-600">
+                    <LogOut className="w-5 h-5 mr-3" />
+                    <span className="font-medium">Sign out</span>
                   </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/dashboard" className="flex items-center gap-2">
-                      <LayoutDashboard className="w-4 h-4" />
-                      My Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => logout()} className="text-red-600 cursor-pointer">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign out
-                </DropdownMenuItem>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
