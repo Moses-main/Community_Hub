@@ -29,20 +29,20 @@ export default function SermonsPage() {
             <Input placeholder="Search sermons..." className="pl-10" />
           </div>
           <Select>
-            <SelectTrigger className="w-full md:w-[200px]">
+            <SelectTrigger className="w-full md:w-[200px] bg-white">
               <SelectValue placeholder="Series" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border-gray-200 shadow-xl">
               <SelectItem value="all">All Series</SelectItem>
               <SelectItem value="faith">Faith & Works</SelectItem>
               <SelectItem value="gospel">The Gospel</SelectItem>
             </SelectContent>
           </Select>
           <Select>
-            <SelectTrigger className="w-full md:w-[200px]">
+            <SelectTrigger className="w-full md:w-[200px] bg-white">
               <SelectValue placeholder="Speaker" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border-gray-200 shadow-xl">
               <SelectItem value="all">All Speakers</SelectItem>
               <SelectItem value="pastor">Pastor John</SelectItem>
               <SelectItem value="guest">Guest Speakers</SelectItem>

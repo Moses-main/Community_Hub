@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMyPrayerRequests } from "@/hooks/use-prayer";
 import { Helmet } from "react-helmet-async";
@@ -27,6 +27,19 @@ export default function DashboardPage() {
     houseFellowship: user?.houseFellowship || "",
     parish: (user as any)?.parish || "",
   });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        phone: user.phone || "",
+        address: user.address || "",
+        houseFellowship: user.houseFellowship || "",
+        parish: (user as any)?.parish || "",
+      });
+    }
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -57,20 +70,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50/50 py-8">
       <Helmet>
         <title>Dashboard | WCCRM Lagos</title>
       </Helmet>
 
-      <div className="max-w-4xl mx-auto">
+      <div className="container px-4 md:px-8 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">My Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, {user.firstName || user.email}!</p>
+            <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">My Dashboard</h1>
+            <p className="text-gray-500">Welcome back, {user.firstName || user.email}!</p>
           </div>
           <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline">
+              <Button className="bg-primary hover:bg-primary/90">
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Profile
               </Button>
@@ -170,80 +183,80 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+          <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <User className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg">Profile Information</CardTitle>
-                <CardDescription>Your account details</CardDescription>
+                <CardTitle className="text-lg text-gray-900">Profile Information</CardTitle>
+                <CardDescription className="text-gray-500">Your account details</CardDescription>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
-                <User className="h-4 w-4 text-muted-foreground" />
+                <User className="h-4 w-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Name</p>
-                  <p className="font-medium">
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="font-medium text-gray-900">
                     {user.firstName ? `${user.firstName} ${user.lastName || ''}` : "Not set"}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Mail className="h-4 w-4 text-muted-foreground" />
+                <Mail className="h-4 w-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{user.email}</p>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium text-gray-900">{user.email}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground" />
+                <Phone className="h-4 w-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-medium">{user.phone || "Not set"}</p>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="font-medium text-gray-900">{user.phone || "Not set"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <MapPin className="h-4 w-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Address</p>
-                  <p className="font-medium">{user.address || "Not set"}</p>
+                  <p className="text-sm text-gray-500">Address</p>
+                  <p className="font-medium text-gray-900">{user.address || "Not set"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Home className="h-4 w-4 text-muted-foreground" />
+                <Home className="h-4 w-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-muted-foreground">House Fellowship</p>
-                  <p className="font-medium">{user.houseFellowship || "Not set"}</p>
+                  <p className="text-sm text-gray-500">House Fellowship</p>
+                  <p className="font-medium text-gray-900">{user.houseFellowship || "Not set"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Building className="h-4 w-4 text-muted-foreground" />
+                <Building className="h-4 w-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Parish</p>
-                  <p className="font-medium">{(user as any).parish || "Not set"}</p>
+                  <p className="text-sm text-gray-500">Parish</p>
+                  <p className="font-medium text-gray-900">{(user as any).parish || "Not set"}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Shield className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg">Account Status</CardTitle>
-                <CardDescription>Your membership details</CardDescription>
+                <CardTitle className="text-lg text-gray-900">Account Status</CardTitle>
+                <CardDescription className="text-gray-500">Your membership details</CardDescription>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <Calendar className="h-4 w-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Member Since</p>
-                  <p className="font-medium">
+                  <p className="text-sm text-gray-500">Member Since</p>
+                  <p className="font-medium text-gray-900">
                     {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown"}
                   </p>
                 </div>
@@ -251,13 +264,13 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="md:col-span-2">
+          <Card className="md:col-span-2 border border-gray-100 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
+              <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
                 <Heart className="h-5 w-5 text-primary" />
                 My Prayer Requests
               </CardTitle>
-              <CardDescription>Your prayer requests and how many are praying</CardDescription>
+              <CardDescription className="text-gray-500">Your prayer requests and how many are praying</CardDescription>
             </CardHeader>
             <CardContent>
               {isPrayersLoading ? (
@@ -267,10 +280,10 @@ export default function DashboardPage() {
               ) : myPrayers && myPrayers.length > 0 ? (
                 <div className="space-y-3">
                   {myPrayers.slice(0, 5).map((prayer) => (
-                    <div key={prayer.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                    <div key={prayer.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{prayer.content}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="font-medium text-gray-900 truncate">{prayer.content}</p>
+                        <p className="text-xs text-gray-500">
                           {formatDistanceToNow(new Date(prayer.createdAt), { addSuffix: true })}
                         </p>
                       </div>
@@ -287,7 +300,7 @@ export default function DashboardPage() {
                   )}
                 </div>
               ) : (
-                <div className="text-center py-6 text-muted-foreground">
+                <div className="text-center py-6 text-gray-500">
                   <p>You haven't submitted any prayer requests yet.</p>
                   <Button variant="ghost" asChild className="mt-2">
                     <Link href="/prayer">Share a Prayer Request</Link>
@@ -297,10 +310,10 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="md:col-span-2">
+          <Card className="md:col-span-2 border border-gray-100 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-              <CardDescription>Common tasks and links</CardDescription>
+              <CardTitle className="text-lg text-gray-900">Quick Actions</CardTitle>
+              <CardDescription className="text-gray-500">Common tasks and links</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-4">
               <Button variant="outline" asChild>

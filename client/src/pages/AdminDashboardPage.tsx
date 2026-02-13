@@ -294,44 +294,44 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50/50 py-8">
       <Helmet>
         <title>Admin Dashboard | WCCRM Lagos</title>
       </Helmet>
 
-      <div className="max-w-6xl mx-auto">
+      <div className="container px-4 md:px-8 max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage your church platform</p>
+            <h1 className="text-3xl font-display font-bold text-gray-900">Admin Dashboard</h1>
+            <p className="text-gray-500">Manage your church platform</p>
           </div>
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="users" className="gap-2">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-100 p-1 rounded-lg">
+            <TabsTrigger value="users" className="gap-2 rounded-md">
               <Users className="h-4 w-4" /> Users
             </TabsTrigger>
-            <TabsTrigger value="events" className="gap-2">
+            <TabsTrigger value="events" className="gap-2 rounded-md">
               <Calendar className="h-4 w-4" /> Events
             </TabsTrigger>
-            <TabsTrigger value="sermons" className="gap-2">
+            <TabsTrigger value="sermons" className="gap-2 rounded-md">
               <FileText className="h-4 w-4" /> Sermons
             </TabsTrigger>
-            <TabsTrigger value="branding" className="gap-2">
+            <TabsTrigger value="branding" className="gap-2 rounded-md">
               <Palette className="h-4 w-4" /> Branding
             </TabsTrigger>
-            <TabsTrigger value="overview" className="gap-2">
+            <TabsTrigger value="overview" className="gap-2 rounded-md">
               <Shield className="h-4 w-4" /> Overview
             </TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
           <TabsContent value="users">
-            <Card>
+            <Card className="border border-gray-100 shadow-sm">
               <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>View and manage all registered users</CardDescription>
+                <CardTitle className="text-xl text-gray-900">User Management</CardTitle>
+                <CardDescription className="text-gray-500">View and manage all registered users</CardDescription>
               </CardHeader>
               <CardContent>
                 {isUsersLoading ? (
@@ -342,35 +342,35 @@ export default function AdminDashboardPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-3 px-4 font-medium">Name</th>
-                          <th className="text-left py-3 px-4 font-medium">Email</th>
-                          <th className="text-left py-3 px-4 font-medium">Phone</th>
-                          <th className="text-left py-3 px-4 font-medium">Parish</th>
-                          <th className="text-left py-3 px-4 font-medium">House Fellowship</th>
-                          <th className="text-left py-3 px-4 font-medium">Verified</th>
-                          <th className="text-left py-3 px-4 font-medium">Joined</th>
-                          <th className="text-left py-3 px-4 font-medium">Role</th>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Name</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Phone</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Parish</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">House Fellowship</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Verified</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Joined</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
                         </tr>
                       </thead>
                       <tbody>
                         {users?.map((u) => (
-                          <tr key={u.id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4 font-medium">
+                          <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
+                            <td className="py-3 px-4 font-medium text-gray-900">
                               {u.firstName ? `${u.firstName} ${u.lastName || ''}` : '-'}
                             </td>
-                            <td className="py-3 px-4">{u.email}</td>
-                            <td className="py-3 px-4 text-muted-foreground">{u.phone || '-'}</td>
-                            <td className="py-3 px-4 text-muted-foreground">{u.parish || '-'}</td>
-                            <td className="py-3 px-4 text-muted-foreground">{u.houseFellowship || '-'}</td>
+                            <td className="py-3 px-4 text-gray-600">{u.email}</td>
+                            <td className="py-3 px-4 text-gray-500">{u.phone || '-'}</td>
+                            <td className="py-3 px-4 text-gray-500">{u.parish || '-'}</td>
+                            <td className="py-3 px-4 text-gray-500">{u.houseFellowship || '-'}</td>
                             <td className="py-3 px-4">
                               {u.isVerified ? (
-                                <Badge className="bg-green-500">Verified</Badge>
+                                <Badge className="bg-green-500 text-white">Verified</Badge>
                               ) : (
-                                <Badge variant="secondary">Pending</Badge>
+                                <Badge variant="secondary" className="bg-gray-100 text-gray-600">Pending</Badge>
                               )}
                             </td>
-                            <td className="py-3 px-4 text-muted-foreground">
+                            <td className="py-3 px-4 text-gray-500">
                               {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
                             </td>
                             <td className="py-3 px-4">
@@ -383,12 +383,12 @@ export default function AdminDashboardPage() {
                                 }}
                                 disabled={updateUserRole.isPending}
                               >
-                                <SelectTrigger className="w-[160px]">
+                                <SelectTrigger className="w-[160px] bg-white">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-white border-gray-200 shadow-xl">
                                   {USER_ROLES.map((role) => (
-                                    <SelectItem key={role.value} value={role.value}>
+                                    <SelectItem key={role.value} value={role.value} className="cursor-pointer">
                                       {role.label}
                                     </SelectItem>
                                   ))}
@@ -400,7 +400,7 @@ export default function AdminDashboardPage() {
                       </tbody>
                     </table>
                     {users?.length === 0 && (
-                      <p className="text-center py-8 text-muted-foreground">No users found</p>
+                      <p className="text-center py-8 text-gray-500">No users found</p>
                     )}
                   </div>
                 )}

@@ -38,7 +38,7 @@ export function Navbar() {
           <img 
             src="/church_logo.jpeg" 
             alt="WCCRM Lagos" 
-            className="h-10 md:h-12 w-auto object-contain"
+            className="h-10 md:h-12 w-auto rounded-full object-contain"
           />
           <span className="hidden sm:inline">
             WCCRM<span className="text-primary"> Lagos</span>
@@ -77,22 +77,23 @@ export function Navbar() {
                   <ChevronDown className="w-4 h-4 text-gray-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 z-50 bg-white border-gray-200 shadow-xl">
+              <DropdownMenuContent align="end" className="w-56 z-50 bg-white border-gray-200 shadow-xl rounded-lg">
                 <div className="px-3 py-2 border-b">
                   <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link href="/dashboard" className="flex items-center gap-2">
-                    <LayoutDashboard className="w-4 h-4" />
-                    Dashboard
-                  </Link>
-                </DropdownMenuItem>
-                {user.isAdmin && (
+                {user.isAdmin ? (
                   <DropdownMenuItem asChild className="cursor-pointer">
                     <Link href="/admin" className="flex items-center gap-2">
-                      <Settings className="w-4 h-4" />
+                      <LayoutDashboard className="w-4 h-4" />
                       Admin Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/dashboard" className="flex items-center gap-2">
+                      <LayoutDashboard className="w-4 h-4" />
+                      My Dashboard
                     </Link>
                   </DropdownMenuItem>
                 )}
