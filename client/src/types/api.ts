@@ -1,6 +1,6 @@
 // Client-side API types (without server dependencies)
 export interface User {
-  id: number;
+  id: string;
   email: string;
   firstName?: string;
   lastName?: string;
