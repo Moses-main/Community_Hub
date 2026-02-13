@@ -1,36 +1,41 @@
 import { Link } from "wouter";
-import { ArrowRight, Play, Calendar, Heart } from "lucide-react";
+import { ArrowRight, Play, Calendar, Heart, Clock, MapPin } from "lucide-react";
 import { useSermons } from "@/hooks/use-sermons";
 import { useEvents } from "@/hooks/use-events";
 import { Button } from "@/components/ui/button";
-import { SermonCard } from "@/components/SermonCard";
-import { EventCard } from "@/components/EventCard";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FaPray } from "react-icons/fa";
 import { FaHandHoldingHeart } from "react-icons/fa";
-
+import { format } from "date-fns";
 
 export default function HomePage() {
   const { data: sermons, isLoading: loadingSermons } = useSermons();
   const { data: events, isLoading: loadingEvents } = useEvents();
 
-  // Get latest sermon and upcoming 2 events
-  const latestSermons = sermons?.slice(0, 3) || [];
-  const upcomingEvents = events?.slice(0, 2) || [];
+  // Sort events by date (upcoming first)
+  const upcomingEvents = events
+    ?.filter(e => new Date(e.date) >= new Date())
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) || [];
+
+  // Group sermons by series
+  const sermonsBySeries = sermons?.reduce((acc, sermon) => {
+    const series = sermon.series || "Uncategorized";
+    if (!acc[series]) acc[series] = [];
+    acc[series].push(sermon);
+    return acc;
+  }, {} as Record<string, typeof sermons>) || {};
 
   return (
     <div className="flex flex-col gap-16 md:gap-24 pb-20">
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
-          {/* Unsplash: Modern church worship atmosphere */}
           <img
             src="https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1920&auto=format&fit=crop&q=80"
             alt="Worship Background"
             className="w-full h-full object-cover"
           />
-          {/* <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-black/30" /> */}
         </div>
 
         <div className="container relative z-10 px-4 text-center">
@@ -59,85 +64,99 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Latest Sermons */}
+      {/* Upcoming Events Section */}
       <section className="container px-4">
         <div className="flex justify-between items-end mb-10">
           <div>
             <h2 className="text-3xl font-display font-bold mb-2">
-              Latest Messages
+              Upcoming Events
             </h2>
             <p className="text-muted-foreground">
-              Watch or listen to recent sermons
+              Join us for fellowship and growth
             </p>
           </div>
-          <Button variant="ghost" asChild  className="hidden border-gray/60 hover:bg-black/10 md:flex gap-2">
-            <Link href="/sermons">
-              View Archive <ArrowRight size={16} />
+          <Button variant="ghost" asChild className="hidden md:flex gap-2 border-gray/60 hover:bg-black/10">
+            <Link href="/events">
+              View All <ArrowRight size={16} />
             </Link>
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {loadingSermons
-            ? Array(3)
-                .fill(0)
-                .map((_, i) => (
-                  <div key={i} className="space-y-4">
-                    <Skeleton className="aspect-video rounded-xl" />
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                ))
-            : latestSermons.map((sermon) => (
-                <SermonCard key={sermon.id} sermon={sermon} />
-              ))}
-        </div>
+        {loadingEvents ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array(3).fill(0).map((_, i) => (
+              <div key={i} className="space-y-4">
+                <Skeleton className="h-48 rounded-xl" />
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : upcomingEvents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {upcomingEvents.slice(0, 6).map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+          ) : (
+          <div className="text-center py-12 bg-secondary/30 rounded-xl">
+            <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No upcoming events at this time.</p>
+            <Button variant="ghost" asChild className="mt-2">
+              <Link href="/events"><span>View Past Events</span></Link>
+            </Button>
+          </div>
+        )}
 
         <Button variant="outline" asChild className="w-full mt-8 md:hidden">
-          <Link href="/sermons">View All Sermons</Link>
+          <Link href="/events">View All Events</Link>
         </Button>
       </section>
 
-      {/* Upcoming Events */}
+      {/* Sermon Series Section */}
       <section className="bg-secondary/30 py-20">
         <div className="container px-4">
           <div className="flex justify-between items-end mb-10">
             <div>
               <h2 className="text-3xl font-display font-bold mb-2">
-                Upcoming Events
+                Sermon Series
               </h2>
               <p className="text-muted-foreground">
-                Join us for fellowship and growth
+                Explore our message series
               </p>
             </div>
             <Button variant="ghost" asChild className="hidden md:flex gap-2 border-gray/60 hover:bg-black/10">
-              <Link href="/events">
-                Full Calendar <Calendar size={16} />
+              <Link href="/sermons">
+                View All <ArrowRight size={16} />
               </Link>
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {loadingEvents
-              ? Array(2)
-                  .fill(0)
-                  .map((_, i) => (
-                    <div key={i} className="flex gap-4">
-                      <Skeleton className="w-1/3 h-48 rounded-xl" />
-                      <div className="flex-1 space-y-4 py-2">
-                        <Skeleton className="h-6 w-3/4" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-1/2" />
-                      </div>
-                    </div>
-                  ))
-              : upcomingEvents.map((event) => (
-                  <EventCard key={event.id} event={event} />
-                ))}
-          </div>
+          {loadingSermons ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array(3).fill(0).map((_, i) => (
+                <div key={i} className="space-y-4">
+                  <Skeleton className="aspect-video rounded-xl" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : sermons && sermons.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sermons.slice(0, 6).map((sermon) => (
+                <SermonCard key={sermon.id} sermon={sermon} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-background rounded-xl">
+              <Play className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No sermons available yet.</p>
+            </div>
+          )}
 
           <Button variant="outline" asChild className="w-full mt-8 md:hidden">
-            <Link href="/events">View Full Calendar</Link>
+            <Link href="/sermons">View All Sermons</Link>
           </Button>
         </div>
       </section>
@@ -179,5 +198,91 @@ export default function HomePage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function EventCard({ event }: { event: any }) {
+  const eventDate = new Date(event.date);
+  
+  return (
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+      <div className="aspect-video relative bg-muted">
+        {event.imageUrl ? (
+          <img 
+            src={event.imageUrl} 
+            alt={event.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-secondary">
+            <Calendar className="h-12 w-12 text-muted-foreground/30" />
+          </div>
+        )}
+        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg text-center shadow-sm">
+          <div className="text-xs font-bold uppercase text-primary">{format(eventDate, "MMM")}</div>
+          <div className="text-xl font-display font-bold leading-none">{format(eventDate, "dd")}</div>
+        </div>
+      </div>
+      <CardContent className="p-5">
+        <h3 className="font-display font-bold text-lg mb-2 line-clamp-1">{event.title}</h3>
+        <div className="space-y-2 text-sm text-muted-foreground mb-4">
+          <div className="flex items-center gap-2">
+            <Clock size={14} className="text-primary flex-shrink-0" />
+            <span>{format(eventDate, "EEEE, h:mm a")}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPin size={14} className="text-primary flex-shrink-0" />
+            <span className="line-clamp-1">{event.location}</span>
+          </div>
+        </div>
+        <Button variant="outline" className="w-full" asChild>
+          <Link href={`/events/${event.id}`}>Details</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SermonCard({ sermon }: { sermon: any }) {
+  const sermonDate = new Date(sermon.date);
+  
+  return (
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow group">
+      <div className="aspect-video relative bg-muted">
+        {sermon.thumbnailUrl ? (
+          <img 
+            src={sermon.thumbnailUrl} 
+            alt={sermon.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-secondary">
+            <Play className="h-12 w-12 text-muted-foreground/30" />
+          </div>
+        )}
+        {sermon.videoUrl && (
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+            <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center">
+              <Play className="h-6 w-6 text-primary ml-1" />
+            </div>
+          </div>
+        )}
+      </div>
+      <CardContent className="p-5">
+        {sermon.series && (
+          <p className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">
+            {sermon.series}
+          </p>
+        )}
+        <h3 className="font-display font-bold text-lg mb-2 line-clamp-2">{sermon.title}</h3>
+        <p className="text-sm text-muted-foreground mb-3">{sermon.speaker}</p>
+        <p className="text-xs text-muted-foreground">
+          {format(sermonDate, "MMMM d, yyyy")}
+        </p>
+        <Button variant="secondary" className="w-full mt-4" asChild>
+          <Link href={`/sermons/${sermon.id}`}>Watch</Link>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
