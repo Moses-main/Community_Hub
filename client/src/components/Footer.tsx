@@ -11,10 +11,14 @@ export function Footer() {
               href="/"
               className="flex items-center gap-2 font-display font-bold text-xl tracking-tight"
             >
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
-                <Church size={20} />
-              </div>
-              <span>
+              <div className="w-20 h-18 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+            <img
+            src="/public/church_logo.jpeg"
+            alt="Worship Background"
+            className="w-full h-full rounded-full object-cover"
+          />
+          </div>
+              <span className="text-sm">
                 WCCRM<span className="text-primary"> Lagos</span>
               </span>
             </Link>
