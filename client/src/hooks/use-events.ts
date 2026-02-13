@@ -45,6 +45,41 @@ export function useCreateEvent() {
   });
 }
 
+export function useUpdateEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertEvent> }): Promise<Event> => {
+      const res = await fetch(buildApiUrl(`/api/events/${id}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update event");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [apiRoutes.events.list] });
+    },
+  });
+}
+
+export function useDeleteEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number): Promise<void> => {
+      const res = await fetch(buildApiUrl(`/api/events/${id}`), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete event");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [apiRoutes.events.list] });
+    },
+  });
+}
+
 export function useRsvpEvent() {
   return useMutation({
     mutationFn: async (id: number) => {

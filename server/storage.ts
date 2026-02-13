@@ -21,19 +21,25 @@ export interface IStorage {
   getEvents(): Promise<Event[]>;
   getEvent(id: number): Promise<Event | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
+  updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event>;
+  deleteEvent(id: number): Promise<void>;
   
   // Sermons
   getSermons(): Promise<Sermon[]>;
   getSermon(id: number): Promise<Sermon | undefined>;
   createSermon(sermon: InsertSermon): Promise<Sermon>;
+  updateSermon(id: number, sermon: Partial<InsertSermon>): Promise<Sermon>;
+  deleteSermon(id: number): Promise<void>;
 
   // Prayer Requests
   getPrayerRequests(): Promise<PrayerRequest[]>;
   createPrayerRequest(request: InsertPrayerRequest): Promise<PrayerRequest>;
   incrementPrayCount(id: number): Promise<PrayerRequest | undefined>;
+  deletePrayerRequest(id: number): Promise<void>;
 
   // Donations
   createDonation(donation: InsertDonation): Promise<Donation>;
+  getDonations(): Promise<Donation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -116,6 +122,19 @@ export class DatabaseStorage implements IStorage {
     return event;
   }
 
+  async updateEvent(id: number, update: Partial<InsertEvent>): Promise<Event> {
+    const [event] = await db
+      .update(events)
+      .set(update)
+      .where(eq(events.id, id))
+      .returning();
+    return event;
+  }
+
+  async deleteEvent(id: number): Promise<void> {
+    await db.delete(events).where(eq(events.id, id));
+  }
+
   // Sermons
   async getSermons(): Promise<Sermon[]> {
     return await db.select().from(sermons).orderBy(desc(sermons.date));
@@ -129,6 +148,19 @@ export class DatabaseStorage implements IStorage {
   async createSermon(insertSermon: InsertSermon): Promise<Sermon> {
     const [sermon] = await db.insert(sermons).values(insertSermon).returning();
     return sermon;
+  }
+
+  async updateSermon(id: number, update: Partial<InsertSermon>): Promise<Sermon> {
+    const [sermon] = await db
+      .update(sermons)
+      .set(update)
+      .where(eq(sermons.id, id))
+      .returning();
+    return sermon;
+  }
+
+  async deleteSermon(id: number): Promise<void> {
+    await db.delete(sermons).where(eq(sermons.id, id));
   }
 
   // Prayer Requests
@@ -153,10 +185,18 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async deletePrayerRequest(id: number): Promise<void> {
+    await db.delete(prayerRequests).where(eq(prayerRequests.id, id));
+  }
+
   // Donations
   async createDonation(insertDonation: InsertDonation): Promise<Donation> {
     const [donation] = await db.insert(donations).values(insertDonation).returning();
     return donation;
+  }
+
+  async getDonations(): Promise<Donation[]> {
+    return await db.select().from(donations).orderBy(desc(donations.createdAt));
   }
 }
 

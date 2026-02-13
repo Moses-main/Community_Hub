@@ -30,7 +30,7 @@ const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  lastName: z.string().optional(),
 });
 
 // Authentication middleware
@@ -140,7 +140,7 @@ export async function registerRoutes(
         email,
         passwordHash,
         firstName,
-        lastName,
+        lastName: lastName || '',
       });
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
@@ -273,6 +273,32 @@ export async function registerRoutes(
     res.json({ message: "RSVP successful" });
   });
 
+  // Update event
+  app.put("/api/events/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const input = api.events.create.input.partial().parse(req.body);
+      const event = await storage.updateEvent(id, input);
+      res.json(event);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete event
+  app.delete("/api/events/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteEvent(id);
+      res.json({ message: "Event deleted successfully" });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Sermons
   app.get(api.sermons.list.path, async (req, res) => {
     const sermons = await storage.getSermons();
@@ -294,6 +320,32 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update sermon
+  app.put("/api/sermons/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const input = api.sermons.create.input.partial().parse(req.body);
+      const sermon = await storage.updateSermon(id, input);
+      res.json(sermon);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete sermon
+  app.delete("/api/sermons/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteSermon(id);
+      res.json({ message: "Sermon deleted successfully" });
+    } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }
   });

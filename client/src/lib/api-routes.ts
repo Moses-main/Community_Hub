@@ -7,6 +7,10 @@ export const apiRoutes = {
     logout: "/api/auth/logout",
     verifyEmail: "/api/auth/verify-email",
   },
+  admin: {
+    users: "/api/admin/users",
+    getUser: (id: number) => `/api/admin/users/${id}`,
+  },
   events: {
     list: "/api/events",
     get: (id: number) => `/api/events/${id}`,
