@@ -52,7 +52,7 @@ const transporterPromise = (async () => {
           reject(error);
         } else {
           logger.info('Email server is ready to take our messages');
-          resolve(transporter);
+          resolve();
         }
       });
     });

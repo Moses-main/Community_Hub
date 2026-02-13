@@ -210,7 +210,8 @@ export async function registerRoutes(
 
   // Get user details (admin only)
   app.get("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
-    const user = await storage.getUserById(req.params.id);
+    const userId = req.params.id as string;
+    const user = await storage.getUserById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -234,7 +235,7 @@ export async function registerRoutes(
 
   // Update user role (admin only)
   app.put("/api/admin/users/:id/role", isAuthenticated, isAdmin, async (req, res) => {
-    const userId = req.params.id;
+    const userId = req.params.id as string;
     const { role } = req.body;
     
     if (!role) {
@@ -263,7 +264,7 @@ export async function registerRoutes(
 
   // Update user profile (admin only)
   app.put("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
-    const userId = req.params.id;
+    const userId = req.params.id as string;
     const { firstName, lastName, phone, address, houseFellowship } = req.body;
     
     const user = await storage.getUserById(userId);
@@ -345,7 +346,13 @@ export async function registerRoutes(
   app.put("/api/events/:id", isAuthenticated, async (req, res) => {
     try {
       const id = Number(req.params.id);
-      const input = api.events.create.input.partial().parse(req.body);
+      const { title, description, date, location, imageUrl } = req.body;
+      const input: Partial<{ title: string; description: string; date: Date; location: string; imageUrl?: string }> = {};
+      if (title !== undefined) input.title = title;
+      if (description !== undefined) input.description = description;
+      if (date !== undefined) input.date = new Date(date);
+      if (location !== undefined) input.location = location;
+      if (imageUrl !== undefined) input.imageUrl = imageUrl;
       const event = await storage.updateEvent(id, input);
       res.json(event);
     } catch (err) {
@@ -396,7 +403,16 @@ export async function registerRoutes(
   app.put("/api/sermons/:id", isAuthenticated, async (req, res) => {
     try {
       const id = Number(req.params.id);
-      const input = api.sermons.create.input.partial().parse(req.body);
+      const { title, speaker, date, videoUrl, audioUrl, series, description, thumbnailUrl } = req.body;
+      const input: Partial<{ title: string; speaker: string; date: Date; videoUrl?: string; audioUrl?: string; series?: string; description?: string; thumbnailUrl?: string }> = {};
+      if (title !== undefined) input.title = title;
+      if (speaker !== undefined) input.speaker = speaker;
+      if (date !== undefined) input.date = new Date(date);
+      if (videoUrl !== undefined) input.videoUrl = videoUrl;
+      if (audioUrl !== undefined) input.audioUrl = audioUrl;
+      if (series !== undefined) input.series = series;
+      if (description !== undefined) input.description = description;
+      if (thumbnailUrl !== undefined) input.thumbnailUrl = thumbnailUrl;
       const sermon = await storage.updateSermon(id, input);
       res.json(sermon);
     } catch (err) {

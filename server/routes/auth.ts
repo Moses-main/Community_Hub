@@ -123,7 +123,7 @@ router.post('/signup', async (req, res) => {
     
     return res.status(500).json({ 
       message: 'Internal server error',
-      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+      error: process.env.NODE_ENV === 'development' ? (err as Error).message : undefined
     });
   }
 });
@@ -143,7 +143,7 @@ router.get('/verify-email', async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired verification token' });
     }
 
-    if (new Date() > user.verificationTokenExpires) {
+    if (user.verificationTokenExpires && new Date() > user.verificationTokenExpires) {
       return res.status(400).json({ message: 'Verification token has expired' });
     }
 

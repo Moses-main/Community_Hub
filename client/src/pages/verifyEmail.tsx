@@ -1,15 +1,14 @@
 // client/src/pages/VerifyEmail.tsx
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { verifyEmail } from '../lib/api';
 import { Button } from '../components/ui/button';
 
 export default function VerifyEmail() {
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [error, setError] = useState<string | null>(null);
-  const [searchParams] = useLocation();
-  const navigate = useNavigate();
-
+  const [searchParams, setLocation] = useLocation();
+  
   useEffect(() => {
     const verify = async () => {
       const token = new URLSearchParams(searchParams).get('token');
@@ -23,7 +22,7 @@ export default function VerifyEmail() {
       try {
         await verifyEmail(token);
         setStatus('success');
-        setTimeout(() => navigate('/login?verified=true'), 3000);
+        setTimeout(() => setLocation('/login?verified=true'), 3000);
       } catch (err) {
         setStatus('error');
         setError(err instanceof Error ? err.message : 'Failed to verify email');
@@ -31,7 +30,7 @@ export default function VerifyEmail() {
     };
 
     verify();
-  }, [searchParams, navigate]);
+  }, [searchParams, setLocation]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">

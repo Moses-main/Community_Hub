@@ -21,7 +21,7 @@ export default function LogoutPage() {
     };
 
     logout();
-  }, [router]);
+  }, [navigate]);
 
   return null;
 }
