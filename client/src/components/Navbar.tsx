@@ -75,6 +75,9 @@ export function Navbar() {
                 <DropdownMenuItem className="font-semibold">
                   {user.firstName ? `Hi, ${user.firstName}` : user.email}
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard">Dashboard</Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => logout()}>
                   Sign out
                 </DropdownMenuItem>

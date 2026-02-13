@@ -2,8 +2,11 @@
 export interface User {
   id: number;
   email: string;
-  name?: string;
   firstName?: string;
+  lastName?: string;
+  isAdmin?: boolean;
+  isVerified?: boolean;
+  createdAt?: string;
 }
 
 export interface Event {

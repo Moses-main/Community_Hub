@@ -16,6 +16,7 @@ import GivePage from "@/pages/GivePage";
 import AuthPage from "@/pages/login"; // This is our combined auth page
 import LogoutPage from "@/pages/logout";
 import AuthCallbackPage from "@/pages/auth/callback";
+import DashboardPage from "@/pages/DashboardPage";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/login" component={AuthPage} />
       <Route path="/logout" component={LogoutPage} />
       <Route path="/auth/callback" component={AuthCallbackPage} />
+      <Route path="/dashboard" component={DashboardPage} />
       {/* Detail pages could be added here later e.g. /sermons/:id */}
       <Route component={NotFound} />
     </Switch>
