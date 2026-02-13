@@ -3,11 +3,13 @@ import { createServer, type Server as HttpServer } from 'http';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { storage } from './storage';
-import { api as authRouter } from './routes/auth';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { config } from './config';
+import { api as authRouter } from './routes/auth';
+import { prayerRouter } from "./routes/prayer";
+
 
 // Extend Express Request type to include user
 declare global {
@@ -139,11 +141,21 @@ export const createApp = (): { app: Express; httpServer: HttpServer } => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // Prayer Routes
+  app.use("/api/prayer-requests", prayerRouter);
+
   // Error handling middleware
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     console.error('Error:', err);
     res.status(500).json({ message: 'Internal server error' });
   });
+
+  // handling route not created
+  app.use("*", (req, res) => {
+    console.log("Route not found:", req.method, req.originalUrl);
+    res.status(404).json({ message: "Route not found" });
+  });
+  
 
   return { app, httpServer };
 };

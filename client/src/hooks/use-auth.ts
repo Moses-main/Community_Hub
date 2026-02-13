@@ -20,7 +20,11 @@ async function fetchUser(): Promise<User | null> {
 }
 
 async function logout(): Promise<void> {
-  window.location.href = buildApiUrl(apiRoutes.auth.logout);
+  await fetch(buildApiUrl(apiRoutes.auth.logout), {
+    method: "POST",
+    credentials: "include",
+  });
+  window.location.href = "/";
 }
 
 export function useAuth() {

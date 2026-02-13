@@ -169,7 +169,11 @@ export async function registerRoutes(
 
   // Logout
   app.post("/api/auth/logout", (req, res) => {
-    res.clearCookie('token');
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
     res.json({ message: "Logged out successfully" });
   });
 
