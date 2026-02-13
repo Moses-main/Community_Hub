@@ -4,7 +4,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "DEBUG=* NODE_ENV=development node --import tsx start-dev.js",
+    "dev": "DEBUG=* NODE_ENV=development node --import tsx server/server.ts",
     "build": "echo 'Build completed - using tsx for production'",
     "start": "NODE_ENV=production node --import tsx server/server.ts",
     "vercel-build": "npm install",

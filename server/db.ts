@@ -1,26 +1,23 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
+import config from "./config";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
+// Use DATABASE_URL if provided, otherwise fall back to the default from config.
+// This allows the server to start in development even when a database
+// environment variable has not been explicitly configured.
+const connectionString = process.env.DATABASE_URL || config.database.url;
 
-// Parse the database URL
-const connectionString = process.env.DATABASE_URL;
-
-// Configure the connection with SSL
+// Configure the connection with SSL (relaxed for development)
 const sslConfig = {
-  rejectUnauthorized: false // Only use this in development. For production, use proper certificates
+  rejectUnauthorized: false, // Only use this in development. For production, use proper certificates
 };
 
 export const pool = new Pool({
   connectionString,
-  ssl: sslConfig
+  ssl: sslConfig,
 });
 
 export const db = drizzle(pool, { schema });

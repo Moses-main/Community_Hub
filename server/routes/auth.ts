@@ -166,8 +166,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Check if email is verified
-    if (!user.isVerified) {
+    // In production, require email verification before login.
+    // In development, allow login without verification to simplify local testing.
+    if (process.env.NODE_ENV === 'production' && !user.isVerified) {
       return res.status(403).json({ 
         message: 'Please verify your email before logging in' 
       });

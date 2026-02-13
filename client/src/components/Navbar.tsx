@@ -35,7 +35,7 @@ export function Navbar() {
         >
           <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
             <img
-            src="/public/church_logo.jpeg"
+            src="/church_logo.jpeg"
             alt="Worship Background"
             className="w-full h-full rounded-full object-cover"
           />

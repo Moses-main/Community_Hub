@@ -5,6 +5,7 @@ export const apiRoutes = {
     login: "/api/auth/login",
     signup: "/api/auth/signup",
     logout: "/api/auth/logout",
+    verifyEmail: "/api/auth/verify-email",
   },
   events: {
     list: "/api/events",
