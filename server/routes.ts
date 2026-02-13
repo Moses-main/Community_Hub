@@ -258,7 +258,12 @@ export async function registerRoutes(
   app.post(api.events.create.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.events.create.input.parse(req.body);
-      const event = await storage.createEvent(input);
+      // Convert date string to Date object
+      const eventData = {
+        ...input,
+        date: new Date(input.date),
+      };
+      const event = await storage.createEvent(eventData);
       res.status(201).json(event);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -438,6 +443,10 @@ async function seedDatabase() {
       thumbnailUrl:
         "https://images.unsplash.com/photo-1507692049790-de58293a4697?w=800&auto=format&fit=crop&q=60",
     });
+  } else {
+    for (const sermon of existingSermons) {
+      await storage.updateSermon(sermon.id, { date: new Date(Date.now() - (sermon.id - 1) * 7 * 24 * 60 * 60 * 1000) });
+    }
   }
 
   const existingEvents = await storage.getEvents();
@@ -458,5 +467,14 @@ async function seedDatabase() {
       imageUrl:
         "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&auto=format&fit=crop&q=60",
     });
+  } else {
+    const eventDates = [
+      new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    ];
+    for (let i = 0; i < existingEvents.length; i++) {
+      await storage.updateEvent(existingEvents[i].id, { date: eventDates[i] || eventDates[0] });
+    }
   }
 }

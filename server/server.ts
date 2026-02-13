@@ -93,8 +93,7 @@ export const createApp = (): { app: Express; httpServer: HttpServer } => {
     origin:
       process.env.NODE_ENV === 'production'
         ? process.env.APP_URL
-        // In development, allow any localhost port (e.g. 5173, 5174, etc.)
-        : /^http:\/\/localhost(?::\d+)?$/,
+        : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
