@@ -92,12 +92,12 @@ export const createApp = (): { app: Express; httpServer: HttpServer } => {
   const corsOptions = {
     origin:
       process.env.NODE_ENV === 'production'
-        ? process.env.APP_URL
+        ? (process.env.APP_URL || true) // Allow all in production if APP_URL not set
         : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
+    optionsSuccessStatus: 200,
   };
 
   // Apply CORS with the specified options
