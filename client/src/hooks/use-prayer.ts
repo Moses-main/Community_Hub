@@ -49,3 +49,16 @@ export function usePrayForRequest() {
     },
   });
 }
+
+export function useMyPrayerRequests() {
+  return useQuery({
+    queryKey: ["/api/prayer-requests/me"],
+    queryFn: async (): Promise<PrayerRequest[]> => {
+      const res = await fetch(buildApiUrl("/api/prayer-requests/me"), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch your prayer requests");
+      return res.json();
+    },
+  });
+}

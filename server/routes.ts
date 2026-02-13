@@ -356,6 +356,13 @@ export async function registerRoutes(
     res.json(requests);
   });
 
+  // Get current user's prayer requests
+  app.get("/api/prayer-requests/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    const allRequests = await storage.getPrayerRequests();
+    const userRequests = allRequests.filter(r => r.userId === req.user?.id);
+    res.json(userRequests);
+  });
+
   app.post(api.prayer.create.path, isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const input = api.prayer.create.input.parse(req.body);

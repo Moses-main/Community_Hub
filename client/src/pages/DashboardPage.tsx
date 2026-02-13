@@ -1,18 +1,21 @@
 import { useAuth } from "@/hooks/use-auth";
+import { useMyPrayerRequests } from "@/hooks/use-prayer";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Calendar, Shield } from "lucide-react";
+import { User, Mail, Calendar, Shield, Heart, Loader2 } from "lucide-react";
 import { Link } from "wouter";
+import { formatDistanceToNow } from "date-fns";
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
+  const { data: myPrayers, isLoading: isPrayersLoading } = useMyPrayerRequests();
 
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -104,6 +107,52 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Heart className="h-5 w-5 text-primary" />
+                My Prayer Requests
+              </CardTitle>
+              <CardDescription>Your prayer requests and how many are praying</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isPrayersLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                </div>
+              ) : myPrayers && myPrayers.length > 0 ? (
+                <div className="space-y-3">
+                  {myPrayers.slice(0, 5).map((prayer) => (
+                    <div key={prayer.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{prayer.content}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(prayer.createdAt), { addSuffix: true })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 ml-4 text-primary">
+                        <Heart className="h-4 w-4 fill-current" />
+                        <span className="font-semibold">{prayer.prayCount || 0}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {myPrayers.length > 5 && (
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href="/prayer"><span>View All ({myPrayers.length})</span></Link>
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <p>You haven't submitted any prayer requests yet.</p>
+                  <Button variant="ghost" asChild className="mt-2">
+                    <Link href="/prayer">Share a Prayer Request</Link>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
