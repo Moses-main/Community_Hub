@@ -109,19 +109,19 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Button
                 asChild
                 variant="ghost"
                 size="sm"
-                className="hidden md:flex text-gray-600 hover:text-primary"
+                className="hidden md:flex text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-4"
               >
-                <Link href="/login">Sign In</Link>
+                <Link href="/login">Log In</Link>
               </Button>
               <Button
                 asChild
                 size="sm"
-                className="rounded-full px-6 bg-gradient-primary hover:opacity-90 shadow-lg shadow-primary/25"
+                className="rounded-full px-6 py-2.5 bg-primary hover:bg-primary/90 text-white font-medium shadow-md hover:shadow-lg transition-all"
               >
                 <Link href="/login">Get Started</Link>
               </Button>
