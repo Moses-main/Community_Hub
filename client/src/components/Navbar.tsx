@@ -33,11 +33,13 @@ export function Navbar() {
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-3 font-display font-bold text-xl tracking-tight"
+          className="flex items-center gap-3"
         >
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-primary flex items-center justify-center text-white shadow-lg shadow-primary/25">
-            <span className="text-lg md:text-xl font-bold">W</span>
-          </div>
+          <img 
+            src="/church_logo.jpeg" 
+            alt="WCCRM Lagos" 
+            className="h-10 md:h-12 w-auto object-contain"
+          />
           <span className="hidden sm:inline">
             WCCRM<span className="text-primary"> Lagos</span>
           </span>

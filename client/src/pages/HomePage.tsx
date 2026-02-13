@@ -19,29 +19,35 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col">
-      {/* Hero Section - Clean white like Copperx */}
-      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden bg-white">
-        {/* Subtle pattern */}
-        <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgb(0 0 0 / 0.03) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+      {/* Hero Section - Clean white like Copperx with church background */}
+      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
+        {/* Church background image */}
+        <div className="absolute inset-0">
+          <img 
+            src="https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1920&auto=format&fit=crop&q=80" 
+            alt="Worship Background" 
+            className="w-full h-full object-cover"
+          />
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-black/50" />
+        </div>
         
-        {/* Subtle gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-50/50 to-white" />
-
+        {/* Content */}
         <div className="container relative z-10 px-4 md:px-8">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-50 text-purple-700 text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-white text-sm font-medium mb-6 border border-white/20">
               <Sparkles className="w-4 h-4" />
               Welcome to WCCRM Lagos
             </div>
             
-            <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-gray-900 mb-6 leading-tight">
+            <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-white mb-6 leading-tight">
               Experience the
-              <span className="block text-purple-600">
+              <span className="block text-white">
                 Power of Faith
               </span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-gray-500 max-w-2xl mx-auto mb-10 font-light leading-relaxed">
+            <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto mb-10 font-light leading-relaxed">
               Join a vibrant community dedicated to loving God, loving people, and making a difference in our city and beyond.
             </p>
             
@@ -69,18 +75,18 @@ export default function HomePage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-16 pt-16 border-t border-gray-100">
+          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-16 pt-16 border-t border-white/20">
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">5000+</div>
-              <div className="text-sm text-gray-500">Members</div>
+              <div className="text-3xl md:text-4xl font-bold text-white mb-1">5000+</div>
+              <div className="text-sm text-white/70">Members</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">15+</div>
-              <div className="text-sm text-gray-500">Years Active</div>
+              <div className="text-3xl md:text-4xl font-bold text-white mb-1">15+</div>
+              <div className="text-sm text-white/70">Years Active</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">50+</div>
-              <div className="text-sm text-gray-500">Ministries</div>
+              <div className="text-3xl md:text-4xl font-bold text-white mb-1">50+</div>
+              <div className="text-sm text-white/70">Ministries</div>
             </div>
           </div>
         </div>

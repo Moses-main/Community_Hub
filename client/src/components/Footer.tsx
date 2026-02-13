@@ -10,13 +10,15 @@ export function Footer() {
           <div className="space-y-4">
             <Link
               href="/"
-              className="flex items-center gap-3 font-display font-bold text-xl tracking-tight"
+              className="flex items-center gap-3"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center text-white shadow-lg shadow-primary/25">
-                <span className="text-lg font-bold">W</span>
-              </div>
-              <span>
-                WCCRM<span className="text-primary"> Lagos</span>
+              <img 
+                src="/church_logo.jpeg" 
+                alt="WCCRM Lagos" 
+                className="h-12 w-auto object-contain"
+              />
+              <span className="font-semibold text-gray-900">
+                WCCRM<span className="text-purple-600"> Lagos</span>
               </span>
             </Link>
             <p className="text-gray-500 text-sm leading-relaxed">
