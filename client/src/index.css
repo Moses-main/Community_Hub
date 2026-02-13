@@ -8,38 +8,61 @@
     --font-display: "DM Sans", sans-serif;
     --font-body: "Inter", sans-serif;
 
-    /* Modern Church Palette - Clean, Trustworthy, Inspiring */
-    --background: 210 20% 98%;
+    /* Modern Vibrant Church Palette - Inspired by modern SaaS design */
+    /* Using a warm, welcoming palette with purple/gold accents */
+    
+    /* Background & Foreground */
+    --background: 0 0% 100%;
     --foreground: 222 47% 11%;
 
-    --primary: 215 25% 27%; /* Deep Slate Blue */
-    --primary-foreground: 210 40% 98%;
-
+    /* Primary - Rich Purple (spiritual, modern) */
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 262 83% 48%;
+    
+    /* Secondary */
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
 
+    /* Muted */
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 262 83% 58%; /* Subtle Purple Accent for "Spiritual" feel */
-    --accent-foreground: 210 40% 98%;
+    /* Accent - Gold/Amber (warmth, welcome) */
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Success, Warning, Error */
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --error: 0 84% 60%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-
+    /* Borders */
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 222 84% 45%;
+    --ring: 262 83% 58%;
 
+    /* Cards */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    
+    /* Radius */
     --radius: 0.75rem;
+    
+    /* Shadows - Modern soft shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
 .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -47,15 +70,15 @@
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 262 83% 58%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 40% 98%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 212 26% 87%;
+    --ring: 262 83% 58%;
+    
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
 }
 
 @layer base {
@@ -63,7 +86,7 @@
         @apply border-border;
     }
     html {
-        @apply overflow-x-hidden;
+        @apply scroll-smooth;
     }
     body {
         @apply bg-background text-foreground antialiased;
@@ -95,7 +118,7 @@
     /* Container utilities */
     .container {
         width: 100%;
-        max-width: 1200px;
+        max-width: 1280px;
         margin: 0 auto;
         padding-left: 1rem;
         padding-right: 1rem;
@@ -116,18 +139,96 @@
     }
 }
 
-.glass-panel {
+/* Glass morphism utilities */
+.glass {
     @apply bg-white/80 dark:bg-black/50 backdrop-blur-md border border-white/20 shadow-xl;
 }
 
+.glass-light {
+    @apply bg-white/60 backdrop-blur-sm border border-white/30;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(262 83% 40%) 100%);
+}
+
+.bg-gradient-warm {
+    background: linear-gradient(135deg, #fdf4ff 0%, #fef3c7 100%);
+}
+
+.bg-gradient-mesh {
+    background-color: #ffffff;
+    background-image: 
+        radial-gradient(at 40% 20%, hsla(262,83%,58%,0.1) 0px, transparent 50%),
+        radial-gradient(at 80% 0%, hsla(38,92%,50%,0.1) 0px, transparent 50%),
+        radial-gradient(at 0% 50%, hsla(262,83%,58%,0.1) 0px, transparent 50%),
+        radial-gradient(at 80% 50%, hsla(38,92%,50%,0.05) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, hsla(262,83%,58%,0.1) 0px, transparent 50%);
+}
+
+/* Hero gradient */
 .hero-gradient {
     background: linear-gradient(
         135deg,
-        hsl(215 25% 27%) 0%,
-        hsl(222 47% 11%) 100%
+        hsl(262 83% 58%) 0%,
+        hsl(262 83% 40%) 50%,
+        hsl(38 92% 50%) 100%
     );
 }
 
+.hero-pattern {
+    background-color: hsl(var(--primary));
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Text gradients */
 .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-amber-500;
+}
+
+.text-gradient-primary {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70;
+}
+
+/* Card hover effects */
+.card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+}
+
+/* Button shine effect */
+.btn-shine {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-shine::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -100%;
+    width: 50%;
+    height: 200%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,0.2),
+        transparent
+    );
+    transform: skewX(-25deg);
+    transition: left 0.5s;
+}
+
+.btn-shine:hover::after {
+    left: 150%;
+}
+
+/* Section spacing */
+.section-py {
+    @apply py-16 md:py-24 lg:py-32;
+}
+
+/* Focus ring */
+.focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
 }

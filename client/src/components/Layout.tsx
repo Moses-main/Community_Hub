@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { LocationMap } from "@/components/LocationMap";
 
 interface LayoutProps {
   children: ReactNode;
@@ -9,10 +8,9 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="flex flex-col min-h-screen w-full">
+    <div className="flex flex-col min-h-screen w-full bg-white">
       <Navbar />
       <main className="flex-1 w-full">{children}</main>
-      <LocationMap className="bg-gray-50" />
       <Footer />
     </div>
   );

@@ -5,9 +5,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, User, Church } from "lucide-react";
+import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
@@ -27,34 +28,31 @@ export function Navbar() {
   const isActive = (path: string) => location === path;
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border">
-      <div className="container mx-auto px-4 h-20 flex items-center justify-between">
+    <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-lg border-b border-gray-100/50 shadow-sm">
+      <div className="container mx-auto px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
+        {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 font-display font-bold text-xl tracking-tight"
+          className="flex items-center gap-3 font-display font-bold text-xl tracking-tight"
         >
-          <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-            <img
-            src="/church_logo.jpeg"
-            alt="Worship Background"
-            className="w-full h-full rounded-full object-cover"
-          />
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-primary flex items-center justify-center text-white shadow-lg shadow-primary/25">
+            <span className="text-lg md:text-xl font-bold">W</span>
           </div>
-          <span>
+          <span className="hidden sm:inline">
             WCCRM<span className="text-primary"> Lagos</span>
           </span>
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`text-sm font-medium transition-colors hover:text-primary hover:border hover:border-black/30 hover:p-3 hover:rounded-lg transition-all duration-300 px-3 py-3 ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 isActive(link.href)
-                  ? "text-primary font-semibold"
-                  : "text-muted-foreground"
+                  ? "text-primary bg-primary/5"
+                  : "text-gray-600 hover:text-primary hover:bg-gray-50"
               }`}
             >
               {link.label}
@@ -63,69 +61,97 @@ export function Navbar() {
         </div>
 
         {/* User / Mobile Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <User className="h-5 w-5" />
+                <Button variant="ghost" className="flex items-center gap-2 px-2 py-1.5 h-auto rounded-full hover:bg-gray-100">
+                  <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold">
+                    {user.firstName ? user.firstName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="hidden lg:inline text-sm font-medium">
+                    {user.firstName || user.email.split('@')[0]}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="font-semibold">
-                  {user.firstName ? `Hi, ${user.firstName}` : user.email}
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-3 py-2 border-b">
+                  <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
+                </div>
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href="/dashboard" className="flex items-center gap-2">
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard
+                  </Link>
                 </DropdownMenuItem>
-                {user.isAdmin ? (
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin">Admin Dashboard</Link>
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">Dashboard</Link>
+                {user.isAdmin && (
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/admin" className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Admin Dashboard
+                    </Link>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={() => logout()}>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => logout()} className="text-red-600 cursor-pointer">
+                  <LogOut className="w-4 h-4 mr-2" />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="hidden md:flex"
-            >
-              <Link href="/login">Sign In</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="hidden md:flex text-gray-600 hover:text-primary"
+              >
+                <Link href="/login">Sign In</Link>
+              </Button>
+              <Button
+                asChild
+                size="sm"
+                className="rounded-full px-6 bg-gradient-primary hover:opacity-90 shadow-lg shadow-primary/25"
+              >
+                <Link href="/login">Get Started</Link>
+              </Button>
+            </div>
           )}
 
           {/* Mobile Menu */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button variant="ghost" size="icon" className="md:hidden rounded-full">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent>
-              <div className="flex flex-col gap-4 mt-8">
+              <div className="flex flex-col gap-2 mt-8">
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`text-lg font-medium p-2 rounded-md transition-colors ${
+                    className={`text-lg font-medium p-3 rounded-xl transition-colors ${
                       isActive(link.href)
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:bg-secondary/50"
+                        ? "bg-primary/10 text-primary"
+                        : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     {link.label}
                   </Link>
                 ))}
                 {!user && (
-                  <Button asChild className="w-full mt-4">
-                    <a href={buildApiUrl(apiRoutes.auth.login)}>Sign In</a>
-                  </Button>
+                  <div className="flex flex-col gap-2 mt-4 pt-4 border-t">
+                    <Button asChild variant="outline" className="w-full rounded-xl">
+                      <Link href="/login">Sign In</Link>
+                    </Button>
+                    <Button asChild className="w-full rounded-xl bg-gradient-primary">
+                      <Link href="/login">Get Started</Link>
+                    </Button>
+                  </div>
                 )}
               </div>
             </SheetContent>
