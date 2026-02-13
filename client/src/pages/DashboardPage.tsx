@@ -3,7 +3,7 @@ import { useMyPrayerRequests } from "@/hooks/use-prayer";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Calendar, Shield, Heart, Loader2 } from "lucide-react";
+import { User, Mail, Calendar, Shield, Heart, Loader2, Phone, MapPin, Home } from "lucide-react";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 
@@ -77,6 +77,27 @@ export default function DashboardPage() {
                   <p className="font-medium">{user.email}</p>
                 </div>
               </div>
+              <div className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p className="font-medium">{user.phone || "Not set"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Address</p>
+                  <p className="font-medium">{user.address || "Not set"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Home className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">House Fellowship</p>
+                  <p className="font-medium">{user.houseFellowship || "Not set"}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -91,13 +112,6 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Shield className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Role</p>
-                  <p className="font-medium">{user.isAdmin ? "Administrator" : "Member"}</p>
-                </div>
-              </div>
               <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>

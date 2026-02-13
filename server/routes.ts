@@ -197,6 +197,10 @@ export async function registerRoutes(
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
+      address: user.address,
+      houseFellowship: user.houseFellowship,
+      role: user.role,
       createdAt: user.createdAt,
       isAdmin: user.email === 'admin@wccrm.com'
     })));
@@ -214,10 +218,65 @@ export async function registerRoutes(
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
+      address: user.address,
+      houseFellowship: user.houseFellowship,
+      role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       isAdmin: user.email === 'admin@wccrm.com'
     });
+  });
+
+  // Update user role (admin only)
+  app.put("/api/admin/users/:id/role", isAuthenticated, isAdmin, async (req, res) => {
+    const userId = req.params.id;
+    const { role } = req.body;
+    
+    if (!role) {
+      return res.status(400).json({ message: "Role is required" });
+    }
+
+    const validRoles = [
+      'USER', 'ADMIN', 'PASTOR', 'PASTORS_WIFE', 'CHILDREN_LEADER',
+      'CHOIRMASTER', 'CHORISTER', 'SOUND_EQUIPMENT', 'SECURITY',
+      'USHERS_LEADER', 'USHER', 'SUNDAY_SCHOOL_TEACHER', 'CELL_LEADER',
+      'PRAYER_TEAM', 'FINANCE_TEAM', 'TECH_TEAM', 'DECOR_TEAM', 'EVANGELISM_TEAM'
+    ];
+
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await storage.updateUserRole(userId, role);
+    res.json({ message: "Role updated successfully" });
+  });
+
+  // Update user profile (admin only)
+  app.put("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    const userId = req.params.id;
+    const { firstName, lastName, phone, address, houseFellowship } = req.body;
+    
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await storage.updateUser(userId, {
+      firstName: firstName ?? user.firstName,
+      lastName: lastName ?? user.lastName,
+      phone: phone ?? user.phone,
+      address: address ?? user.address,
+      houseFellowship: houseFellowship ?? user.houseFellowship,
+    });
+
+    const updatedUser = await storage.getUserById(userId);
+    res.json(updatedUser);
   });
 
   // === APP ROUTES ===

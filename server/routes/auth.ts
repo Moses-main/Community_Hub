@@ -22,6 +22,9 @@ const signupSchema = z.object({
   password: z.string().min(6),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  houseFellowship: z.string().optional(),
 });
 
 // Signup
@@ -30,7 +33,7 @@ router.post('/signup', async (req, res) => {
     logger.info('Signup request received', { email: req.body.email });
     
     // Validate request body
-    const { email, password, firstName, lastName } = signupSchema.parse(req.body);
+    const { email, password, firstName, lastName, phone, address, houseFellowship } = signupSchema.parse(req.body);
     
     logger.debug('Signup form validated', { email, firstName });
     
@@ -51,7 +54,10 @@ router.post('/signup', async (req, res) => {
       email,
       passwordHash,
       firstName,
-      lastName
+      lastName,
+      phone,
+      address,
+      houseFellowship
     });
     
     logger.info('User created successfully', { userId: user.id, email });
@@ -193,6 +199,10 @@ router.post('/login', async (req, res) => {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
+      address: user.address,
+      houseFellowship: user.houseFellowship,
+      role: user.role,
       isVerified: user.isVerified,
       isAdmin: user.email === 'admin@wccrm.com'
     });
@@ -226,6 +236,10 @@ router.get('/user', async (req, res) => {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
+      address: user.address,
+      houseFellowship: user.houseFellowship,
+      role: user.role,
       isVerified: user.isVerified,
       isAdmin: user.email === 'admin@wccrm.com'
     });

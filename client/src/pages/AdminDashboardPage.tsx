@@ -11,17 +11,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart } from "lucide-react";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
-import type { Event, Sermon, InsertEvent, InsertSermon } from "@/types/api";
+import type { Event, Sermon, InsertEvent, InsertSermon, UserRole } from "@/types/api";
+import { USER_ROLES } from "@/types/api";
 
 interface AdminUser {
-  id: number;
+  id: string;
   email: string;
   firstName?: string;
   lastName?: string;
+  phone?: string;
+  address?: string;
+  houseFellowship?: string;
+  role?: UserRole;
   createdAt: string;
   isAdmin: boolean;
 }
@@ -221,6 +227,26 @@ export default function AdminDashboardPage() {
     },
   });
 
+  const updateUserRole = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: UserRole }) => {
+      const res = await fetch(buildApiUrl(`/api/admin/users/${userId}/role`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update user role");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Role updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update role", variant: "destructive" });
+    },
+  });
+
   const { data: branding, isLoading: isBrandingLoading } = useBranding();
   const updateBranding = useMutation({
     mutationFn: async (data: Partial<Branding>) => {
@@ -334,11 +360,26 @@ export default function AdminDashboardPage() {
                               {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
                             </td>
                             <td className="py-3 px-4">
-                              {u.isAdmin ? (
-                                <Badge className="bg-primary">Admin</Badge>
-                              ) : (
-                                <Badge variant="secondary">Member</Badge>
-                              )}
+                              <Select
+                                value={u.role || 'USER'}
+                                onValueChange={(value) => {
+                                  if (value !== u.role) {
+                                    updateUserRole.mutate({ userId: u.id, role: value as UserRole });
+                                  }
+                                }}
+                                disabled={updateUserRole.isPending}
+                              >
+                                <SelectTrigger className="w-[180px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {USER_ROLES.map((role) => (
+                                    <SelectItem key={role.value} value={role.value}>
+                                      {role.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </td>
                           </tr>
                         ))}

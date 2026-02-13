@@ -1,12 +1,65 @@
 // Client-side API types (without server dependencies)
+export type UserRole = 
+  | 'USER' 
+  | 'ADMIN' 
+  | 'PASTOR' 
+  | 'PASTORS_WIFE' 
+  | 'CHILDREN_LEADER' 
+  | 'CHOIRMASTER' 
+  | 'CHORISTER' 
+  | 'SOUND_EQUIPMENT' 
+  | 'SECURITY' 
+  | 'USHERS_LEADER' 
+  | 'USHER' 
+  | 'SUNDAY_SCHOOL_TEACHER' 
+  | 'CELL_LEADER' 
+  | 'PRAYER_TEAM' 
+  | 'FINANCE_TEAM' 
+  | 'TECH_TEAM' 
+  | 'DECOR_TEAM' 
+  | 'EVANGELISM_TEAM';
+
+export const USER_ROLES: { value: UserRole; label: string }[] = [
+  { value: 'USER', label: 'Member' },
+  { value: 'ADMIN', label: 'Admin' },
+  { value: 'PASTOR', label: 'Pastor' },
+  { value: 'PASTORS_WIFE', label: "Pastor's Wife" },
+  { value: 'CHILDREN_LEADER', label: 'Children Leader' },
+  { value: 'CHOIRMASTER', label: 'Choirmaster' },
+  { value: 'CHORISTER', label: 'Chorister' },
+  { value: 'SOUND_EQUIPMENT', label: 'Sound Equipment' },
+  { value: 'SECURITY', label: 'Security' },
+  { value: 'USHERS_LEADER', label: 'Ushers Leader' },
+  { value: 'USHER', label: 'Usher' },
+  { value: 'SUNDAY_SCHOOL_TEACHER', label: 'Sunday School Teacher' },
+  { value: 'CELL_LEADER', label: 'Cell Leader' },
+  { value: 'PRAYER_TEAM', label: 'Prayer Team' },
+  { value: 'FINANCE_TEAM', label: 'Finance Team' },
+  { value: 'TECH_TEAM', label: 'Tech Team' },
+  { value: 'DECOR_TEAM', label: 'Decor Team' },
+  { value: 'EVANGELISM_TEAM', label: 'Evangelism Team' },
+];
+
 export interface User {
   id: string;
   email: string;
   firstName?: string;
   lastName?: string;
+  phone?: string;
+  address?: string;
+  houseFellowship?: string;
+  role?: UserRole;
   isAdmin?: boolean;
   isVerified?: boolean;
   createdAt?: string;
+}
+
+export interface UpdateUserProfile {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  address?: string;
+  houseFellowship?: string;
 }
 
 export interface Event {

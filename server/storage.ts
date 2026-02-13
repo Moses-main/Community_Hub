@@ -10,7 +10,9 @@ export interface IStorage {
   // Users
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: { email: string; passwordHash: string; firstName: string; lastName: string }): Promise<User>;
+  createUser(user: { email: string; passwordHash: string; firstName: string; lastName: string; phone?: string; address?: string; houseFellowship?: string }): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User>;
+  updateUserRole(id: string, role: string): Promise<User>;
   getAllUsers(): Promise<User[]>;
 
   // Branding
@@ -54,12 +56,15 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(userData: { email: string; passwordHash: string; firstName: string; lastName: string }): Promise<User> {
+  async createUser(userData: { email: string; passwordHash: string; firstName: string; lastName: string; phone?: string; address?: string; houseFellowship?: string }): Promise<User> {
     const [user] = await db.insert(users).values({
       email: userData.email,
       passwordHash: userData.passwordHash,
       firstName: userData.firstName,
       lastName: userData.lastName,
+      phone: userData.phone,
+      address: userData.address,
+      houseFellowship: userData.houseFellowship,
     }).returning();
     return user;
   }
@@ -74,6 +79,15 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserRole(id: string, role: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ role: role as any, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
     return user;
