@@ -77,7 +77,7 @@ export function Navbar() {
                   <ChevronDown className="w-4 h-4 text-gray-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-56 z-50 bg-white border-gray-200 shadow-xl">
                 <div className="px-3 py-2 border-b">
                   <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
                   <p className="text-xs text-gray-500">{user.email}</p>
