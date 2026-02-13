@@ -73,8 +73,34 @@ export const donationsRelations = relations(donations, ({ one }) => ({
 
 // === BASE SCHEMAS ===
 export const insertBrandingSchema = createInsertSchema(branding).omit({ id: true });
-export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
-export const insertSermonSchema = createInsertSchema(sermons).omit({ id: true, createdAt: true });
+
+// Custom event schema that accepts string dates and converts to Date
+export const insertEventSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1),
+  date: z.string().datetime(),
+  location: z.string().min(1),
+  imageUrl: z.string().optional(),
+}).transform(data => ({
+  ...data,
+  date: new Date(data.date),
+}));
+
+// Custom sermon schema that accepts string dates and converts to Date
+export const insertSermonSchema = z.object({
+  title: z.string().min(1),
+  speaker: z.string().min(1),
+  date: z.string().datetime(),
+  videoUrl: z.string().optional(),
+  audioUrl: z.string().optional(),
+  series: z.string().optional(),
+  description: z.string().optional(),
+  thumbnailUrl: z.string().optional(),
+}).transform(data => ({
+  ...data,
+  date: new Date(data.date),
+}));
+
 export const insertPrayerRequestSchema = createInsertSchema(prayerRequests).omit({ id: true, createdAt: true, prayCount: true });
 export const insertDonationSchema = createInsertSchema(donations).omit({ id: true, createdAt: true });
 

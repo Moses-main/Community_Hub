@@ -10,7 +10,9 @@ import { HelmetProvider } from "react-helmet-async";
 // Pages
 import HomePage from "@/pages/HomePage";
 import SermonsPage from "@/pages/SermonsPage";
+import SermonDetailPage from "@/pages/SermonDetailPage";
 import EventsPage from "@/pages/EventsPage";
+import EventDetailPage from "@/pages/EventDetailPage";
 import PrayerPage from "@/pages/PrayerPage";
 import GivePage from "@/pages/GivePage";
 import AuthPage from "@/pages/login"; // This is our combined auth page
@@ -24,7 +26,9 @@ function Router() {
     <Switch>
       <Route path="/" component={HomePage} />
       <Route path="/sermons" component={SermonsPage} />
+      <Route path="/sermons/:id" component={SermonDetailPage} />
       <Route path="/events" component={EventsPage} />
+      <Route path="/events/:id" component={EventDetailPage} />
       <Route path="/prayer" component={PrayerPage} />
       <Route path="/give" component={GivePage} />
       {/* Auth routes */}
