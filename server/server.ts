@@ -1,6 +1,7 @@
 import express, { type Express, type Request, type Response, type NextFunction } from 'express';
 import { createServer, type Server as HttpServer } from 'http';
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
 import { storage } from './storage';
 import { api as authRouter } from './routes/auth';
 import { z } from 'zod';
@@ -83,7 +84,34 @@ export const createApp = (): { app: Express; httpServer: HttpServer } => {
   const app = express();
   const httpServer = createServer(app);
 
-  // Middleware
+  // Enable pre-flight requests for all routes
+  app.options('*', cors());
+
+  // Configure CORS with specific options
+  const corsOptions = {
+    origin: process.env.NODE_ENV === 'production' 
+      ? process.env.APP_URL 
+      : 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
+  };
+
+  // Apply CORS with the specified options
+  app.use(cors(corsOptions));
+  
+  // Handle preflight requests
+  app.use((req, res, next) => {
+    if (req.method === 'OPTIONS') {
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      return res.status(200).end();
+    }
+    next();
+  });
+  
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());

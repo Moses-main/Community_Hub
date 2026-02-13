@@ -1,3 +1,7 @@
+import { IoMdClock } from "react-icons/io";
+import { BiSolidCarGarage } from "react-icons/bi";
+
+
 interface LocationMapProps {
   className?: string;
 }
@@ -71,7 +75,7 @@ export function LocationMap({ className = "" }: LocationMapProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-primary text-xl">🕐</span>
+              <IoMdClock size={32}/>
             </div>
             <h4 className="font-semibold mb-2">Service Times</h4>
             <p className="text-sm text-muted-foreground">
@@ -83,7 +87,7 @@ export function LocationMap({ className = "" }: LocationMapProps) {
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-primary text-xl">🚗</span>
+              <BiSolidCarGarage size={32}/>
             </div>
             <h4 className="font-semibold mb-2">Parking</h4>
             <p className="text-sm text-muted-foreground">
@@ -99,9 +103,8 @@ export function LocationMap({ className = "" }: LocationMapProps) {
             </div>
             <h4 className="font-semibold mb-2">First Time?</h4>
             <p className="text-sm text-muted-foreground">
-              New visitor parking available
-              <br />
-              Welcome desk for assistance
+              New visitor are highly welcomed
+            
             </p>
           </div>
         </div>

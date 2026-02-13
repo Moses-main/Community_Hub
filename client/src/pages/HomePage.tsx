@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { SermonCard } from "@/components/SermonCard";
 import { EventCard } from "@/components/EventCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FaPray } from "react-icons/fa";
+import { FaHandHoldingHeart } from "react-icons/fa";
+
 
 export default function HomePage() {
   const { data: sermons, isLoading: loadingSermons } = useSermons();
@@ -27,12 +30,12 @@ export default function HomePage() {
             alt="Worship Background"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-black/30" />
+          {/* <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-black/30" /> */}
         </div>
 
         <div className="container relative z-10 px-4 text-center">
           <h1 className="font-display font-bold text-5xl md:text-7xl lg:text-8xl tracking-tighter text-white mb-6 drop-shadow-sm">
-            Welcome <span className="text-primary-foreground">Home</span>
+            Welcome
           </h1>
           <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto mb-10 font-light leading-relaxed">
             A place to belong, believe, and become who God created you to be.
@@ -144,7 +147,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-primary/5 rounded-3xl p-10 flex flex-col items-center text-center border border-primary/10">
             <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-6">
-              <Heart size={32} />
+              <FaPray size={32}/>
             </div>
             <h3 className="text-2xl font-display font-bold mb-3">
               Need Prayer?
@@ -160,7 +163,7 @@ export default function HomePage() {
 
           <div className="bg-accent/5 rounded-3xl p-10 flex flex-col items-center text-center border border-accent/10">
             <div className="w-16 h-16 rounded-full bg-accent/10 text-accent flex items-center justify-center mb-6">
-              <Heart size={32} />
+              <FaHandHoldingHeart size={32}/>
             </div>
             <h3 className="text-2xl font-display font-bold mb-3">
               Give Online
