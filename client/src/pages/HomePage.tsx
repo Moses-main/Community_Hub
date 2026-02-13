@@ -184,10 +184,9 @@ export default function HomePage() {
       </section>
 
       {/* Call to Action - Prayer & Giving */}
-      <section className="section-py bg-white">
+      {/* <section className="section-py bg-white">
         <div className="container px-4 md:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Prayer Card */}
             <div className="border border-gray-100 rounded-2xl p-8 hover:shadow-lg transition-shadow">
               <div className="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center mb-5">
                 <FaPray className="w-6 h-6 text-purple-600" />
@@ -203,7 +202,6 @@ export default function HomePage() {
               </Button>
             </div>
 
-            {/* Giving Card */}
             <div className="border border-gray-100 rounded-2xl p-8 hover:shadow-lg transition-shadow">
               <div className="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center mb-5">
                 <FaHandHoldingHeart className="w-6 h-6 text-purple-600" />
@@ -220,7 +218,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Features / Ministries Preview */}
       <section className="section-py bg-gray-50/50">
