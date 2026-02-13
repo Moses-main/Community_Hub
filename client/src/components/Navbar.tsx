@@ -28,13 +28,17 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-4 h-20 flex items-center justify-between">
         <Link
           href="/"
           className="flex items-center gap-2 font-display font-bold text-xl tracking-tight"
         >
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
-            <Church size={20} />
+          <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+            <img
+            src="/public/church_logo.jpeg"
+            alt="Worship Background"
+            className="w-full h-full rounded-full object-cover"
+          />
           </div>
           <span>
             WCCRM<span className="text-primary"> Lagos</span>
@@ -47,7 +51,7 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
+              className={`text-sm font-medium transition-colors hover:text-primary hover:border hover:border-black/30 hover:p-3 hover:rounded-lg transition-all duration-300 px-3 py-3 ${
                 isActive(link.href)
                   ? "text-primary font-semibold"
                   : "text-muted-foreground"

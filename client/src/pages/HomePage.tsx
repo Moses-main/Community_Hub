@@ -21,7 +21,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col gap-16 md:gap-24 pb-20">
       {/* Hero Section */}
-      <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           {/* Unsplash: Modern church worship atmosphere */}
@@ -43,7 +43,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               size="lg"
-              className="text-lg px-8 py-6 rounded-full shadow-xl hover:scale-105 transition-transform"
+              className="text-lg px-10 py-6 rounded-full shadow-xl hover:scale-105 transition-transform"
             >
               Plan a Visit
             </Button>
@@ -70,7 +70,7 @@ export default function HomePage() {
               Watch or listen to recent sermons
             </p>
           </div>
-          <Button variant="ghost" asChild className="hidden md:flex gap-2">
+          <Button variant="ghost" asChild  className="hidden border-gray/60 hover:bg-black/10 md:flex gap-2">
             <Link href="/sermons">
               View Archive <ArrowRight size={16} />
             </Link>
@@ -110,7 +110,7 @@ export default function HomePage() {
                 Join us for fellowship and growth
               </p>
             </div>
-            <Button variant="ghost" asChild className="hidden md:flex gap-2">
+            <Button variant="ghost" asChild className="hidden md:flex gap-2 border-gray/60 hover:bg-black/10">
               <Link href="/events">
                 Full Calendar <Calendar size={16} />
               </Link>
