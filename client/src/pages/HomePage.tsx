@@ -20,7 +20,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero Section - Clean white like Copperx with church background */}
-      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[85vh] h-screen  flex items-center justify-center overflow-hidden">
         {/* Church background image */}
         <div className="absolute inset-0">
           <img 
@@ -250,6 +250,51 @@ export default function HomePage() {
               title="Prayer Ministry"
               description="Join our prayer team and experience the power of prayer"
             />
+          </div>
+        </div>
+      </section>
+
+      {/* Church Building Section */}
+      <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0">
+          <img 
+            src="/church_building.avif" 
+            alt="WCCRM Lagos Church Building" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
+        
+        <div className="container relative z-10 px-4 md:px-8">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="font-display font-bold text-4xl md:text-5xl text-white mb-6">
+              Visit Us This Sunday
+            </h2>
+            <p className="text-xl text-white/90 mb-8 leading-relaxed">
+              We welcome you to join us for worship, fellowship, and community. 
+              Experience the warmth of God's love at WCCRM Lagos.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                asChild
+                size="lg"
+                className="text-lg px-8 py-6 rounded-lg bg-white text-gray-900 hover:bg-gray-100"
+              >
+                <Link href="/events">
+                  Service Times <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="text-lg px-8 py-6 rounded-lg border-white text-white bg-transparent hover:bg-white/10"
+              >
+                <Link href="/contact">
+                  Get Directions
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
