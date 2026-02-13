@@ -89,7 +89,7 @@ export default function HomePage() {
       </section>
 
       {/* Upcoming Events Section */}
-      <section className="section-py bg-gradient-to-b from-white to-gray-50">
+      <section className="section-py bg-white">
         <div className="container px-4 md:px-8">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
             <div>
@@ -124,8 +124,8 @@ export default function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-16 bg-gray-50 rounded-2xl">
-              <Calendar className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+            <div className="text-center py-16 border border-gray-100 rounded-2xl">
+              <Calendar className="h-16 w-16 mx-auto text-gray-200 mb-4" />
               <p className="text-gray-500 text-lg">No upcoming events at this time.</p>
               <Button variant="ghost" asChild className="mt-4">
                 <Link href="/events"><span>View Past Events</span></Link>
@@ -136,7 +136,7 @@ export default function HomePage() {
       </section>
 
       {/* Latest Sermons Section */}
-      <section className="section-py bg-white">
+      <section className="section-py bg-gray-50/50">
         <div className="container px-4 md:px-8">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
             <div>
@@ -180,41 +180,37 @@ export default function HomePage() {
       </section>
 
       {/* Call to Action - Prayer & Giving */}
-      <section className="section-py bg-gradient-to-br from-primary via-purple-700 to-primary relative overflow-hidden">
-        <div className="absolute inset-0 hero-pattern opacity-30" />
-        <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl" />
-        
-        <div className="container px-4 md:px-8 relative z-10">
+      <section className="section-py bg-white">
+        <div className="container px-4 md:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* Prayer Card */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20">
-              <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mb-6">
-                <FaPray className="w-8 h-8 text-white" />
+            <div className="border border-gray-100 rounded-2xl p-8 hover:shadow-lg transition-shadow">
+              <div className="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center mb-5">
+                <FaPray className="w-6 h-6 text-purple-600" />
               </div>
-              <h3 className="text-2xl font-display font-bold text-white mb-3">
+              <h3 className="text-xl font-display font-bold text-gray-900 mb-3">
                 Need Prayer?
               </h3>
-              <p className="text-white/80 mb-6">
+              <p className="text-gray-500 mb-6">
                 We believe in the power of prayer. Share your request and let our community stand with you.
               </p>
-              <Button asChild variant="secondary" className="rounded-full px-8">
+              <Button asChild variant="outline" className="rounded-lg px-6">
                 <Link href="/prayer">Share Request</Link>
               </Button>
             </div>
 
             {/* Giving Card */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20">
-              <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mb-6">
-                <FaHandHoldingHeart className="w-8 h-8 text-white" />
+            <div className="border border-gray-100 rounded-2xl p-8 hover:shadow-lg transition-shadow">
+              <div className="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center mb-5">
+                <FaHandHoldingHeart className="w-6 h-6 text-purple-600" />
               </div>
-              <h3 className="text-2xl font-display font-bold text-white mb-3">
+              <h3 className="text-xl font-display font-bold text-gray-900 mb-3">
                 Give Online
               </h3>
-              <p className="text-white/80 mb-6">
+              <p className="text-gray-500 mb-6">
                 Support the mission and ministry of WCCRM Lagos through generous giving.
               </p>
-              <Button asChild className="rounded-full px-8 bg-amber-500 hover:bg-amber-400 text-white">
+              <Button asChild className="rounded-lg px-6 bg-purple-600 hover:bg-purple-700">
                 <Link href="/give">Give Now</Link>
               </Button>
             </div>
@@ -223,7 +219,7 @@ export default function HomePage() {
       </section>
 
       {/* Features / Ministries Preview */}
-      <section className="section-py bg-gray-50">
+      <section className="section-py bg-gray-50/50">
         <div className="container px-4 md:px-8">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">
@@ -262,8 +258,8 @@ function EventCard({ event }: { event: any }) {
   
   return (
     <Link href={`/events/${event.id}`}>
-      <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 bg-white">
-        <div className="aspect-[4/3] relative bg-gray-100">
+      <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border border-gray-100 bg-white">
+        <div className="aspect-[4/3] relative bg-gray-50">
           {event.imageUrl ? (
             <img 
               src={event.imageUrl} 
@@ -271,24 +267,24 @@ function EventCard({ event }: { event: any }) {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-purple-50">
-              <Calendar className="h-12 w-12 text-primary/30" />
+            <div className="w-full h-full flex items-center justify-center">
+              <Calendar className="h-12 w-12 text-gray-200" />
             </div>
           )}
-          <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl text-center shadow-lg">
-            <div className="text-xs font-bold uppercase text-primary">{format(eventDate, "MMM")}</div>
-            <div className="text-2xl font-display font-bold leading-none">{format(eventDate, "dd")}</div>
+          <div className="absolute top-3 left-3 bg-white px-3 py-2 rounded-lg text-center shadow-sm border border-gray-100">
+            <div className="text-xs font-semibold uppercase text-gray-500">{format(eventDate, "MMM")}</div>
+            <div className="text-xl font-bold text-gray-900 leading-none">{format(eventDate, "dd")}</div>
           </div>
         </div>
-        <CardContent className="p-5">
-          <h3 className="font-display font-bold text-lg mb-2 line-clamp-1">{event.title}</h3>
-          <div className="space-y-2 text-sm text-gray-500">
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-1">{event.title}</h3>
+          <div className="space-y-1 text-sm text-gray-500">
             <div className="flex items-center gap-2">
-              <Clock size={14} className="text-primary" />
+              <Clock size={14} />
               <span>{format(eventDate, "EEEE, h:mm a")}</span>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin size={14} className="text-primary" />
+              <MapPin size={14} />
               <span className="line-clamp-1">{event.location}</span>
             </div>
           </div>
@@ -303,38 +299,38 @@ function SermonCard({ sermon }: { sermon: any }) {
   
   return (
     <Link href={`/sermons/${sermon.id}`}>
-      <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 bg-white">
-        <div className="aspect-video relative bg-gray-100 group">
+      <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border border-gray-100 bg-white">
+        <div className="aspect-video relative bg-gray-50 group">
           {sermon.thumbnailUrl ? (
             <img 
               src={sermon.thumbnailUrl} 
               alt={sermon.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-purple-50">
-              <Play className="h-12 w-12 text-primary/30" />
+            <div className="w-full h-full flex items-center justify-center">
+              <Play className="h-10 w-10 text-gray-200" />
             </div>
           )}
           {sermon.videoUrl && (
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-              <div className="w-16 h-16 rounded-full bg-white/95 flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
-                <Play className="h-6 w-6 text-primary ml-1" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow">
+                <Play className="h-4 w-4 text-gray-900 ml-0.5" />
               </div>
             </div>
           )}
         </div>
-        <CardContent className="p-5">
+        <CardContent className="p-4">
           {sermon.series && (
-            <p className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">
+            <p className="text-xs font-medium text-purple-600 mb-1.5">
               {sermon.series}
             </p>
           )}
-          <h3 className="font-display font-bold text-lg mb-2 line-clamp-2">{sermon.title}</h3>
+          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{sermon.title}</h3>
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span className="font-medium">{sermon.speaker}</span>
-            <span>•</span>
-            <span>{format(sermonDate, "MMM d, yyyy")}</span>
+            <span>{sermon.speaker}</span>
+            <span>·</span>
+            <span>{format(sermonDate, "MMM d")}</span>
           </div>
         </CardContent>
       </Card>
@@ -344,13 +340,13 @@ function SermonCard({ sermon }: { sermon: any }) {
 
 function MinistryCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-      <CardContent className="p-8 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-purple-50 flex items-center justify-center mx-auto mb-5 text-primary">
+    <Card className="bg-white border border-gray-100 hover:shadow-lg transition-all duration-200">
+      <CardContent className="p-6 text-center">
+        <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center mx-auto mb-4 text-purple-600">
           {icon}
         </div>
-        <h3 className="font-display font-bold text-xl mb-3">{title}</h3>
-        <p className="text-gray-500">{description}</p>
+        <h3 className="font-semibold text-gray-900 mb-2">{title}</h3>
+        <p className="text-gray-500 text-sm">{description}</p>
       </CardContent>
     </Card>
   );

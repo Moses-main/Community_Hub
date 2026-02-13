@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Inter:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -8,28 +8,27 @@
     --font-display: "DM Sans", sans-serif;
     --font-body: "Inter", sans-serif;
 
-    /* Modern Vibrant Church Palette - Inspired by modern SaaS design */
-    /* Using a warm, welcoming palette with purple/gold accents */
+    /* Clean White Background - SaaS Style like Copperx */
     
-    /* Background & Foreground */
+    /* Background & Foreground - Pure white */
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
 
-    /* Primary - Rich Purple (spiritual, modern) */
+    /* Primary - Clean Purple */
     --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 262 83% 48%;
+    --primary-light: 262 83% 95%;
     
     /* Secondary */
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
 
     /* Muted */
-    --muted: 210 40% 96%;
+    --muted: 210 40% 97%;
     --muted-foreground: 215 16% 47%;
 
-    /* Accent - Gold/Amber (warmth, welcome) */
-    --accent: 38 92% 50%;
+    /* Accent */
+    --accent: 262 83% 58%;
     --accent-foreground: 0 0% 100%;
     
     /* Success, Warning, Error */
@@ -37,9 +36,9 @@
     --warning: 38 92% 50%;
     --error: 0 84% 60%;
 
-    /* Borders */
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    /* Borders - Subtle gray */
+    --border: 214 14% 86%;
+    --input: 214 14% 90%;
     --ring: 262 83% 58%;
 
     /* Cards */
@@ -48,36 +47,26 @@
     
     /* Radius */
     --radius: 0.75rem;
-    
-    /* Shadows - Modern soft shadows */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
 .dark {
-    --background: 222 47% 11%;
+    --background: 222 47% 8%;
     --foreground: 210 40% 98%;
 
-    --primary: 262 83% 58%;
+    --primary: 262 83% 68%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 33% 17%;
+    --secondary: 217 33% 12%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 217 33% 12%;
+    --muted-foreground: 215 16% 65%;
 
-    --accent: 38 92% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 262 83% 58%;
+    --border: 217 25% 20%;
+    --input: 217 25% 20%;
+    --ring: 262 83% 68%;
     
-    --card: 222 47% 11%;
+    --card: 222 47% 10%;
     --card-foreground: 210 40% 98%;
 }
 
