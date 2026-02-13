@@ -42,18 +42,13 @@ export default function EventDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background pb-20">
-        <div className="relative h-[400px] bg-muted">
-          <Skeleton className="w-full h-full" />
-        </div>
-        <div className="container px-4 -mt-32 relative z-10">
-          <Card className="p-8">
-            <Skeleton className="h-10 w-2/3 mb-4" />
-            <Skeleton className="h-6 w-1/3 mb-6" />
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-full mb-2" />
-            <Skeleton className="h-4 w-2/3 mb-6" />
-          </Card>
+      <div className="min-h-screen bg-white">
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <Skeleton className="h-8 w-32 mb-8" />
+          <Skeleton className="h-16 w-2/3 mb-4" />
+          <Skeleton className="h-6 w-1/3 mb-8" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full mt-6 rounded-xl" />
         </div>
       </div>
     );
@@ -61,9 +56,9 @@ export default function EventDetailPage() {
 
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-background pb-20">
-        <div className="container px-4 py-20 text-center">
-          <h1 className="text-2xl font-bold mb-4">Event not found</h1>
+      <div className="min-h-screen bg-white">
+        <div className="max-w-5xl mx-auto px-4 py-20 text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Event not found</h1>
           <Button asChild>
             <Link href="/events">Back to Events</Link>
           </Button>
@@ -75,110 +70,100 @@ export default function EventDetailPage() {
   const eventDate = new Date(event.date);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Hero Image */}
-      <div className="relative h-[400px] bg-muted">
-        {event.imageUrl ? (
-          <img
-            src={event.imageUrl}
-            alt={event.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-secondary flex items-center justify-center">
-            <Calendar className="h-24 w-24 text-muted-foreground/20" />
+    <div className="min-h-screen bg-white">
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Back Button */}
+        <Link href="/events" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 mb-8">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Events
+        </Link>
+
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">{event.title}</h1>
+          <div className="flex flex-wrap gap-6 text-gray-500">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              <span>{format(eventDate, "EEEE, MMMM d, yyyy")}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              <span>{format(eventDate, "h:mm a")}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              <span>{event.location}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Image */}
+        {event.imageUrl && (
+          <div className="aspect-video rounded-xl overflow-hidden mb-8 bg-gray-50">
+            <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
-      </div>
-
-      <div className="container px-4 -mt-32 relative z-10">
-        {/* Back Button */}
-        <Button variant="ghost" asChild className="mb-6 text-white hover:text-white hover:bg-white/10">
-          <Link href="/events">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Events
-          </Link>
-        </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
+          {/* Description */}
           <div className="lg:col-span-2">
-            <Card className="p-8">
-              <h1 className="text-4xl font-display font-bold mb-6">{event.title}</h1>
-              
-              <div className="flex flex-wrap gap-6 text-muted-foreground mb-8">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <span className="font-medium">{format(eventDate, "EEEE, MMMM d, yyyy")}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-primary" />
-                  <span className="font-medium">{format(eventDate, "h:mm a")}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <span className="font-medium">{event.location}</span>
-                </div>
-              </div>
-
-              <div className="prose prose-lg max-w-none">
-                <h3 className="text-xl font-bold mb-4">About this event</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  {event.description}
-                </p>
-              </div>
+            <Card className="border border-gray-100">
+              <CardContent className="p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">About this event</h2>
+                <p className="text-gray-600 leading-relaxed">{event.description}</p>
+              </CardContent>
             </Card>
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            <Card className="p-6">
-              <h3 className="font-bold text-lg mb-4">Event Details</h3>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="font-medium">{format(eventDate, "MMMM d, yyyy")}</p>
-                    <p className="text-sm text-muted-foreground">{format(eventDate, "EEEE")}</p>
+          <div>
+            <Card className="border border-gray-100 sticky top-24">
+              <CardContent className="p-6">
+                <h3 className="font-semibold text-gray-900 mb-4">Event Details</h3>
+                <div className="space-y-4 mb-6">
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <Calendar className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">{format(eventDate, "MMMM d, yyyy")}</p>
+                      <p className="text-sm">{format(eventDate, "EEEE")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <Clock className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">{format(eventDate, "h:mm a")}</p>
+                      <p className="text-sm">West Africa Time</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <MapPin className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">Location</p>
+                      <p className="text-sm">{event.location}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="font-medium">{format(eventDate, "h:mm a")}</p>
-                    <p className="text-sm text-muted-foreground">West Africa Time (WAT)</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="font-medium">Location</p>
-                    <p className="text-sm text-muted-foreground">{event.location}</p>
-                  </div>
-                </div>
-              </div>
 
-              <div className="mt-6 space-y-3">
                 <Button 
                   onClick={handleRsvp} 
                   disabled={isPending}
-                  className="w-full"
+                  className="w-full bg-purple-600 hover:bg-purple-700"
                   size="lg"
                 >
                   {isPending ? "Confirming..." : "RSVP Now"}
                 </Button>
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1" size="lg">
-                    <Share2 className="mr-2 h-4 w-4" />
+                
+                <div className="flex gap-3 mt-3">
+                  <Button variant="outline" className="flex-1" size="sm">
+                    <Share2 className="w-4 h-4 mr-2" />
                     Share
                   </Button>
-                  <Button variant="outline" className="flex-1" size="lg">
-                    <CalendarPlus className="mr-2 h-4 w-4" />
+                  <Button variant="outline" className="flex-1" size="sm">
+                    <CalendarPlus className="w-4 h-4 mr-2" />
                     Add to Calendar
                   </Button>
                 </div>
-              </div>
+              </CardContent>
             </Card>
           </div>
         </div>

@@ -19,31 +19,29 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col">
-      {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-        {/* Background with gradient and pattern */}
-        <div className="absolute inset-0 hero-gradient hero-pattern" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/20" />
+      {/* Hero Section - Clean white like Copperx */}
+      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden bg-white">
+        {/* Subtle pattern */}
+        <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgb(0 0 0 / 0.03) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
         
-        {/* Floating elements */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-50/50 to-white" />
 
         <div className="container relative z-10 px-4 md:px-8">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm font-medium mb-6 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-50 text-purple-700 text-sm font-medium mb-6">
               <Sparkles className="w-4 h-4" />
               Welcome to WCCRM Lagos
             </div>
             
-            <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-white mb-6 leading-tight">
+            <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-gray-900 mb-6 leading-tight">
               Experience the
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-white to-amber-200">
+              <span className="block text-purple-600">
                 Power of Faith
               </span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto mb-10 font-light leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-500 max-w-2xl mx-auto mb-10 font-light leading-relaxed">
               Join a vibrant community dedicated to loving God, loving people, and making a difference in our city and beyond.
             </p>
             
@@ -51,7 +49,7 @@ export default function HomePage() {
               <Button
                 asChild
                 size="lg"
-                className="text-lg px-10 py-6 rounded-full bg-white text-primary hover:bg-white/90 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+                className="text-lg px-10 py-6 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors"
               >
                 <Link href="/events">
                   Plan a Visit <ArrowRight className="ml-2 w-5 h-5" />
@@ -61,7 +59,7 @@ export default function HomePage() {
                 asChild
                 size="lg"
                 variant="outline"
-                className="text-lg px-8 py-6 rounded-full bg-white/10 border-white/30 text-white hover:bg-white/20 hover:border-white/50 backdrop-blur-sm shadow-xl"
+                className="text-lg px-8 py-6 rounded-lg border-gray-200 text-gray-700 hover:bg-gray-50"
               >
                 <Link href="/sermons">
                   <Play className="mr-2 w-5 h-5" /> Watch Online
@@ -71,18 +69,18 @@ export default function HomePage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-16 pt-16 border-t border-white/20">
+          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-16 pt-16 border-t border-gray-100">
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-white mb-1">5000+</div>
-              <div className="text-sm text-white/70">Members</div>
+              <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">5000+</div>
+              <div className="text-sm text-gray-500">Members</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-white mb-1">15+</div>
-              <div className="text-sm text-white/70">Years Active</div>
+              <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">15+</div>
+              <div className="text-sm text-gray-500">Years Active</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-white mb-1">50+</div>
-              <div className="text-sm text-white/70">Ministries</div>
+              <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">50+</div>
+              <div className="text-sm text-gray-500">Ministries</div>
             </div>
           </div>
         </div>
