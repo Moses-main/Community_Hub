@@ -8,7 +8,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "$BACKEND_URL/api/$1"
+      "destination": "https://wccrm-backend.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",
