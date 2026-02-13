@@ -200,7 +200,9 @@ export async function registerRoutes(
       phone: user.phone,
       address: user.address,
       houseFellowship: user.houseFellowship,
+      parish: user.parish,
       role: user.role,
+      isVerified: user.isVerified,
       createdAt: user.createdAt,
       isAdmin: user.email === 'admin@wccrm.com'
     })));
@@ -221,7 +223,9 @@ export async function registerRoutes(
       phone: user.phone,
       address: user.address,
       houseFellowship: user.houseFellowship,
+      parish: user.parish,
       role: user.role,
+      isVerified: user.isVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       isAdmin: user.email === 'admin@wccrm.com'

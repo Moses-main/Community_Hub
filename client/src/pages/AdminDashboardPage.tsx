@@ -27,7 +27,9 @@ interface AdminUser {
   phone?: string;
   address?: string;
   houseFellowship?: string;
+  parish?: string;
   role?: UserRole;
+  isVerified?: boolean;
   createdAt: string;
   isAdmin: boolean;
 }
@@ -341,9 +343,12 @@ export default function AdminDashboardPage() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left py-3 px-4 font-medium">ID</th>
                           <th className="text-left py-3 px-4 font-medium">Name</th>
                           <th className="text-left py-3 px-4 font-medium">Email</th>
+                          <th className="text-left py-3 px-4 font-medium">Phone</th>
+                          <th className="text-left py-3 px-4 font-medium">Parish</th>
+                          <th className="text-left py-3 px-4 font-medium">House Fellowship</th>
+                          <th className="text-left py-3 px-4 font-medium">Verified</th>
                           <th className="text-left py-3 px-4 font-medium">Joined</th>
                           <th className="text-left py-3 px-4 font-medium">Role</th>
                         </tr>
@@ -351,17 +356,26 @@ export default function AdminDashboardPage() {
                       <tbody>
                         {users?.map((u) => (
                           <tr key={u.id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4 text-muted-foreground">#{u.id}</td>
                             <td className="py-3 px-4 font-medium">
                               {u.firstName ? `${u.firstName} ${u.lastName || ''}` : '-'}
                             </td>
                             <td className="py-3 px-4">{u.email}</td>
+                            <td className="py-3 px-4 text-muted-foreground">{u.phone || '-'}</td>
+                            <td className="py-3 px-4 text-muted-foreground">{u.parish || '-'}</td>
+                            <td className="py-3 px-4 text-muted-foreground">{u.houseFellowship || '-'}</td>
+                            <td className="py-3 px-4">
+                              {u.isVerified ? (
+                                <Badge className="bg-green-500">Verified</Badge>
+                              ) : (
+                                <Badge variant="secondary">Pending</Badge>
+                              )}
+                            </td>
                             <td className="py-3 px-4 text-muted-foreground">
                               {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
                             </td>
                             <td className="py-3 px-4">
                               <Select
-                                value={u.role || 'USER'}
+                                value={u.role || 'MEMBER'}
                                 onValueChange={(value) => {
                                   if (value !== u.role) {
                                     updateUserRole.mutate({ userId: u.id, role: value as UserRole });
@@ -369,7 +383,7 @@ export default function AdminDashboardPage() {
                                 }}
                                 disabled={updateUserRole.isPending}
                               >
-                                <SelectTrigger className="w-[180px]">
+                                <SelectTrigger className="w-[160px]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>

@@ -1,7 +1,8 @@
 import { pgTable, text, boolean, timestamp, uuid, pgEnum } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', [
-  'USER', 
+  'MEMBER', 
+  'USER',
   'ADMIN',
   'PASTOR',
   'PASTORS_WIFE',
@@ -30,13 +31,14 @@ export const users = pgTable('users', {
   phone: text('phone'),
   address: text('address'),
   houseFellowship: text('house_fellowship'),
+  parish: text('parish'),
   isAdmin: boolean('is_admin').default(false).notNull(),
   isVerified: boolean('is_verified').default(false).notNull(),
   verificationToken: text('verification_token'),
   verificationTokenExpires: timestamp('verification_token_expires'),
   resetPasswordToken: text('reset_password_token'),
   resetPasswordExpires: timestamp('reset_password_expires'),
-  role: userRoleEnum('role').default('USER').notNull(),
+  role: userRoleEnum('role').default('MEMBER').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

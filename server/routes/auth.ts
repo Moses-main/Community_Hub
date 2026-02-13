@@ -202,6 +202,7 @@ router.post('/login', async (req, res) => {
       phone: user.phone,
       address: user.address,
       houseFellowship: user.houseFellowship,
+      parish: user.parish,
       role: user.role,
       isVerified: user.isVerified,
       isAdmin: user.email === 'admin@wccrm.com'
@@ -239,12 +240,59 @@ router.get('/user', async (req, res) => {
       phone: user.phone,
       address: user.address,
       houseFellowship: user.houseFellowship,
+      parish: user.parish,
       role: user.role,
       isVerified: user.isVerified,
       isAdmin: user.email === 'admin@wccrm.com'
     });
   } catch (err) {
     res.status(401).json({ message: 'Invalid or expired token' });
+  }
+});
+
+// Update user profile
+router.put('/profile', async (req, res) => {
+  try {
+    const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, config.jwtSecret) as { userId: string };
+    const user = await storage.getUserById(decoded.userId);
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
+    const { firstName, lastName, phone, address, houseFellowship, parish } = req.body;
+
+    const updatedUser = await storage.updateUser(user.id, {
+      firstName: firstName ?? user.firstName,
+      lastName: lastName ?? user.lastName,
+      phone: phone ?? user.phone,
+      address: address ?? user.address,
+      houseFellowship: houseFellowship ?? user.houseFellowship,
+      parish: parish ?? user.parish,
+    });
+
+    res.json({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      phone: updatedUser.phone,
+      address: updatedUser.address,
+      houseFellowship: updatedUser.houseFellowship,
+      parish: updatedUser.parish,
+      role: updatedUser.role,
+      isVerified: updatedUser.isVerified,
+      isAdmin: updatedUser.email === 'admin@wccrm.com'
+    });
+  } catch (err) {
+    console.error('Profile update error:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 

@@ -1,15 +1,32 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMyPrayerRequests } from "@/hooks/use-prayer";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Calendar, Shield, Heart, Loader2, Phone, MapPin, Home } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { buildApiUrl } from "@/lib/api-config";
+import { User, Mail, Calendar, Shield, Heart, Loader2, Phone, MapPin, Home, Building, Edit } from "lucide-react";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 
 export default function DashboardPage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refetch } = useAuth();
   const { data: myPrayers, isLoading: isPrayersLoading } = useMyPrayerRequests();
+  const { toast } = useToast();
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    phone: user?.phone || "",
+    address: user?.address || "",
+    houseFellowship: user?.houseFellowship || "",
+    parish: (user as any)?.parish || "",
+  });
 
   if (isLoading) {
     return (
@@ -46,8 +63,111 @@ export default function DashboardPage() {
       </Helmet>
 
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">My Dashboard</h1>
-        <p className="text-muted-foreground mb-8">Welcome back, {user.firstName || user.email}!</p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">My Dashboard</h1>
+            <p className="text-muted-foreground">Welcome back, {user.firstName || user.email}!</p>
+          </div>
+          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Profile
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Profile</DialogTitle>
+                <DialogDescription>Update your personal information</DialogDescription>
+              </DialogHeader>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setIsUpdating(true);
+                  try {
+                    const res = await fetch(buildApiUrl("/api/auth/profile"), {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      credentials: "include",
+                      body: JSON.stringify(formData),
+                    });
+                    if (res.ok) {
+                      await refetch();
+                      setIsEditOpen(false);
+                      toast({ title: "Profile updated successfully" });
+                    } else {
+                      toast({ title: "Failed to update profile", variant: "destructive" });
+                    }
+                  } catch {
+                    toast({ title: "Error updating profile", variant: "destructive" });
+                  } finally {
+                    setIsUpdating(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="Enter your phone number"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Enter your address"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="parish">Parish</Label>
+                  <Input
+                    id="parish"
+                    value={formData.parish}
+                    onChange={(e) => setFormData({ ...formData, parish: e.target.value })}
+                    placeholder="Enter your parish"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="houseFellowship">House Fellowship</Label>
+                  <Input
+                    id="houseFellowship"
+                    value={formData.houseFellowship}
+                    onChange={(e) => setFormData({ ...formData, houseFellowship: e.target.value })}
+                    placeholder="Enter your house fellowship"
+                  />
+                </div>
+                <Button type="submit" disabled={isUpdating} className="w-full">
+                  {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
@@ -96,6 +216,13 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">House Fellowship</p>
                   <p className="font-medium">{user.houseFellowship || "Not set"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Building className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Parish</p>
+                  <p className="font-medium">{(user as any).parish || "Not set"}</p>
                 </div>
               </div>
             </CardContent>

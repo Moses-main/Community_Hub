@@ -1,5 +1,6 @@
 // Client-side API types (without server dependencies)
 export type UserRole = 
+  | 'MEMBER'
   | 'USER' 
   | 'ADMIN' 
   | 'PASTOR' 
@@ -20,7 +21,8 @@ export type UserRole =
   | 'EVANGELISM_TEAM';
 
 export const USER_ROLES: { value: UserRole; label: string }[] = [
-  { value: 'USER', label: 'Member' },
+  { value: 'MEMBER', label: 'Member' },
+  { value: 'USER', label: 'User' },
   { value: 'ADMIN', label: 'Admin' },
   { value: 'PASTOR', label: 'Pastor' },
   { value: 'PASTORS_WIFE', label: "Pastor's Wife" },
@@ -48,6 +50,7 @@ export interface User {
   phone?: string;
   address?: string;
   houseFellowship?: string;
+  parish?: string;
   role?: UserRole;
   isAdmin?: boolean;
   isVerified?: boolean;
@@ -60,6 +63,7 @@ export interface UpdateUserProfile {
   phone?: string;
   address?: string;
   houseFellowship?: string;
+  parish?: string;
 }
 
 export interface Event {

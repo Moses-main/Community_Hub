@@ -49,5 +49,6 @@ export function useAuth() {
     isAuthenticated: !!user,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
+    refetch: () => queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] }),
   };
 }
