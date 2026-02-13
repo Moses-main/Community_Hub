@@ -363,13 +363,23 @@ export async function registerRoutes(
     res.json(userRequests);
   });
 
-  app.post(api.prayer.create.path, isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  // Create prayer request - NO auth required (open to all)
+  app.post(api.prayer.create.path, async (req, res) => {
     try {
       const input = api.prayer.create.input.parse(req.body);
-      // Inject user ID from auth
-      const user = req.user;
-      const requestWithUser = { ...input, userId: user?.id };
-
+      // Try to get user ID from auth if available, otherwise allow anonymous
+      let userId: string | undefined;
+      try {
+        const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
+        if (token) {
+          const decoded = jwt.verify(token, JWT_SECRET) as any;
+          userId = decoded.userId;
+        }
+      } catch (e) {
+        // Not authenticated, that's fine - allow anonymous requests
+      }
+      
+      const requestWithUser = { ...input, userId };
       const request = await storage.createPrayerRequest(requestWithUser);
       res.status(201).json(request);
     } catch (err) {
