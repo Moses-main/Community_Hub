@@ -104,10 +104,11 @@ export default function EventDetailPage() {
   const { mutate: addToCalendar, isPending: isAddingToCalendar } = useAddToCalendar();
   const { toast } = useToast();
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [justRsvped, setJustRsvped] = useState(false);
 
-  // Check if user has RSVP'd to this event
+  // Check if user has RSVP'd to this event (from server or just RSVP'd locally)
   const userRsvp = userRsvps?.find((r: any) => Number(r.eventId) === Number(eventId));
-  const isRsvped = !!userRsvp;
+  const isRsvped = !!userRsvp || justRsvped;
   const isAddedToCalendar = userRsvp?.addedToCalendar;
 
   const handleRsvp = () => {
@@ -115,6 +116,7 @@ export default function EventDetailPage() {
       window.location.href = "/login";
       return;
     }
+    setJustRsvped(true);
     rsvp(eventId!, {
       onSuccess: () => {
         toast({
@@ -123,6 +125,7 @@ export default function EventDetailPage() {
         });
       },
       onError: () => {
+        setJustRsvped(false);
         toast({
           title: "Error",
           description: "Could not RSVP. Please try again.",
