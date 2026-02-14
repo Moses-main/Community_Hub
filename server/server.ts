@@ -92,22 +92,22 @@ export const createApp = (): { app: Express; httpServer: HttpServer } => {
     'https://wccrm-lagos.vercel.app',
   ];
 
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        if (!origin) return callback(null, true); // allow mobile apps / curl
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-        callback(new Error('Not allowed by CORS'));
-      },
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-    })
-  );
+  const corsConfig = {
+    origin: (origin: string | undefined, callback: Function) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
+  
 
- 
+  app.use(cors(corsConfig));
+  app.options('*', cors(corsConfig));
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());
