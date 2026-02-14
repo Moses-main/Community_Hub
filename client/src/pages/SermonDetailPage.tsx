@@ -1,17 +1,46 @@
 import { useRoute } from "wouter";
-import { useSermon } from "@/hooks/use-sermons";
+import { useSermon, useShareSermon, useDownloadSermon } from "@/hooks/use-sermons";
 import { format } from "date-fns";
-import { Play, Calendar, User, ArrowLeft, Share2, Download, Headphones } from "lucide-react";
+import { Play, Calendar, User, ArrowLeft, Share2, Download, Headphones, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { useState } from "react";
 
 export default function SermonDetailPage() {
   const [, params] = useRoute<{ id: string }>("/sermons/:id");
   const sermonId = params?.id ? parseInt(params.id) : null;
   const { data: sermon, isLoading, error } = useSermon(sermonId!);
+  const shareSermon = useShareSermon();
+  const downloadSermon = useDownloadSermon();
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    if (!sermonId) return;
+    const result = await shareSermon.mutateAsync(sermonId);
+    window.open(result.x, '_blank');
+  };
+
+  const handleDownload = async (type?: "video" | "audio") => {
+    if (!sermonId) return;
+    try {
+      const result = await downloadSermon.mutateAsync({ id: sermonId, type });
+      window.open(result.url, '_blank');
+    } catch (e) {
+      console.error("Download failed", e);
+    }
+  };
+
+  const copyLink = async () => {
+    if (!sermonId) return;
+    const result = await shareSermon.mutateAsync(sermonId);
+    await navigator.clipboard.writeText(result.copyLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (isLoading) {
     return (
@@ -147,21 +176,47 @@ export default function SermonDetailPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Button variant="outline" className="w-full text-xs md:text-sm py-2" size="sm">
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-xs md:text-sm py-2" 
+                    size="sm"
+                    onClick={() => setShowShareModal(true)}
+                  >
                     <Share2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
                     Share
                   </Button>
                   {sermon.audioUrl && (
                     <>
-                      <Button variant="outline" className="w-full text-xs md:text-sm py-2" size="sm">
+                      <Button 
+                        variant="outline" 
+                        className="w-full text-xs md:text-sm py-2" 
+                        size="sm"
+                        onClick={() => handleDownload("audio")}
+                      >
                         <Headphones className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
                         Listen Audio
                       </Button>
-                      <Button variant="outline" className="w-full text-xs md:text-sm py-2" size="sm">
+                      <Button 
+                        variant="outline" 
+                        className="w-full text-xs md:text-sm py-2" 
+                        size="sm"
+                        onClick={() => handleDownload("audio")}
+                      >
                         <Download className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
                         Download Audio
                       </Button>
                     </>
+                  )}
+                  {sermon.videoUrl && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full text-xs md:text-sm py-2" 
+                      size="sm"
+                      onClick={() => handleDownload("video")}
+                    >
+                      <Download className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
+                      Download Video
+                    </Button>
                   )}
                 </div>
               </CardContent>
@@ -169,6 +224,59 @@ export default function SermonDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Share this sermon</h3>
+                <button onClick={() => setShowShareModal(false)} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={handleShare}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50"
+                >
+                  <span className="text-xl">𝕏</span>
+                  <span className="text-xs">X</span>
+                </button>
+                <button
+                  onClick={() => shareSermon.data?.whatsapp && window.open(shareSermon.data.whatsapp, '_blank')}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50"
+                >
+                  <span className="text-xl">💬</span>
+                  <span className="text-xs">WhatsApp</span>
+                </button>
+                <button
+                  onClick={() => shareSermon.data?.facebook && window.open(shareSermon.data.facebook, '_blank')}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50"
+                >
+                  <span className="text-xl">📘</span>
+                  <span className="text-xs">Facebook</span>
+                </button>
+                <button
+                  onClick={() => shareSermon.data?.email && window.open(shareSermon.data.email, '_blank')}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50"
+                >
+                  <span className="text-xl">✉️</span>
+                  <span className="text-xs">Email</span>
+                </button>
+                <button
+                  onClick={copyLink}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50"
+                >
+                  {copied ? <Check className="w-5 h-5 text-green-500" /> : <span className="text-xl">🔗</span>}
+                  <span className="text-xs">{copied ? "Copied!" : "Copy Link"}</span>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

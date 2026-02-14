@@ -81,11 +81,15 @@ export interface Sermon {
   title: string;
   speaker: string;
   date: string;
+  topic?: string;
   videoUrl?: string;
+  videoFilePath?: string;
   audioUrl?: string;
+  audioFilePath?: string;
   series?: string;
   description?: string;
   thumbnailUrl?: string;
+  isUpcoming?: boolean;
   createdAt: string;
 }
 
@@ -115,3 +119,26 @@ export type InsertEvent = Omit<Event, 'id' | 'createdAt'>;
 export type InsertSermon = Omit<Sermon, 'id' | 'createdAt'>;
 export type InsertPrayerRequest = Omit<PrayerRequest, 'id' | 'createdAt' | 'prayCount'>;
 export type InsertDonation = Omit<Donation, 'id' | 'createdAt'>;
+
+// Extended types for filters
+export interface SermonFilters {
+  speaker?: string;
+  series?: string;
+  status?: "upcoming" | "past";
+}
+
+export interface ShareLinks {
+  x: string;
+  whatsapp: string;
+  email: string;
+  facebook: string;
+  instagram: string;
+  tiktok: string;
+  copyLink: string;
+}
+
+export interface DownloadInfo {
+  url: string;
+  filename: string;
+  title: string;
+}

@@ -3,11 +3,30 @@ import type { Sermon, InsertSermon } from "@/types/api";
 import { buildApiUrl } from "@/lib/api-config";
 import { apiRoutes } from "@/lib/api-routes";
 
-export function useSermons() {
+export interface SermonFilters {
+  speaker?: string;
+  series?: string;
+  status?: "upcoming" | "past";
+}
+
+export function useSermons(filters?: SermonFilters) {
+  const queryKey = filters?.speaker || filters?.series || filters?.status
+    ? [apiRoutes.sermons.list, filters]
+    : [apiRoutes.sermons.list];
+
   return useQuery({
-    queryKey: [apiRoutes.sermons.list],
+    queryKey,
     queryFn: async (): Promise<Sermon[]> => {
-      const res = await fetch(buildApiUrl(apiRoutes.sermons.list));
+      const params = new URLSearchParams();
+      if (filters?.speaker) params.append("speaker", filters.speaker);
+      if (filters?.series) params.append("series", filters.series);
+      if (filters?.status) params.append("status", filters.status);
+      
+      const url = params.toString() 
+        ? `${buildApiUrl(apiRoutes.sermons.list)}?${params}`
+        : buildApiUrl(apiRoutes.sermons.list);
+      
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch sermons");
       return res.json();
     },
@@ -76,6 +95,45 @@ export function useDeleteSermon() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [apiRoutes.sermons.list] });
+    },
+  });
+}
+
+export interface ShareLinks {
+  x: string;
+  whatsapp: string;
+  email: string;
+  facebook: string;
+  instagram: string;
+  tiktok: string;
+  copyLink: string;
+}
+
+export interface DownloadInfo {
+  url: string;
+  filename: string;
+  title: string;
+}
+
+export function useShareSermon() {
+  return useMutation({
+    mutationFn: async (id: number): Promise<ShareLinks> => {
+      const res = await fetch(buildApiUrl(apiRoutes.sermons.share(id)));
+      if (!res.ok) throw new Error("Failed to get share links");
+      return res.json();
+    },
+  });
+}
+
+export function useDownloadSermon() {
+  return useMutation({
+    mutationFn: async ({ id, type }: { id: number; type?: "video" | "audio" }): Promise<DownloadInfo> => {
+      const url = type 
+        ? `${buildApiUrl(apiRoutes.sermons.download(id))}?type=${type}`
+        : buildApiUrl(apiRoutes.sermons.download(id));
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to get download info");
+      return res.json();
     },
   });
 }

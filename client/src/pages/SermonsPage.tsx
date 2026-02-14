@@ -1,5 +1,6 @@
+import React, { useState } from "react";
 import ReactPlayer from "react-player";
-import { useSermons } from "@/hooks/use-sermons";
+import { useSermons, type SermonFilters } from "@/hooks/use-sermons";
 import { SermonCard } from "@/components/SermonCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search } from "lucide-react";
 
 export default function SermonsPage() {
-  const { data: sermons, isLoading } = useSermons();
+  const [filters, setFilters] = useState<SermonFilters>({});
+  const { data: sermons, isLoading } = useSermons(filters);
+
+  const handleFilterChange = (key: keyof SermonFilters, value: string) => {
+    if (value === "all" || !value) {
+      const newFilters = { ...filters };
+      delete newFilters[key];
+      setFilters(newFilters);
+    } else {
+      setFilters({ ...filters, [key]: value });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-12 md:pb-20">
@@ -26,26 +38,44 @@ export default function SermonsPage() {
         <div className="flex flex-col md:flex-row gap-3 md:gap-4 mb-6 md:mb-10">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input placeholder="Search sermons..." className="pl-10" />
+            <Input 
+              placeholder="Search sermons..." 
+              className="pl-10"
+              value={filters.speaker || ""}
+              onChange={(e) => handleFilterChange("speaker", e.target.value)}
+            />
           </div>
-          <Select>
+          <Select value={filters.status || ""} onValueChange={(value) => handleFilterChange("status", value)}>
+            <SelectTrigger className="w-full md:w-[180px] lg:w-[200px] bg-white">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border-gray-200 shadow-xl">
+              <SelectItem value="">All Messages</SelectItem>
+              <SelectItem value="past">Past Messages</SelectItem>
+              <SelectItem value="upcoming">Upcoming Messages</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filters.series || ""} onValueChange={(value) => handleFilterChange("series", value)}>
             <SelectTrigger className="w-full md:w-[180px] lg:w-[200px] bg-white">
               <SelectValue placeholder="Series" />
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-xl">
-              <SelectItem value="all">All Series</SelectItem>
-              <SelectItem value="faith">Faith & Works</SelectItem>
-              <SelectItem value="gospel">The Gospel</SelectItem>
+              <SelectItem value="">All Series</SelectItem>
+              <SelectItem value="Faith">Faith & Works</SelectItem>
+              <SelectItem value="Gospel">The Gospel</SelectItem>
+              <SelectItem value="Peace">Peace</SelectItem>
+              <SelectItem value="Community">Community</SelectItem>
             </SelectContent>
           </Select>
-          <Select>
+          <Select value={filters.speaker || ""} onValueChange={(value) => handleFilterChange("speaker", value)}>
             <SelectTrigger className="w-full md:w-[180px] lg:w-[200px] bg-white">
               <SelectValue placeholder="Speaker" />
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-xl">
-              <SelectItem value="all">All Speakers</SelectItem>
-              <SelectItem value="pastor">Pastor John</SelectItem>
-              <SelectItem value="guest">Guest Speakers</SelectItem>
+              <SelectItem value="">All Speakers</SelectItem>
+              <SelectItem value="John">Pastor John</SelectItem>
+              <SelectItem value="Jane">Pastor Jane</SelectItem>
+              <SelectItem value="Emmanuel">Pastor Emmanuel</SelectItem>
             </SelectContent>
           </Select>
         </div>
