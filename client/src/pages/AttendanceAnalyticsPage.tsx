@@ -26,7 +26,7 @@ const serviceTypeLabels: Record<string, string> = {
 };
 
 export default function AttendanceAnalyticsPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, refetch: refetchAuth } = useAuth();
   const [dateRange, setDateRange] = useState<"week" | "month" | "quarter">("month");
   
   const now = new Date();
@@ -45,10 +45,16 @@ export default function AttendanceAnalyticsPage() {
       break;
   }
 
-  const { data: stats, isLoading, error } = useAttendanceStats(
+  const { data: stats, isLoading, error, refetch } = useAttendanceStats(
     startDate.toISOString(),
     endDate.toISOString()
   );
+
+  console.log("Auth loading:", authLoading);
+  console.log("User:", user);
+  console.log("Stats loading:", isLoading);
+  console.log("Stats error:", error);
+  console.log("Stats data:", stats);
 
   if (authLoading) {
     return (
@@ -74,20 +80,54 @@ export default function AttendanceAnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="container max-w-6xl mx-auto py-8 px-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Attendance Analytics</h1>
+            <p className="text-muted-foreground mt-1">
+              Track engagement and growth
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant={dateRange === "week" ? "default" : "outline"} size="sm" onClick={() => setDateRange("week")}>Week</Button>
+            <Button variant={dateRange === "month" ? "default" : "outline"} size="sm" onClick={() => setDateRange("month")}>Month</Button>
+            <Button variant={dateRange === "quarter" ? "default" : "outline"} size="sm" onClick={() => setDateRange("quarter")}>Quarter</Button>
+          </div>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading analytics...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container max-w-4xl mx-auto py-8 px-4">
+      <div className="container max-w-6xl mx-auto py-8 px-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Attendance Analytics</h1>
+            <p className="text-muted-foreground mt-1">
+              Track engagement and growth
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant={dateRange === "week" ? "default" : "outline"} size="sm" onClick={() => setDateRange("week")}>Week</Button>
+            <Button variant={dateRange === "month" ? "default" : "outline"} size="sm" onClick={() => setDateRange("month")}>Month</Button>
+            <Button variant={dateRange === "quarter" ? "default" : "outline"} size="sm" onClick={() => setDateRange("quarter")}>Quarter</Button>
+          </div>
+        </div>
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <p>Failed to load attendance analytics. Please try again.</p>
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                <p>Failed to load attendance analytics</p>
+              </div>
+              <Button onClick={() => refetch()}>Try Again</Button>
             </div>
           </CardContent>
         </Card>
