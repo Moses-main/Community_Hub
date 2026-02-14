@@ -30,7 +30,7 @@ export function Navbar() {
   const isActive = (path: string) => location === path;
 
   return (
-    <nav className="sticky top-0 z-50 w-full md:bg-white/80 md:backdrop-blur-lg border-b border-gray-100/50 shadow-sm">
+    <nav className="sticky top-0 z-50 w-full md:bg-white/30 md:backdrop-blur-lg border-b border-gray-100/50 shadow-sm">
       <div className="container mx-auto px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
         {/* Logo */}
         <Link
