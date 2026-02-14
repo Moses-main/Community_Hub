@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart } from "lucide-react";
+import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart, Search } from "lucide-react";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import type { Event, Sermon, InsertEvent, InsertSermon, UserRole } from "@/types/api";
@@ -27,6 +27,7 @@ interface AdminUser {
   phone?: string;
   address?: string;
   houseFellowship?: string;
+  houseCellLocation?: string;
   parish?: string;
   role?: UserRole;
   isVerified?: boolean;
@@ -130,6 +131,9 @@ export default function AdminDashboardPage() {
   const { user, isLoading: isUserLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredUsers, setFilteredUsers] = useState<AdminUser[] | null>(null);
+  const [houseCellInputs, setHouseCellInputs] = useState<Record<string, string>>({});
 
   const { data: users, isLoading: isUsersLoading, refetch: refetchUsers } = useQuery<AdminUser[]>({
     queryKey: ["/api/admin/users"],
@@ -249,6 +253,78 @@ export default function AdminDashboardPage() {
     },
   });
 
+  const searchMembers = useMutation({
+    mutationFn: async (query: string) => {
+      const res = await fetch(buildApiUrl(`/api/members/search?q=${encodeURIComponent(query)}`), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to search members");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setFilteredUsers(data);
+      toast({ title: `Found ${data.length} member(s)` });
+    },
+    onError: () => {
+      toast({ title: "Failed to search members", variant: "destructive" });
+    },
+  });
+
+  const updateHouseCell = useMutation({
+    mutationFn: async ({ userId, houseCellLocation }: { userId: string; houseCellLocation: string }) => {
+      const res = await fetch(buildApiUrl(`/api/members/${userId}/house-cell`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ houseCellLocation }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update house cell");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "House cell location updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update house cell", variant: "destructive" });
+    },
+  });
+
+  const verifyUser = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetch(buildApiUrl(`/api/admin/users/${userId}/verify`), {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to verify user");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Member verified successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to verify member", variant: "destructive" });
+    },
+  });
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      searchMembers.mutate(query);
+    } else {
+      setFilteredUsers(null);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setFilteredUsers(null);
+  };
+
+  const displayUsers = filteredUsers || users;
+  const isSearching = filteredUsers !== null;
+
   const { data: branding, isLoading: isBrandingLoading } = useBranding();
   const updateBranding = useMutation({
     mutationFn: async (data: Partial<Branding>) => {
@@ -339,69 +415,121 @@ export default function AdminDashboardPage() {
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Name</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Phone</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Parish</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">House Fellowship</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Verified</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Joined</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {users?.map((u) => (
-                          <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
-                            <td className="py-3 px-4 font-medium text-gray-900">
-                              {u.firstName ? `${u.firstName} ${u.lastName || ''}` : '-'}
-                            </td>
-                            <td className="py-3 px-4 text-gray-600">{u.email}</td>
-                            <td className="py-3 px-4 text-gray-500">{u.phone || '-'}</td>
-                            <td className="py-3 px-4 text-gray-500">{u.parish || '-'}</td>
-                            <td className="py-3 px-4 text-gray-500">{u.houseFellowship || '-'}</td>
-                            <td className="py-3 px-4">
-                              {u.isVerified ? (
-                                <Badge className="bg-green-500 text-white">Verified</Badge>
-                              ) : (
-                                <Badge variant="secondary" className="bg-gray-100 text-gray-600">Pending</Badge>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-gray-500">
-                              {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
-                            </td>
-                            <td className="py-3 px-4">
-                              <Select
-                                value={u.role || 'MEMBER'}
-                                onValueChange={(value) => {
-                                  if (value !== u.role) {
-                                    updateUserRole.mutate({ userId: u.id, role: value as UserRole });
-                                  }
-                                }}
-                                disabled={updateUserRole.isPending}
-                              >
-                                <SelectTrigger className="w-[160px] bg-white">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border-gray-200 shadow-xl">
-                                  {USER_ROLES.map((role) => (
-                                    <SelectItem key={role.value} value={role.value} className="cursor-pointer">
-                                      {role.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search members by name, email, phone, house fellowship..."
+                          value={searchQuery}
+                          onChange={(e) => handleSearch(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      {isSearching && (
+                        <Button type="button" variant="outline" onClick={clearSearch}>
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-100">
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">Name</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">Phone</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">House Cell Location</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">House Fellowship</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">Verified</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">Joined</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {users?.length === 0 && (
-                      <p className="text-center py-8 text-gray-500">No users found</p>
-                    )}
+                        </thead>
+                        <tbody>
+                          {displayUsers?.map((u) => (
+                            <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
+                              <td className="py-3 px-4 font-medium text-gray-900">
+                                {u.firstName ? `${u.firstName} ${u.lastName || ''}` : '-'}
+                              </td>
+                              <td className="py-3 px-4 text-gray-600">{u.email}</td>
+                              <td className="py-3 px-4 text-gray-500">{u.phone || '-'}</td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    placeholder="Enter location"
+                                    value={houseCellInputs[u.id] || u.houseCellLocation || ''}
+                                    onChange={(e) => setHouseCellInputs({ ...houseCellInputs, [u.id]: e.target.value })}
+                                    className="h-8 w-32 text-sm"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const location = houseCellInputs[u.id];
+                                      if (location) {
+                                        updateHouseCell.mutate({ userId: u.id, houseCellLocation: location });
+                                      }
+                                    }}
+                                    disabled={updateHouseCell.isPending || !houseCellInputs[u.id]}
+                                    className="h-8"
+                                  >
+                                    Save
+                                  </Button>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-gray-500">{u.houseFellowship || '-'}</td>
+                              <td className="py-3 px-4">
+                                {u.isVerified ? (
+                                  <Badge className="bg-green-500 text-white">Verified</Badge>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="secondary" className="bg-gray-100 text-gray-600">Pending</Badge>
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => verifyUser.mutate(u.id)}
+                                      disabled={verifyUser.isPending}
+                                      className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+                                    >
+                                      Verify
+                                    </Button>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-gray-500">
+                                {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
+                              </td>
+                              <td className="py-3 px-4">
+                                <Select
+                                  value={u.role || 'MEMBER'}
+                                  onValueChange={(value) => {
+                                    if (value !== u.role) {
+                                      updateUserRole.mutate({ userId: u.id, role: value as UserRole });
+                                    }
+                                  }}
+                                  disabled={updateUserRole.isPending}
+                                >
+                                  <SelectTrigger className="w-[160px] bg-white">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-white border-gray-200 shadow-xl">
+                                    {USER_ROLES.map((role) => (
+                                      <SelectItem key={role.value} value={role.value} className="cursor-pointer">
+                                        {role.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {displayUsers?.length === 0 && (
+                        <p className="text-center py-8 text-gray-500">No users found</p>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>

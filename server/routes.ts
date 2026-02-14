@@ -79,7 +79,24 @@ export async function registerRoutes(
 
   // Get current user
   app.get("/api/auth/user", isAuthenticated, async (req: AuthenticatedRequest, res) => {
-    res.json(req.user);
+    const user = await storage.getUserById(req.user!.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      address: user.address,
+      houseFellowship: user.houseFellowship,
+      houseCellLocation: user.houseCellLocation,
+      parish: user.parish,
+      role: user.role,
+      isAdmin: user.email === 'admin@wccrm.com',
+      createdAt: user.createdAt,
+    });
   });
 
   // Login
@@ -111,6 +128,11 @@ export async function registerRoutes(
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        phone: user.phone,
+        address: user.address,
+        houseFellowship: user.houseFellowship,
+        houseCellLocation: user.houseCellLocation,
+        parish: user.parish,
         isAdmin: user.email === 'admin@wccrm.com'
       });
     } catch (err) {
@@ -157,6 +179,11 @@ export async function registerRoutes(
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        phone: user.phone,
+        address: user.address,
+        houseFellowship: user.houseFellowship,
+        houseCellLocation: user.houseCellLocation,
+        parish: user.parish,
         isAdmin: user.email === 'admin@wccrm.com'
       });
     } catch (err) {
@@ -282,6 +309,139 @@ export async function registerRoutes(
 
     const updatedUser = await storage.getUserById(userId);
     res.json(updatedUser);
+  });
+
+  // === MEMBER ROUTES ===
+
+  // Get current user's profile
+  app.get("/api/members/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    const user = await storage.getUserById(req.user!.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      address: user.address,
+      houseFellowship: user.houseFellowship,
+      houseCellLocation: user.houseCellLocation,
+      parish: user.parish,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    });
+  });
+
+  // Update current user's profile
+  app.put("/api/members/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    const userId = req.user!.id;
+    const { firstName, lastName, phone, address, houseFellowship, parish, houseCellLocation } = req.body;
+    
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, {
+      firstName: firstName ?? user.firstName,
+      lastName: lastName ?? user.lastName,
+      phone: phone ?? user.phone,
+      address: address ?? user.address,
+      houseFellowship: houseFellowship ?? user.houseFellowship,
+      parish: parish ?? user.parish,
+      houseCellLocation: houseCellLocation ?? user.houseCellLocation,
+    });
+
+    res.json({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      phone: updatedUser.phone,
+      address: updatedUser.address,
+      houseFellowship: updatedUser.houseFellowship,
+      houseCellLocation: updatedUser.houseCellLocation,
+      parish: updatedUser.parish,
+      role: updatedUser.role,
+      createdAt: updatedUser.createdAt,
+      updatedAt: updatedUser.updatedAt,
+    });
+  });
+
+  // Search members (admin only)
+  app.get("/api/members/search", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    const query = req.query.q;
+    const q = Array.isArray(query) ? query[0] : query;
+    if (!q || typeof q !== 'string') {
+      return res.status(400).json({ message: "Search query required" });
+    }
+    const users = await storage.searchUsers(q);
+    res.json(users.map(user => ({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      address: user.address,
+      houseFellowship: user.houseFellowship,
+      houseCellLocation: user.houseCellLocation,
+      parish: user.parish,
+      role: user.role,
+      createdAt: user.createdAt,
+    })));
+  });
+
+  // Update user's house cell location (admin only)
+  app.put("/api/members/:id/house-cell", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    const userIdParam = req.params.id;
+    const userId = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
+    const houseCellLocationInput = req.body.houseCellLocation;
+    const houseCellLocation = typeof houseCellLocationInput === 'string' ? houseCellLocationInput : String(houseCellLocationInput);
+    
+    if (!houseCellLocation || !userId) {
+      return res.status(400).json({ message: "House cell location and user ID are required" });
+    }
+
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUserHouseCell(userId, houseCellLocation);
+    res.json({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      houseCellLocation: updatedUser.houseCellLocation,
+    });
+  });
+
+  // Verify user (admin only)
+  app.post("/api/admin/users/:id/verify", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    const userIdParam = req.params.id;
+    const userId = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
+    
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const verifiedUser = await storage.verifyUser(userId);
+    res.json({
+      id: verifiedUser.id,
+      email: verifiedUser.email,
+      firstName: verifiedUser.firstName,
+      lastName: verifiedUser.lastName,
+      isVerified: verifiedUser.isVerified,
+    });
   });
 
   // === APP ROUTES ===

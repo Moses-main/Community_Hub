@@ -50,11 +50,13 @@ export interface User {
   phone?: string;
   address?: string;
   houseFellowship?: string;
+  houseCellLocation?: string;
   parish?: string;
   role?: UserRole;
   isAdmin?: boolean;
   isVerified?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UpdateUserProfile {
@@ -63,6 +65,7 @@ export interface UpdateUserProfile {
   phone?: string;
   address?: string;
   houseFellowship?: string;
+  houseCellLocation?: string;
   parish?: string;
 }
 

@@ -4,7 +4,7 @@ import {
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or, ilike, and, like } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -14,6 +14,9 @@ export interface IStorage {
   updateUser(id: string, updates: Partial<User>): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User>;
   getAllUsers(): Promise<User[]>;
+  searchUsers(query: string): Promise<User[]>;
+  updateUserHouseCell(id: string, houseCellLocation: string): Promise<User>;
+  verifyUser(id: string): Promise<User>;
 
   // Branding
   getBranding(): Promise<Branding | undefined>;
@@ -95,6 +98,39 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async searchUsers(query: string): Promise<User[]> {
+    const searchPattern = `%${query}%`;
+    return await db.select().from(users).where(
+      or(
+        like(users.firstName, searchPattern),
+        like(users.lastName, searchPattern),
+        like(users.email, searchPattern),
+        like(users.phone, searchPattern),
+        like(users.houseFellowship, searchPattern),
+        like(users.houseCellLocation, searchPattern),
+        like(users.parish, searchPattern)
+      )
+    ).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserHouseCell(id: string, houseCellLocation: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ houseCellLocation, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async verifyUser(id: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ isVerified: true, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
   }
 
   // Branding

@@ -26,6 +26,7 @@ export default function DashboardPage() {
     address: user?.address || "",
     houseFellowship: user?.houseFellowship || "",
     parish: (user as any)?.parish || "",
+    houseCellLocation: user?.houseCellLocation || "",
   });
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function DashboardPage() {
         address: user.address || "",
         houseFellowship: user.houseFellowship || "",
         parish: (user as any)?.parish || "",
+        houseCellLocation: user.houseCellLocation || "",
       });
     }
   }, [user]);
@@ -98,7 +100,7 @@ export default function DashboardPage() {
                   e.preventDefault();
                   setIsUpdating(true);
                   try {
-                    const res = await fetch(buildApiUrl("/api/auth/profile"), {
+                    const res = await fetch(buildApiUrl("/api/members/me"), {
                       method: "PUT",
                       headers: { "Content-Type": "application/json" },
                       credentials: "include",
@@ -173,6 +175,15 @@ export default function DashboardPage() {
                     placeholder="Enter your house fellowship"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="houseCellLocation">House Cell Location</Label>
+                  <Input
+                    id="houseCellLocation"
+                    value={formData.houseCellLocation}
+                    onChange={(e) => setFormData({ ...formData, houseCellLocation: e.target.value })}
+                    placeholder="Enter your house cell location"
+                  />
+                </div>
                 <Button type="submit" disabled={isUpdating} className="w-full">
                   {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
@@ -229,6 +240,13 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm text-gray-500">House Fellowship</p>
                   <p className="font-medium text-gray-900">{user.houseFellowship || "Not set"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Home className="h-4 w-4 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">House Cell Location</p>
+                  <p className="font-medium text-gray-900">{user.houseCellLocation || "Not set"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
