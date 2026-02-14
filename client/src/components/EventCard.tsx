@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { format } from "date-fns";
-import { MapPin, Clock, Calendar, Check, CalendarPlus } from "lucide-react";
+import { MapPin, Clock, Calendar, Check, CalendarPlus, Share2 } from "lucide-react";
 import type { Event } from "@/types/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { useRsvpEvent, useRemoveRsvp, useUserRsvps, useAddToCalendar } from "@/h
 import { useToast } from "@/hooks/use-toast";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
+import { useState } from "react";
 
 interface EventCardProps {
   event: Event;
@@ -29,11 +30,11 @@ function generateCalendarLink(event: Event): string {
 export function EventCard({ event }: EventCardProps) {
   const { user } = useAuth();
   const { mutate: rsvp, isPending: isRsvpPending } = useRsvpEvent();
-  const { mutate: removeRsvp, isPending: isRemovePending } = useRemoveRsvp();
   const { mutate: addToCalendar, isPending: isAddingToCalendar } = useAddToCalendar();
   const { data: userRsvps } = useUserRsvps();
   const { toast } = useToast();
   const eventDate = new Date(event.date);
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
   const userRsvp = userRsvps?.find((r: any) => r.eventId === event.id);
   const isRsvped = !!userRsvp;
@@ -61,22 +62,42 @@ export function EventCard({ event }: EventCardProps) {
     });
   };
 
-  const handleRemoveRsvp = () => {
-    removeRsvp(event.id, {
-      onSuccess: () => {
-        toast({
-          title: "RSVP Removed",
-          description: "You have been removed from this event.",
-        });
-      },
-      onError: () => {
-        toast({
-          title: "Error",
-          description: "Could not remove RSVP. Please try again.",
-          variant: "destructive",
-        });
-      },
-    });
+  const handleShare = async () => {
+    const shareData = {
+      title: event.title,
+      text: event.description,
+      url: `${window.location.origin}/events/${event.id}`,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          handleCopyLink();
+        }
+      }
+    } else {
+      handleCopyLink();
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/events/${event.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Link Copied!",
+        description: "Event link has been copied to clipboard.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Could not copy link. Please try again.",
+        variant: "destructive",
+      });
+    }
+    setShowShareMenu(false);
   };
 
   const handleAddToCalendar = () => {
@@ -137,22 +158,46 @@ export function EventCard({ event }: EventCardProps) {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           {isRsvped ? (
             <>
               <Button 
                 variant="default"
-                disabled={isRemovePending}
-                className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5 bg-green-600 hover:bg-green-700"
-                onClick={handleRemoveRsvp}
+                disabled
+                className="flex-1 sm:flex-none text-sm md:text-base py-2 md:py-2.5 bg-green-600 cursor-not-allowed"
               >
-                {isRemovePending ? "Removing..." : <><Check className="w-4 h-4 mr-1" /> Going</>}
+                <Check className="w-4 h-4 mr-1" /> RSVPED
               </Button>
+              <div className="relative">
+                <Button 
+                  variant="outline"
+                  className="flex-1 sm:flex-none text-sm md:text-base py-2 md:py-2.5"
+                  onClick={() => setShowShareMenu(!showShareMenu)}
+                >
+                  <Share2 className="w-4 h-4 mr-1" /> Share
+                </Button>
+                {showShareMenu && (
+                  <div className="absolute bottom-full mb-2 left-0 bg-white border rounded-lg shadow-lg py-2 min-w-[160px] z-10">
+                    <button
+                      onClick={handleShare}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <Share2 className="w-4 h-4" /> Share via...
+                    </button>
+                    <button
+                      onClick={handleCopyLink}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      Copy Link
+                    </button>
+                  </div>
+                )}
+              </div>
               {!isAddedToCalendar ? (
                 <Button 
                   variant="outline"
                   disabled={isAddingToCalendar}
-                  className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5"
+                  className="flex-1 sm:flex-none text-sm md:text-base py-2 md:py-2.5"
                   onClick={handleAddToCalendar}
                 >
                   {isAddingToCalendar ? "Adding..." : <><CalendarPlus className="w-4 h-4 mr-1" /> Add to Calendar</>}
@@ -161,7 +206,7 @@ export function EventCard({ event }: EventCardProps) {
                 <Button 
                   variant="outline"
                   disabled
-                  className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5 bg-green-50"
+                  className="flex-1 sm:flex-none text-sm md:text-base py-2 md:py-2.5 bg-green-50"
                 >
                   <Calendar className="w-4 h-4 mr-1" /> Added
                 </Button>
@@ -176,6 +221,31 @@ export function EventCard({ event }: EventCardProps) {
               >
                 {isRsvpPending ? "Confirming..." : "RSVP"}
               </Button>
+              <div className="relative">
+                <Button 
+                  variant="outline"
+                  className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5"
+                  onClick={() => setShowShareMenu(!showShareMenu)}
+                >
+                  <Share2 className="w-4 h-4 mr-1" /> Share
+                </Button>
+                {showShareMenu && (
+                  <div className="absolute bottom-full mb-2 left-0 bg-white border rounded-lg shadow-lg py-2 min-w-[160px] z-10">
+                    <button
+                      onClick={handleShare}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <Share2 className="w-4 h-4" /> Share via...
+                    </button>
+                    <button
+                      onClick={handleCopyLink}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      Copy Link
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
           <Button variant="outline" asChild className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5">
