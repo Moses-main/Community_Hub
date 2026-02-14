@@ -183,10 +183,14 @@ export function Navbar() {
                 )}
                 {!user && (
                   <div className="flex flex-col gap-2 mt-4 pt-4 border-t">
-                    <Button asChild variant="outline" className="w-full rounded-xl">
-                      <Link href="/login">Sign In</Link>
-                    </Button>
-                    <Button asChild className="w-full rounded-xl bg-gradient-primary">
+                    <Link 
+                      href="/login" 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-lg font-medium p-3 rounded-xl transition-colors flex items-center justify-center text-gray-600 hover:bg-gray-50"
+                    >
+                      Sign In
+                    </Link>
+                    <Button asChild className="w-full rounded-xl bg-gradient-primary" onClick={() => setMobileMenuOpen(false)}>
                       <Link href="/login">Get Started</Link>
                     </Button>
                   </div>
