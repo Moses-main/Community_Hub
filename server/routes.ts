@@ -1114,8 +1114,8 @@ export async function registerRoutes(
     }
   });
 
-  // Get attendance analytics (admin/leaders only)
-  app.get("/api/attendance/analytics", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  // Get attendance analytics (admin only)
+  app.get("/api/attendance/analytics", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
     try {
       const { startDate, endDate, serviceType } = req.query;
 
@@ -1136,8 +1136,8 @@ export async function registerRoutes(
     }
   });
 
-  // Get all attendance records for a service (admin/leaders only)
-  app.get("/api/attendance/service", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  // Get all attendance records for a service (admin only)
+  app.get("/api/attendance/service", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
     try {
       const { serviceType, serviceDate } = req.query;
 

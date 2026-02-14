@@ -1,7 +1,8 @@
 import { Link } from "wouter";
-import { ArrowRight, Play, Calendar, Heart, Clock, MapPin, Sparkles, Users, BookOpen } from "lucide-react";
+import { ArrowRight, Play, Calendar, Heart, Clock, MapPin, Sparkles, Users, BookOpen, CheckCircle } from "lucide-react";
 import { useSermons } from "@/hooks/use-sermons";
 import { useEvents } from "@/hooks/use-events";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +13,7 @@ import { format } from "date-fns";
 export default function HomePage() {
   const { data: sermons, isLoading: loadingSermons } = useSermons();
   const { data: events, isLoading: loadingEvents } = useEvents();
+  const { user } = useAuth();
 
   const upcomingEvents = events
     ?.filter(e => new Date(e.date) >= new Date())
@@ -70,6 +72,17 @@ export default function HomePage() {
                   <Play className="mr-2 w-4 h-4 md:w-5 md:h-5" /> Watch Online
                 </Link>
               </Button>
+              {user && (
+                <Button
+                  asChild
+                  size="lg"
+                  className="text-base md:text-lg px-6 md:px-8 py-3 md:py-6 rounded-lg bg-green-600/80 backdrop-blur-md border border-green-500/30 text-white hover:bg-green-600"
+                >
+                  <Link href="/attendance/checkin">
+                    <CheckCircle className="mr-2 w-4 h-4 md:w-5 md:h-5" /> Check In
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
 
