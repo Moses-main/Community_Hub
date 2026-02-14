@@ -116,7 +116,8 @@ export function EventCard({ event }: EventCardProps) {
   const eventDate = new Date(event.date);
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  const userRsvp = userRsvps?.find((r: any) => r.eventId === event.id);
+  // Check if user has RSVP'd to this event
+  const userRsvp = userRsvps?.find((r: any) => Number(r.eventId) === Number(event.id));
   const isRsvped = !!userRsvp;
   const isAddedToCalendar = userRsvp?.addedToCalendar;
 

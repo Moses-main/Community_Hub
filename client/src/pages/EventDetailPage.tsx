@@ -105,7 +105,8 @@ export default function EventDetailPage() {
   const { toast } = useToast();
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  const userRsvp = userRsvps?.find((r: any) => r.eventId === eventId);
+  // Check if user has RSVP'd to this event
+  const userRsvp = userRsvps?.find((r: any) => Number(r.eventId) === Number(eventId));
   const isRsvped = !!userRsvp;
   const isAddedToCalendar = userRsvp?.addedToCalendar;
 

@@ -112,6 +112,8 @@ export function useDeleteEvent() {
 
 export function useRsvpEvent() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
   return useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(buildApiUrl(apiRoutes.events.rsvp(id)), {
@@ -146,19 +148,25 @@ export function useRemoveRsvp() {
 }
 
 export function useUserRsvps() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   
   return useQuery({
-    queryKey: ["user-rsvps", isAuthenticated],
+    queryKey: ["user-rsvps", user?.id],
     queryFn: async () => {
-      if (!isAuthenticated) return [];
+      if (!isAuthenticated || !user) return [];
       const res = await fetch(buildApiUrl(apiRoutes.events.rsvps), {
         credentials: "include",
       });
-      if (!res.ok) return [];
-      return res.json();
+      if (!res.ok) {
+        console.error("Failed to fetch RSVPs:", res.status);
+        return [];
+      }
+      const data = await res.json();
+      console.log("RSVPs fetched:", data);
+      return data;
     },
-    enabled: isAuthenticated,
+    enabled: !!isAuthenticated && !!user,
+    staleTime: 0, // Always fetch fresh data
   });
 }
 
