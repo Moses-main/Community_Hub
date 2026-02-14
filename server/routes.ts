@@ -503,7 +503,20 @@ export async function registerRoutes(
     try {
       const userId = req.user!.id;
       const rsvps = await storage.getUserRsvps(userId);
-      res.json(rsvps);
+      
+      // Fetch event details for each RSVP
+      const rsvpsWithEvents = await Promise.all(
+        rsvps.map(async (rsvp) => {
+          const eventId = Number(rsvp.eventId);
+          if (isNaN(eventId)) {
+            return { ...rsvp, event: null };
+          }
+          const event = await storage.getEvent(eventId);
+          return { ...rsvp, event };
+        })
+      );
+      
+      res.json(rsvpsWithEvents);
     } catch (err) {
       console.error("Error fetching RSVPs:", err);
       res.status(500).json({ message: "Internal server error" });
