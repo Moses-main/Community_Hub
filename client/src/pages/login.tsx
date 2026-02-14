@@ -4,7 +4,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import { Helmet } from "react-helmet";
@@ -66,8 +66,16 @@ export default function AuthPage() {
         throw new Error(data.message || "Authentication failed");
       }
 
-      // On successful login/register
-      window.location.href = "/";
+      // Show success toast before redirect
+      toast({
+        title: mode === "login" ? "Welcome back!" : "Account created!",
+        description: mode === "login" 
+          ? "You have successfully signed in." 
+          : "Your account has been created successfully.",
+      });
+
+      // On successful login/register - redirect with a timestamp to bypass cache
+      window.location.href = "/?auth=" + Date.now();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
       setError(errorMessage);
