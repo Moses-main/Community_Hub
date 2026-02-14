@@ -185,6 +185,26 @@ export default function AdminDashboardPage() {
     },
   });
 
+  const updateEvent = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertEvent> }) => {
+      const res = await fetch(buildApiUrl(`/api/events/${id}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update event");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [apiRoutes.events.list] });
+      toast({ title: "Event updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update event", variant: "destructive" });
+    },
+  });
+
   const deleteEvent = useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(buildApiUrl(`/api/events/${id}`), {
@@ -561,9 +581,12 @@ export default function AdminDashboardPage() {
                             {new Date(event.date).toLocaleDateString()} • {event.location}
                           </p>
                         </div>
-                        <Button variant="destructive" size="icon" onClick={() => deleteEvent.mutate(event.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <EditEventDialog event={event} onSubmit={(data) => updateEvent.mutate({ id: event.id, data })} isLoading={updateEvent.isPending} />
+                          <Button variant="destructive" size="icon" onClick={() => deleteEvent.mutate(event.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                     {events?.length === 0 && (
@@ -743,6 +766,68 @@ function CreateEventDialog({ onSubmit, isLoading }: { onSubmit: (data: InsertEve
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Event
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditEventDialog({ event, onSubmit, isLoading }: { event: Event; onSubmit: (data: Partial<InsertEvent>) => void; isLoading: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: event.title,
+    description: event.description,
+    date: new Date(event.date).toISOString().slice(0, 16),
+    location: event.location,
+    imageUrl: event.imageUrl || ""
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      title: formData.title,
+      description: formData.description,
+      date: new Date(formData.date).toISOString(),
+      location: formData.location,
+      imageUrl: formData.imageUrl || undefined,
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline"><Edit className="h-4 w-4" /></Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Event</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="edit-title">Title</Label>
+            <Input id="edit-title" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
+          </div>
+          <div>
+            <Label htmlFor="edit-description">Description</Label>
+            <Textarea id="edit-description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required />
+          </div>
+          <div>
+            <Label htmlFor="edit-date">Date</Label>
+            <Input id="edit-date" type="datetime-local" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
+          </div>
+          <div>
+            <Label htmlFor="edit-location">Location</Label>
+            <Input id="edit-location" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} required />
+          </div>
+          <div>
+            <Label htmlFor="edit-imageUrl">Image URL</Label>
+            <Input id="edit-imageUrl" value={formData.imageUrl} onChange={e => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://..." />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
           </Button>
         </form>
       </DialogContent>

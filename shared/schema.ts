@@ -21,6 +21,7 @@ export const events = pgTable("events", {
   date: timestamp("date").notNull(),
   location: text("location").notNull(),
   imageUrl: text("image_url"),
+  creatorId: text("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

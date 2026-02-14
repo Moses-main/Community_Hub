@@ -470,7 +470,32 @@ export async function registerRoutes(
   // Events
   app.get(api.events.list.path, async (req, res) => {
     const events = await storage.getEvents();
-    res.json(events);
+    const eventsWithRsvpCount = await Promise.all(
+      events.map(async (event) => {
+        const rsvps = await storage.getEventRsvps(event.id);
+        return { ...event, rsvpCount: rsvps.length };
+      })
+    );
+    res.json(eventsWithRsvpCount);
+  });
+
+  app.get("/api/events/list-with-rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    const userId = req.user!.id;
+    const events = await storage.getEvents();
+    const userRsvps = await storage.getUserRsvps(userId);
+    const userRsvpEventIds = new Set(userRsvps.map(r => r.eventId));
+    
+    const eventsWithRsvpCount = await Promise.all(
+      events.map(async (event) => {
+        const rsvps = await storage.getEventRsvps(event.id);
+        return { 
+          ...event, 
+          rsvpCount: rsvps.length,
+          hasRsvped: userRsvpEventIds.has(event.id),
+        };
+      })
+    );
+    res.json(eventsWithRsvpCount);
   });
 
   app.get(api.events.get.path, async (req, res) => {
@@ -486,6 +511,7 @@ export async function registerRoutes(
       const eventData = {
         ...input,
         date: new Date(input.date),
+        creatorId: req.user!.id,
       };
       const event = await storage.createEvent(eventData);
       res.status(201).json(event);
@@ -514,12 +540,20 @@ export async function registerRoutes(
     }
   });
 
-  // Get user's RSVPs
+  // Get user's RSVPs with event details
   app.get("/api/events/rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
       const rsvps = await storage.getUserRsvps(userId);
-      res.json(rsvps);
+      
+      const rsvpsWithEvents = await Promise.all(
+        rsvps.map(async (rsvp) => {
+          const event = await storage.getEvent(rsvp.eventId);
+          return { ...rsvp, event };
+        })
+      );
+      
+      res.json(rsvpsWithEvents);
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -551,7 +585,31 @@ export async function registerRoutes(
     }
   });
 
-  // Update event
+  // Get event with RSVP count
+  app.get("/api/events/:id/with-rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const userId = req.user!.id;
+      
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const rsvps = await storage.getEventRsvps(eventId);
+      const isCreator = event.creatorId === userId;
+      
+      res.json({
+        ...event,
+        rsvpCount: rsvps.length,
+        rsvps: isCreator ? rsvps : undefined,
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update event (auth required)
   app.put("/api/events/:id", isAuthenticated, async (req, res) => {
     try {
       const id = Number(req.params.id);

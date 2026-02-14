@@ -1,18 +1,18 @@
 import { Link } from "wouter";
 import { format } from "date-fns";
-import { MapPin, Clock, Calendar, Check, CalendarPlus, Share2 } from "lucide-react";
+import { MapPin, Clock, Calendar, Check, CalendarPlus, Share2, Facebook, Twitter, Linkedin, Instagram, Link as LinkIcon } from "lucide-react";
 import type { Event } from "@/types/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useRsvpEvent, useRemoveRsvp, useUserRsvps, useAddToCalendar } from "@/hooks/use-events";
+import { useRsvpEvent, useUserRsvps, useAddToCalendar } from "@/hooks/use-events";
 import { useToast } from "@/hooks/use-toast";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import { useState } from "react";
 
 interface EventCardProps {
-  event: Event;
+  event: Event & { rsvpCount?: number };
 }
 
 function generateCalendarLink(event: Event): string {
@@ -25,6 +25,86 @@ function generateCalendarLink(event: Event): string {
   const location = encodeURIComponent(event.location);
   
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${description}&location=${location}`;
+}
+
+function SocialShareMenu({ event, onClose }: { event: Event; onClose: () => void }) {
+  const eventUrl = `${window.location.origin}/events/${event.id}`;
+  const eventTitle = event.title;
+  
+  const shareOptions = [
+    { 
+      name: 'Facebook', 
+      icon: Facebook, 
+      color: 'bg-blue-600 hover:bg-blue-700',
+      url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`
+    },
+    { 
+      name: 'X (Twitter)', 
+      icon: Twitter, 
+      color: 'bg-black hover:bg-gray-800',
+      url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(eventTitle)}&url=${encodeURIComponent(eventUrl)}`
+    },
+    { 
+      name: 'WhatsApp', 
+      icon: (props: any) => <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-4 h-4" {...props} />, 
+      color: 'bg-green-500 hover:bg-green-600',
+      url: `https://wa.me/?text=${encodeURIComponent(eventTitle + ' ' + eventUrl)}`
+    },
+    { 
+      name: 'Instagram', 
+      icon: Instagram, 
+      color: 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 hover:opacity-90',
+      url: `https://www.instagram.com/` // Instagram doesn't have direct share URL
+    },
+    { 
+      name: 'LinkedIn', 
+      icon: Linkedin, 
+      color: 'bg-blue-700 hover:bg-blue-800',
+      url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`
+    },
+    { 
+      name: 'TikTok', 
+      icon: (props: any) => <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/TikTok_logo_2017.svg" alt="TikTok" className="w-4 h-4" {...props} />, 
+      color: 'bg-black hover:bg-gray-800',
+      url: `https://www.tiktok.com/` // TikTok doesn't have web share
+    },
+  ];
+
+  const handleShare = (url: string) => {
+    window.open(url, '_blank', 'width=600,height=400');
+    onClose();
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(eventUrl);
+    } catch {
+      // Fallback
+    }
+    onClose();
+  };
+
+  return (
+    <div className="absolute bottom-full mb-2 right-0 bg-white border rounded-lg shadow-lg py-2 min-w-[180px] z-20">
+      {shareOptions.map((option) => (
+        <button
+          key={option.name}
+          onClick={() => handleShare(option.url)}
+          className={`w-full px-4 py-2 text-left text-sm text-white flex items-center gap-2 ${option.color} transition-colors`}
+        >
+          <option.icon className="w-4 h-4" />
+          {option.name}
+        </button>
+      ))}
+      <button
+        onClick={handleCopyLink}
+        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-gray-700"
+      >
+        <LinkIcon className="w-4 h-4" />
+        Copy Link
+      </button>
+    </div>
+  );
 }
 
 export function EventCard({ event }: EventCardProps) {
@@ -60,44 +140,6 @@ export function EventCard({ event }: EventCardProps) {
         });
       },
     });
-  };
-
-  const handleShare = async () => {
-    const shareData = {
-      title: event.title,
-      text: event.description,
-      url: `${window.location.origin}/events/${event.id}`,
-    };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          handleCopyLink();
-        }
-      }
-    } else {
-      handleCopyLink();
-    }
-  };
-
-  const handleCopyLink = async () => {
-    const url = `${window.location.origin}/events/${event.id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      toast({
-        title: "Link Copied!",
-        description: "Event link has been copied to clipboard.",
-      });
-    } catch {
-      toast({
-        title: "Error",
-        description: "Could not copy link. Please try again.",
-        variant: "destructive",
-      });
-    }
-    setShowShareMenu(false);
   };
 
   const handleAddToCalendar = () => {
@@ -156,6 +198,12 @@ export function EventCard({ event }: EventCardProps) {
               <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
               <span>{event.location}</span>
             </div>
+            {(event as any).rsvpCount !== undefined && (
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" />
+                <span className="text-green-600 font-medium">{(event as any).rsvpCount} attending</span>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
@@ -177,20 +225,7 @@ export function EventCard({ event }: EventCardProps) {
                   <Share2 className="w-4 h-4 mr-1" /> Share
                 </Button>
                 {showShareMenu && (
-                  <div className="absolute bottom-full mb-2 left-0 bg-white border rounded-lg shadow-lg py-2 min-w-[160px] z-10">
-                    <button
-                      onClick={handleShare}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      <Share2 className="w-4 h-4" /> Share via...
-                    </button>
-                    <button
-                      onClick={handleCopyLink}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      Copy Link
-                    </button>
-                  </div>
+                  <SocialShareMenu event={event} onClose={() => setShowShareMenu(false)} />
                 )}
               </div>
               {!isAddedToCalendar ? (
@@ -230,20 +265,7 @@ export function EventCard({ event }: EventCardProps) {
                   <Share2 className="w-4 h-4 mr-1" /> Share
                 </Button>
                 {showShareMenu && (
-                  <div className="absolute bottom-full mb-2 left-0 bg-white border rounded-lg shadow-lg py-2 min-w-[160px] z-10">
-                    <button
-                      onClick={handleShare}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      <Share2 className="w-4 h-4" /> Share via...
-                    </button>
-                    <button
-                      onClick={handleCopyLink}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      Copy Link
-                    </button>
-                  </div>
+                  <SocialShareMenu event={event} onClose={() => setShowShareMenu(false)} />
                 )}
               </div>
             </>

@@ -76,7 +76,10 @@ export interface Event {
   date: string;
   location: string;
   imageUrl?: string;
-  createdAt: string;
+  creatorId?: string;
+  createdAt?: string;
+  rsvpCount?: number;
+  hasRsvped?: boolean;
 }
 
 export interface Sermon {

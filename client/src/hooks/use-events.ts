@@ -2,12 +2,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Event, InsertEvent } from "@/types/api";
 import { buildApiUrl } from "@/lib/api-config";
 import { apiRoutes } from "@/lib/api-routes";
+import { useAuth } from "@/hooks/use-auth";
 
 export function useEvents() {
+  const { isAuthenticated } = useAuth();
+  
   return useQuery({
-    queryKey: [apiRoutes.events.list],
-    queryFn: async (): Promise<Event[]> => {
-      const res = await fetch(buildApiUrl(apiRoutes.events.list));
+    queryKey: [apiRoutes.events.list, isAuthenticated],
+    queryFn: async (): Promise<(Event & { rsvpCount?: number; hasRsvped?: boolean })[]> => {
+      const endpoint = isAuthenticated 
+        ? "/api/events/list-with-rsvps" 
+        : apiRoutes.events.list;
+      const res = await fetch(buildApiUrl(endpoint), {
+        credentials: isAuthenticated ? "include" : "omit",
+      });
       if (!res.ok) throw new Error("Failed to fetch events");
       return res.json();
     },
