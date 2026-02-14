@@ -103,7 +103,7 @@ export const createApp = (): { app: Express; httpServer: HttpServer } => {
     origin:
       process.env.NODE_ENV === 'production'
         ? true
-        : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+        : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'https://wccrm-lagos.vercel.app'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
