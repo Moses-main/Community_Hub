@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { buildApiUrl } from "@/lib/api-config";
 export function Navbar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -65,56 +67,58 @@ export function Navbar() {
         {/* User / Mobile Actions */}
         <div className="flex items-center gap-3">
           {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 px-3 py-2 h-auto rounded-full hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-all">
-                  <div className="w-9 h-9 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold shadow-sm">
-                    {user.firstName ? user.firstName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+            <div className="hidden md:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2 px-3 py-2 h-auto rounded-full hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-all">
+                    <div className="w-9 h-9 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold shadow-sm">
+                      {user.firstName ? user.firstName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="hidden lg:inline text-sm font-medium text-gray-700">
+                      {user.firstName || user.email.split('@')[0]}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-72 z-50 bg-white border-gray-200 shadow-xl rounded-xl p-1">
+                  <div className="px-4 py-3 border-b bg-gray-50 rounded-t-xl">
+                    <p className="text-sm font-semibold text-gray-900">{user.firstName} {user.lastName}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
                   </div>
-                  <span className="hidden lg:inline text-sm font-medium text-gray-700">
-                    {user.firstName || user.email.split('@')[0]}
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72 z-50 bg-white border-gray-200 shadow-xl rounded-xl p-1">
-                <div className="px-4 py-3 border-b bg-gray-50 rounded-t-xl">
-                  <p className="text-sm font-semibold text-gray-900">{user.firstName} {user.lastName}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
-                </div>
-                <div className="py-1">
-                  {user.isAdmin ? (
-                    <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
-                      <Link href="/admin" className="flex items-center gap-3 text-gray-700">
-                        <LayoutDashboard className="w-5 h-5 text-primary" />
-                        <span className="font-medium">Admin Dashboard</span>
-                      </Link>
+                  <div className="py-1">
+                    {user.isAdmin ? (
+                      <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
+                        <Link href="/admin" className="flex items-center gap-3 text-gray-700">
+                          <LayoutDashboard className="w-5 h-5 text-primary" />
+                          <span className="font-medium">Admin Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
+                        <Link href="/dashboard" className="flex items-center gap-3 text-gray-700">
+                          <LayoutDashboard className="w-5 h-5 text-primary" />
+                          <span className="font-medium">My Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator className="my-1" />
+                  <div className="py-1">
+                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer px-4 py-3 hover:bg-red-50 rounded-lg mx-1 text-red-600">
+                      <LogOut className="w-5 h-5 mr-3" />
+                      <span className="font-medium">Sign out</span>
                     </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
-                      <Link href="/dashboard" className="flex items-center gap-3 text-gray-700">
-                        <LayoutDashboard className="w-5 h-5 text-primary" />
-                        <span className="font-medium">My Dashboard</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                </div>
-                <DropdownMenuSeparator className="my-1" />
-                <div className="py-1">
-                  <DropdownMenuItem onClick={() => logout()} className="cursor-pointer px-4 py-3 hover:bg-red-50 rounded-lg mx-1 text-red-600">
-                    <LogOut className="w-5 h-5 mr-3" />
-                    <span className="font-medium">Sign out</span>
-                  </DropdownMenuItem>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-3">
               <Button
                 asChild
                 variant="ghost"
                 size="sm"
-                className="hidden md:flex text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-4"
+                className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-4"
               >
                 <Link href="/login">Log In</Link>
               </Button>
@@ -129,9 +133,9 @@ export function Navbar() {
           )}
 
           {/* Mobile Menu */}
-          <Sheet>
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden rounded-full">
+              <Button variant="ghost" size="icon" className="rounded-full">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -141,6 +145,7 @@ export function Navbar() {
                   <Link
                     key={link.href}
                     href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
                     className={`text-lg font-medium p-3 rounded-xl transition-colors ${
                       isActive(link.href)
                         ? "bg-primary/10 text-primary"
@@ -150,6 +155,32 @@ export function Navbar() {
                     {link.label}
                   </Link>
                 ))}
+                {user && (
+                  <>
+                    <Link
+                      href={user.isAdmin ? "/admin" : "/dashboard"}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`text-lg font-medium p-3 rounded-xl transition-colors flex items-center gap-2 ${
+                        isActive("/dashboard") || isActive("/admin")
+                          ? "bg-primary/10 text-primary"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <LayoutDashboard className="w-5 h-5" />
+                      {user.isAdmin ? "Admin Dashboard" : "My Dashboard"}
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        logout();
+                      }}
+                      className="text-lg font-medium p-3 rounded-xl transition-colors flex items-center gap-2 text-red-600 hover:bg-red-50 w-full text-left"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      Sign out
+                    </button>
+                  </>
+                )}
                 {!user && (
                   <div className="flex flex-col gap-2 mt-4 pt-4 border-t">
                     <Button asChild variant="outline" className="w-full rounded-xl">
