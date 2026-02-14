@@ -133,6 +133,7 @@ export default function AdminDashboardPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [filteredUsers, setFilteredUsers] = useState<AdminUser[] | null>(null);
   const [houseCellInputs, setHouseCellInputs] = useState<Record<string, string>>({});
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
@@ -343,11 +344,14 @@ export default function AdminDashboardPage() {
 
   const clearSearch = () => {
     setSearchQuery("");
+    setRoleFilter("all");
     setFilteredUsers(null);
   };
 
-  const displayUsers = filteredUsers || users;
-  const isSearching = filteredUsers !== null;
+  const displayUsers = (filteredUsers || users)?.filter(user => 
+    roleFilter === "all" || user.role === roleFilter || (!user.role && roleFilter === "MEMBER")
+  );
+  const isSearching = filteredUsers !== null || roleFilter !== "all";
 
   const { data: branding, isLoading: isBrandingLoading } = useBranding();
   const updateBranding = useMutation({
@@ -450,7 +454,20 @@ export default function AdminDashboardPage() {
                           className="pl-10"
                         />
                       </div>
-                      {isSearching && (
+                      <Select value={roleFilter} onValueChange={setRoleFilter}>
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue placeholder="Filter by role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Roles</SelectItem>
+                          {USER_ROLES.map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
+                              {role.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {(isSearching || roleFilter !== "all") && (
                         <Button type="button" variant="outline" onClick={clearSearch}>
                           Clear
                         </Button>
