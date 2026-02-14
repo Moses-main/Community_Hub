@@ -548,8 +548,8 @@ export async function registerRoutes(
       
       const rsvpsWithEvents = await Promise.all(
         rsvps.map(async (rsvp) => {
-          const eventId = Number(rsvp.eventId);
-          if (isNaN(eventId)) {
+          const eventId = rsvp.eventId ? Number(rsvp.eventId) : null;
+          if (!eventId || isNaN(eventId)) {
             return { ...rsvp, event: null };
           }
           const event = await storage.getEvent(eventId);
@@ -595,7 +595,7 @@ export async function registerRoutes(
     try {
       const eventId = Number(req.params.id);
       const userId = req.user!.id;
-      const isAdmin = req.user!.email === 'admin@wccrm.com';
+      const isAdmin = req.user!.isAdmin;
       
       const event = await storage.getEvent(eventId);
       if (!event) {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranding, type Branding } from "@/hooks/use-branding";
+import { useEventWithRsvps } from "@/hooks/use-events";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart, Search } from "lucide-react";
+import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart, Search, MapPin, Clock, User, Mail, Phone } from "lucide-react";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import type { Event, Sermon, InsertEvent, InsertSermon, UserRole } from "@/types/api";
@@ -134,6 +135,9 @@ export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredUsers, setFilteredUsers] = useState<AdminUser[] | null>(null);
   const [houseCellInputs, setHouseCellInputs] = useState<Record<string, string>>({});
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+
+  const { data: eventWithRsvps, isLoading: isRsvpsLoading } = useEventWithRsvps(selectedEventId ?? 0);
 
   const { data: users, isLoading: isUsersLoading, refetch: refetchUsers } = useQuery<AdminUser[]>({
     queryKey: ["/api/admin/users"],
@@ -582,6 +586,10 @@ export default function AdminDashboardPage() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setSelectedEventId(Number(event.id))}>
+                            <Users className="h-4 w-4 mr-1" />
+                            RSVPs
+                          </Button>
                           <EditEventDialog event={event} onSubmit={(data) => updateEvent.mutate({ id: event.id, data })} isLoading={updateEvent.isPending} />
                           <Button variant="destructive" size="icon" onClick={() => deleteEvent.mutate(event.id)}>
                             <Trash2 className="h-4 w-4" />
@@ -711,6 +719,8 @@ export default function AdminDashboardPage() {
             </div>
           </TabsContent>
         </Tabs>
+
+        <EventRsvpDialog eventId={selectedEventId} open={selectedEventId !== null} onClose={() => setSelectedEventId(null)} />
       </div>
     </div>
   );
@@ -830,6 +840,55 @@ function EditEventDialog({ event, onSubmit, isLoading }: { event: Event; onSubmi
             Save Changes
           </Button>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EventRsvpDialog({ eventId, open, onClose }: { eventId: number | null; open: boolean; onClose: () => void }) {
+  const { data: eventData, isLoading } = useEventWithRsvps(eventId ?? 0);
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Event RSVPs</DialogTitle>
+          <DialogDescription>
+            {eventData?.title || "Loading..."}
+          </DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : !eventData?.rsvps || eventData.rsvps.length === 0 ? (
+          <p className="text-center py-8 text-muted-foreground">No RSVPs yet</p>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">{eventData.rsvps.length} people RSVP'd</p>
+            <div className="space-y-3">
+              {eventData.rsvps.map((rsvp: any) => (
+                <div key={rsvp.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{rsvp.user?.firstName} {rsvp.user?.lastName}</p>
+                      <p className="text-sm text-muted-foreground">{rsvp.user?.email}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant="outline">{rsvp.rsvpStatus || "going"}</Badge>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {rsvp.createdAt ? new Date(rsvp.createdAt).toLocaleDateString() : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
