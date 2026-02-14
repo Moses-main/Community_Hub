@@ -7,6 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function EventsPage() {
   const { data: events, isLoading } = useEvents();
 
+  const now = new Date();
+  
+  const sortedEvents = events?.sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    const isPastA = dateA < now;
+    const isPastB = dateB < now;
+    
+    if (isPastA && !isPastB) return 1;
+    if (!isPastA && isPastB) return -1;
+    return dateA.getTime() - dateB.getTime();
+  }) || [];
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="bg-secondary/30 py-16 border-b border-border">
@@ -28,7 +41,7 @@ export default function EventsPage() {
                 <Skeleton key={i} className="h-64 w-full rounded-xl" />
               ))
             ) : (
-              events?.map(event => (
+              sortedEvents.map(event => (
                 <EventCard key={event.id} event={event} />
               ))
             )}
