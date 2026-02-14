@@ -80,14 +80,30 @@ export function useAttendanceStats(startDate: string, endDate: string, serviceTy
   return useQuery<AttendanceStats>({
     queryKey: ["attendance-stats", startDate, endDate, serviceType],
     queryFn: async (): Promise<AttendanceStats> => {
-      const params = new URLSearchParams({ startDate, endDate });
-      if (serviceType) params.append("serviceType", serviceType);
-      const res = await fetch(buildApiUrl(`/api/attendance/analytics?${params}`), { credentials: "include" });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: "Failed to fetch attendance stats" }));
-        throw new Error(error.message || "Failed to fetch attendance stats");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      try {
+        const params = new URLSearchParams({ startDate, endDate });
+        if (serviceType) params.append("serviceType", serviceType);
+        const res = await fetch(buildApiUrl(`/api/attendance/analytics?${params}`), { 
+          credentials: "include",
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ message: "Failed to fetch attendance stats" }));
+          throw new Error(error.message || "Failed to fetch attendance stats");
+        }
+        return res.json();
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === "AbortError") {
+          throw new Error("Request timed out");
+        }
+        throw err;
       }
-      return res.json();
     },
     enabled: !!startDate && !!endDate,
   });

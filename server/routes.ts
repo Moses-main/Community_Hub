@@ -1118,16 +1118,19 @@ export async function registerRoutes(
   app.get("/api/attendance/analytics", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
     try {
       const { startDate, endDate, serviceType } = req.query;
+      console.log("Analytics request:", { startDate, endDate, serviceType });
 
       if (!startDate || !endDate) {
         return res.status(400).json({ message: "Start date and end date are required" });
       }
 
+      console.log("Fetching stats from storage...");
       const stats = await storage.getAttendanceStats(
         new Date(startDate as string),
         new Date(endDate as string),
         serviceType as string | undefined
       );
+      console.log("Stats fetched:", stats);
 
       res.json(stats);
     } catch (err) {
