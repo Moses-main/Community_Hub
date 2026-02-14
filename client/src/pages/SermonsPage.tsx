@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import ReactPlayer from "react-player";
 import { useSermons, type SermonFilters } from "@/hooks/use-sermons";
 import { SermonCard } from "@/components/SermonCard";
@@ -9,7 +9,8 @@ import { Search } from "lucide-react";
 
 export default function SermonsPage() {
   const [filters, setFilters] = useState<SermonFilters>({});
-  const { data: sermons, isLoading } = useSermons(filters);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { data: allSermons, isLoading } = useSermons();
 
   const handleFilterChange = (key: keyof SermonFilters, value: string) => {
     if (value === "all" || !value) {
@@ -20,6 +21,31 @@ export default function SermonsPage() {
       setFilters({ ...filters, [key]: value });
     }
   };
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    if (value) {
+      setFilters({ ...filters, search: value });
+    } else {
+      const newFilters = { ...filters };
+      delete newFilters.search;
+      setFilters(newFilters);
+    }
+  };
+
+  const { data: filteredSermons } = useSermons(filters);
+
+  const uniqueSeries = useMemo(() => {
+    if (!allSermons) return [];
+    const series = allSermons.map(s => s.series).filter((s): s is string => Boolean(s));
+    return [...new Set(series)];
+  }, [allSermons]);
+
+  const uniqueSpeakers = useMemo(() => {
+    if (!allSermons) return [];
+    const speakers = allSermons.map(s => s.speaker).filter((s): s is string => Boolean(s));
+    return [...new Set(speakers)];
+  }, [allSermons]);
 
   return (
     <div className="min-h-screen bg-background pb-12 md:pb-20">
@@ -39,10 +65,10 @@ export default function SermonsPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input 
-              placeholder="Search sermons..." 
+              placeholder="Search by title or pastor name..." 
               className="pl-10"
-              value={filters.speaker || ""}
-              onChange={(e) => handleFilterChange("speaker", e.target.value)}
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
           <Select value={filters.status || "all"} onValueChange={(value) => handleFilterChange("status", value)}>
@@ -61,10 +87,9 @@ export default function SermonsPage() {
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-xl">
               <SelectItem value="all">All Series</SelectItem>
-              <SelectItem value="Faith">Faith & Works</SelectItem>
-              <SelectItem value="Gospel">The Gospel</SelectItem>
-              <SelectItem value="Peace">Peace</SelectItem>
-              <SelectItem value="Community">Community</SelectItem>
+              {uniqueSeries.map((series) => (
+                <SelectItem key={series} value={series}>{series}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={filters.speaker || "all"} onValueChange={(value) => handleFilterChange("speaker", value)}>
@@ -73,9 +98,9 @@ export default function SermonsPage() {
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-xl">
               <SelectItem value="all">All Speakers</SelectItem>
-              <SelectItem value="John">Pastor John</SelectItem>
-              <SelectItem value="Jane">Pastor Jane</SelectItem>
-              <SelectItem value="Emmanuel">Pastor Emmanuel</SelectItem>
+              {uniqueSpeakers.map((speaker) => (
+                <SelectItem key={speaker} value={speaker}>{speaker}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -91,7 +116,7 @@ export default function SermonsPage() {
               </div>
             ))
           ) : (
-            sermons?.map(sermon => (
+            filteredSermons?.map(sermon => (
               <SermonCard key={sermon.id} sermon={sermon} />
             ))
           )}

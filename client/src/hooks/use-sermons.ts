@@ -7,10 +7,11 @@ export interface SermonFilters {
   speaker?: string;
   series?: string;
   status?: "upcoming" | "past";
+  search?: string;
 }
 
 export function useSermons(filters?: SermonFilters) {
-  const queryKey = filters?.speaker || filters?.series || filters?.status
+  const queryKey = filters?.speaker || filters?.series || filters?.status || filters?.search
     ? [apiRoutes.sermons.list, filters]
     : [apiRoutes.sermons.list];
 
@@ -21,6 +22,7 @@ export function useSermons(filters?: SermonFilters) {
       if (filters?.speaker) params.append("speaker", filters.speaker);
       if (filters?.series) params.append("series", filters.series);
       if (filters?.status) params.append("status", filters.status);
+      if (filters?.search) params.append("search", filters.search);
       
       const url = params.toString() 
         ? `${buildApiUrl(apiRoutes.sermons.list)}?${params}`

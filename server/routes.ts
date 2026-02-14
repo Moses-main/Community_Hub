@@ -376,11 +376,12 @@ export async function registerRoutes(
 
   // Sermons
   app.get(api.sermons.list.path, async (req, res) => {
-    const { speaker, series, status } = req.query;
+    const { speaker, series, status, search } = req.query;
     const filter: ISermonFilter = {};
     
     if (speaker) filter.speaker = speaker as string;
     if (series) filter.series = series as string;
+    if (search) filter.search = search as string;
     if (status === 'upcoming') filter.isUpcoming = true;
     if (status === 'past') filter.isUpcoming = false;
     
