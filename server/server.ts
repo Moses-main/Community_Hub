@@ -84,19 +84,41 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
 export const createApp = (): { app: Express; httpServer: HttpServer } => {
   const app = express();
   const httpServer = createServer(app);
+// allowed origins
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'https://wccrm-lagos.vercel.app',
+  ];
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true); // allow mobile apps / curl
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        callback(new Error('Not allowed by CORS'));
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    })
+  );
 
   // Manual CORS headers for all requests
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'true');
+  // app.use((req, res, next) => {
+  //   res.header('Access-Control-Allow-Origin', '*');
+  //   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  //   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  //   res.header('Access-Control-Allow-Credentials', 'true');
     
-    if (req.method === 'OPTIONS') {
-      return res.status(200).end();
-    }
-    next();
-  });
+  //   if (req.method === 'OPTIONS') {
+  //     return res.status(200).end();
+  //   }
+  //   next();
+  // });
 
   // Configure CORS with specific options
   const corsOptions = {
