@@ -86,7 +86,7 @@ export const createApp = (): { app: Express; httpServer: HttpServer } => {
   const httpServer = createServer(app);
 
   // Enable pre-flight requests for all routes
-  // app.options('/*', cors());
+  app.options('/*', cors());
 
   // Configure CORS with specific options
   const corsOptions = {
