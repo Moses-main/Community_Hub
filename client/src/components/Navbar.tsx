@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck, QrCode } from "lucide-react";
+import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck, QrCode, Shield } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
@@ -105,6 +105,12 @@ export function Navbar() {
                       <Link href="/attendance" className="flex items-center gap-3 text-gray-700">
                         <CalendarCheck className="w-5 h-5 text-primary" />
                         <span className="font-medium">My Attendance</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
+                      <Link href="/privacy" className="flex items-center gap-3 text-gray-700">
+                        <Shield className="w-5 h-5 text-primary" />
+                        <span className="font-medium">Privacy & Data</span>
                       </Link>
                     </DropdownMenuItem>
                   </div>

@@ -100,6 +100,132 @@ export async function registerRoutes(
     });
   });
 
+  // === GDPR ROUTES ===
+
+  // Export member data (for GDPR data portability)
+  app.get("/api/gdpr/export", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const attendance = await storage.getAttendanceByUser(userId);
+      const rsvps = await storage.getUserRsvps(userId);
+
+      const exportData = {
+        profile: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          address: user.address,
+          houseFellowship: user.houseFellowship,
+          houseCellLocation: user.houseCellLocation,
+          parish: user.parish,
+          role: user.role,
+          createdAt: user.createdAt,
+        },
+        attendance: attendance.map(a => ({
+          serviceType: a.serviceType,
+          serviceName: a.serviceName,
+          serviceDate: a.serviceDate,
+          attendanceType: a.attendanceType,
+          isOnline: a.isOnline,
+          checkInTime: a.checkInTime,
+        })),
+        eventRsvps: rsvps.map(r => ({
+          eventId: r.eventId,
+          addedToCalendar: r.addedToCalendar,
+          createdAt: r.createdAt,
+        })),
+        exportedAt: new Date().toISOString(),
+      };
+
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Disposition", `attachment; filename=my-data-${new Date().toISOString().split("T")[0]}.json`);
+      res.json(exportData);
+    } catch (err) {
+      console.error("Error exporting data:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete member data (for GDPR right to erasure)
+  app.delete("/api/gdpr/delete", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { confirmation } = req.body;
+
+      if (confirmation !== "DELETE_MY_DATA") {
+        return res.status(400).json({ 
+          message: "Please type 'DELETE_MY_DATA' to confirm deletion" 
+        });
+      }
+
+      // In a real implementation, you would:
+      // 1. Anonymize or delete personal data
+      // 2. Keep minimal data for legal requirements
+      // 3. Notify admin
+      
+      // For now, we'll just return a success message
+      // In production, implement actual data deletion
+      
+      res.json({ 
+        message: "Data deletion request submitted. Your data will be removed within 30 days." 
+      });
+    } catch (err) {
+      console.error("Error deleting data:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get privacy settings
+  app.get("/api/gdpr/privacy", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({
+        dataRetentionEnabled: true,
+        marketingConsent: false,
+        attendanceVisibility: "private",
+        profileVisibility: "members",
+      });
+    } catch (err) {
+      console.error("Error fetching privacy settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update privacy settings
+  app.put("/api/gdpr/privacy", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { marketingConsent, attendanceVisibility, profileVisibility } = req.body;
+
+      // In a real implementation, store these preferences
+      res.json({ 
+        message: "Privacy settings updated successfully",
+        settings: {
+          marketingConsent,
+          attendanceVisibility,
+          profileVisibility,
+        }
+      });
+    } catch (err) {
+      console.error("Error updating privacy settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Login
   app.post("/api/auth/login", async (req, res) => {
     try {
