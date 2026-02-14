@@ -64,8 +64,7 @@ export default function HomePage() {
               <Button
                 asChild
                 size="lg"
-                variant="outline"
-                className="text-base md:text-lg px-6 md:px-8 py-3 md:py-6 rounded-lg border-gray-200 text-gray-700 hover:bg-gray-50"
+                className="text-base md:text-lg px-6 md:px-8 py-3 md:py-6 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"
               >
                 <Link href="/sermons">
                   <Play className="mr-2 w-4 h-4 md:w-5 md:h-5" /> Watch Online
