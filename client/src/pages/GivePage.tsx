@@ -77,12 +77,12 @@ export default function GivePage() {
       <div className="relative py-12 md:py-20">
         <div className="absolute inset-0">
           <img 
-            src="/card-verticle.avif" 
+            src="/tokens.avif" 
             alt="Background" 
-            className="w-full h-full object-cover blur-sm"
+            className="w-full h-full object-cover blur-[1px]"
           />
         </div>
-        <div className="absolute inset-0 bg-white/30 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px]" />
         <div className="container px-3 md:px-4 text-center relative z-10">
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-display font-bold mb-4 md:mb-6 text-gray-900">
             Generosity
