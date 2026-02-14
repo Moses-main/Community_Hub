@@ -1,5 +1,5 @@
 import { useRoute } from "wouter";
-import { useEvent, useRsvpEvent, useUserRsvps, useAddToCalendar } from "@/hooks/use-events";
+import { useEventWithRsvps, useRsvpEvent, useUserRsvps, useAddToCalendar } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -97,7 +97,7 @@ function SocialShareMenu({ event, onClose }: { event: any; onClose: () => void }
 export default function EventDetailPage() {
   const [, params] = useRoute<{ id: string }>("/events/:id");
   const eventId = params?.id ? parseInt(params.id) : null;
-  const { data: event, isLoading, error } = useEvent(eventId!);
+  const { data: event, isLoading, error } = useEventWithRsvps(eventId!);
   const { data: userRsvps } = useUserRsvps();
   const { user } = useAuth();
   const { mutate: rsvp, isPending: isRsvpPending } = useRsvpEvent();
@@ -206,6 +206,12 @@ export default function EventDetailPage() {
               <MapPin className="w-3.5 h-3.5 md:w-5 md:h-5" />
               <span>{event.location}</span>
             </div>
+            {(event as any).rsvpCount !== undefined && (
+              <div className="flex items-center gap-1.5 md:gap-2 text-green-600 font-medium">
+                <Calendar className="w-3.5 h-3.5 md:w-5 md:h-5" />
+                <span>{(event as any).rsvpCount} interested</span>
+              </div>
+            )}
           </div>
         </div>
 

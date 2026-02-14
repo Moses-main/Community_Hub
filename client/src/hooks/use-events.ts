@@ -34,6 +34,28 @@ export function useEvent(id: number) {
   });
 }
 
+export function useEventWithRsvps(id: number) {
+  const { isAuthenticated } = useAuth();
+  
+  return useQuery({
+    queryKey: [apiRoutes.events.get(id), "with-rsvps", isAuthenticated],
+    queryFn: async () => {
+      if (!isAuthenticated) {
+        const res = await fetch(buildApiUrl(apiRoutes.events.get(id)));
+        if (!res.ok) throw new Error("Failed to fetch event");
+        return res.json();
+      }
+      const res = await fetch(buildApiUrl("/api/events/list-with-rsvps"), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch events");
+      const events = await res.json();
+      return events.find((e: Event) => e.id === id);
+    },
+    enabled: !!id,
+  });
+}
+
 export function useCreateEvent() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -101,6 +123,7 @@ export function useRsvpEvent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-rsvps"] });
+      queryClient.invalidateQueries({ queryKey: [apiRoutes.events.list] });
     },
   });
 }
@@ -123,15 +146,19 @@ export function useRemoveRsvp() {
 }
 
 export function useUserRsvps() {
+  const { isAuthenticated } = useAuth();
+  
   return useQuery({
-    queryKey: ["user-rsvps"],
+    queryKey: ["user-rsvps", isAuthenticated],
     queryFn: async () => {
+      if (!isAuthenticated) return [];
       const res = await fetch(buildApiUrl(apiRoutes.events.rsvps), {
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to fetch RSVPs");
+      if (!res.ok) return [];
       return res.json();
     },
+    enabled: isAuthenticated,
   });
 }
 
