@@ -55,7 +55,7 @@ export default function HomePage() {
               <Button
                 asChild
                 size="lg"
-                className="text-base md:text-lg px-6 md:px-10 py-3 md:py-6 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+                className="text-base md:text-lg px-6 md:px-10 py-3 md:py-6 rounded-lg bg-red-900/60 backdrop-blur-md border border-red-700/30 text-red-100 hover:bg-red-800/70 transition-colors"
               >
                 <Link href="/events">
                   Plan a Visit <ArrowRight className="ml-2 w-4 h-4 md:w-5 md:h-5" />
