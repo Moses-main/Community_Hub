@@ -1,17 +1,72 @@
 import { useRoute } from "wouter";
-import { useSermon } from "@/hooks/use-sermons";
+import { useSermon, useShareSermon, useDownloadSermon } from "@/hooks/use-sermons";
 import { format } from "date-fns";
-import { Play, Calendar, User, ArrowLeft, Share2, Download, Headphones } from "lucide-react";
+import { Play, Calendar, User, ArrowLeft, Share2, Download, Headphones, X, Check, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { FaXTwitter, FaWhatsapp, FaFacebook, FaEnvelope, FaLinkedin, FaLink } from "react-icons/fa6";
 
 export default function SermonDetailPage() {
   const [, params] = useRoute<{ id: string }>("/sermons/:id");
   const sermonId = params?.id ? parseInt(params.id) : null;
   const { data: sermon, isLoading, error } = useSermon(sermonId!);
+  const shareSermon = useShareSermon();
+  const downloadSermon = useDownloadSermon();
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (showShareModal && sermonId && !shareSermon.data) {
+      shareSermon.mutate(sermonId);
+    }
+  }, [showShareModal, sermonId]);
+
+  const handleShare = (platform: string) => {
+    const links = shareSermon.data;
+    if (!links) return;
+
+    switch (platform) {
+      case 'x':
+        window.open(links.x, '_blank');
+        break;
+      case 'whatsapp':
+        window.open(links.whatsapp, '_blank');
+        break;
+      case 'facebook':
+        window.open(links.facebook, '_blank');
+        break;
+      case 'email':
+        window.open(links.email, '_blank');
+        break;
+      case 'linkedin':
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(links.copyLink)}`, '_blank');
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleDownload = async (type?: "video" | "audio") => {
+    if (!sermonId) return;
+    try {
+      const result = await downloadSermon.mutateAsync({ id: sermonId, type });
+      window.open(result.url, '_blank');
+    } catch (e) {
+      console.error("Download failed", e);
+    }
+  };
+
+  const copyLink = async () => {
+    const links = shareSermon.data;
+    if (!links) return;
+    await navigator.clipboard.writeText(links.copyLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (isLoading) {
     return (
@@ -147,21 +202,47 @@ export default function SermonDetailPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Button variant="outline" className="w-full text-xs md:text-sm py-2" size="sm">
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-xs md:text-sm py-2" 
+                    size="sm"
+                    onClick={() => setShowShareModal(true)}
+                  >
                     <Share2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
                     Share
                   </Button>
                   {sermon.audioUrl && (
                     <>
-                      <Button variant="outline" className="w-full text-xs md:text-sm py-2" size="sm">
+                      <Button 
+                        variant="outline" 
+                        className="w-full text-xs md:text-sm py-2" 
+                        size="sm"
+                        onClick={() => handleDownload("audio")}
+                      >
                         <Headphones className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
                         Listen Audio
                       </Button>
-                      <Button variant="outline" className="w-full text-xs md:text-sm py-2" size="sm">
+                      <Button 
+                        variant="outline" 
+                        className="w-full text-xs md:text-sm py-2" 
+                        size="sm"
+                        onClick={() => handleDownload("audio")}
+                      >
                         <Download className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
                         Download Audio
                       </Button>
                     </>
+                  )}
+                  {sermon.videoUrl && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full text-xs md:text-sm py-2" 
+                      size="sm"
+                      onClick={() => handleDownload("video")}
+                    >
+                      <Download className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
+                      Download Video
+                    </Button>
                   )}
                 </div>
               </CardContent>
@@ -169,6 +250,76 @@ export default function SermonDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Share this sermon</h3>
+                <button onClick={() => setShowShareModal(false)} className="text-gray-500 hover:text-gray-700">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={() => handleShare('x')}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <FaXTwitter className="w-6 h-6" style={{ color: '#000000' }} />
+                  <span className="text-xs">X</span>
+                </button>
+                <button
+                  onClick={() => handleShare('whatsapp')}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <FaWhatsapp className="w-6 h-6" style={{ color: '#25D366' }} />
+                  <span className="text-xs">WhatsApp</span>
+                </button>
+                <button
+                  onClick={() => handleShare('facebook')}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <FaFacebook className="w-6 h-6" style={{ color: '#1877F2' }} />
+                  <span className="text-xs">Facebook</span>
+                </button>
+                <button
+                  onClick={() => handleShare('email')}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <FaEnvelope className="w-6 h-6" style={{ color: '#EA4335' }} />
+                  <span className="text-xs">Email</span>
+                </button>
+                <button
+                  onClick={() => handleShare('linkedin')}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <FaLinkedin className="w-6 h-6" style={{ color: '#0A66C2' }} />
+                  <span className="text-xs">LinkedIn</span>
+                </button>
+                <button
+                  onClick={copyLink}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {copied ? (
+                    <Check className="w-6 h-6 text-green-500" />
+                  ) : (
+                    <FaLink className="w-6 h-6 text-gray-600" />
+                  )}
+                  <span className="text-xs">{copied ? "Copied!" : "Copy Link"}</span>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

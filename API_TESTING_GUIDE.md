@@ -240,11 +240,27 @@ curl -X POST http://localhost:5000/api/events/1/rsvp \
 ## 🎤 **3. SERMON ENDPOINTS**
 
 ### **GET /api/sermons**
-Get all sermons (sorted by date, newest first).
+Get all sermons (sorted by date, newest first). Supports filtering by speaker, series, and status.
 
 ```bash
+# Get all sermons
 curl -X GET http://localhost:5000/api/sermons
+
+# Filter by speaker
+curl -X GET "http://localhost:5000/api/sermons?speaker=John"
+
+# Filter by series
+curl -X GET "http://localhost:5000/api/sermons?series=Faith"
+
+# Filter by status (upcoming or past)
+curl -X GET "http://localhost:5000/api/sermons?status=upcoming"
+curl -X GET "http://localhost:5000/api/sermons?status=past"
 ```
+
+**Query Parameters:**
+- `speaker` (optional): Filter by pastor/speaker name (partial match)
+- `series` (optional): Filter by sermon series (partial match)
+- `status` (optional): Filter by status - `upcoming` or `past`
 
 ### **GET /api/sermons/:id**
 Get specific sermon by ID.
@@ -253,21 +269,70 @@ Get specific sermon by ID.
 curl -X GET http://localhost:5000/api/sermons/1
 ```
 
+### **GET /api/sermons/:id/share**
+Get social media share links for a sermon. Accessible to all users (authenticated or not).
+
+```bash
+curl -X GET http://localhost:5000/api/sermons/1/share
+```
+
+**Expected Response:**
+```json
+{
+  "x": "https://twitter.com/intent/tweet?text=SermonTitle&url=https%3A%2F%2Fexample.com%2Fsermons%2F1",
+  "whatsapp": "https://wa.me/?text=SermonTitle%20https%3A%2F%2Fexample.com%2Fsermons%2F1",
+  "email": "mailto:?subject=SermonTitle&body=Description%20https%3A%2F%2Fexample.com%2Fsermons%2F1",
+  "facebook": "https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fexample.com%2Fsermons%2F1",
+  "instagram": "https://www.instagram.com/",
+  "tiktok": "https://www.tiktok.com/",
+  "copyLink": "https://example.com/sermons/1"
+}
+```
+
+### **GET /api/sermons/:id/download**
+Get download URL for sermon audio/video. Accessible to all users (authenticated or not).
+
+```bash
+# Get any available download (audio preferred, then video)
+curl -X GET http://localhost:5000/api/sermons/1/download
+
+# Get specific video download
+curl -X GET "http://localhost:5000/api/sermons/1/download?type=video"
+
+# Get specific audio download
+curl -X GET "http://localhost:5000/api/sermons/1/download?type=audio"
+```
+
+**Query Parameters:**
+- `type` (optional): `video` or `audio`. If not specified, returns audio if available, otherwise video.
+
+**Expected Response:**
+```json
+{
+  "url": "https://example.com/audio/sermon.mp3",
+  "filename": "Sermon Title-audio.mp3",
+  "title": "Sermon Title"
+}
+```
+
 ### **POST /api/sermons**
-Create a new sermon.
+Create a new sermon. **Admin only** - requires authentication.
 
 ```bash
 curl -X POST http://localhost:5000/api/sermons \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "title": "Walking in Faith",
     "speaker": "Pastor Michael Johnson",
     "date": "2026-02-09T11:00:00.000Z",
+    "topic": "Faith",
     "videoUrl": "https://www.youtube.com/watch?v=example123",
     "audioUrl": "https://example.com/audio/sermon.mp3",
     "series": "Faith Journey",
     "description": "Exploring what it means to walk by faith and not by sight in our daily lives.",
-    "thumbnailUrl": "https://images.unsplash.com/photo-1507692049790-de58293a4697?w=800"
+    "thumbnailUrl": "https://images.unsplash.com/photo-1507692049790-de58293a4697?w=800",
+    "isUpcoming": false
   }'
 ```
 
@@ -277,12 +342,36 @@ curl -X POST http://localhost:5000/api/sermons \
   "title": "string (required)",
   "speaker": "string (required)",
   "date": "string (ISO 8601 datetime, required)",
+  "topic": "string (optional)",
   "videoUrl": "string (optional URL)",
   "audioUrl": "string (optional URL)",
   "series": "string (optional)",
   "description": "string (optional)",
-  "thumbnailUrl": "string (optional URL)"
+  "thumbnailUrl": "string (optional URL)",
+  "isUpcoming": "boolean (optional, default: false)"
 }
+```
+
+### **PUT /api/sermons/:id**
+Update a sermon. **Admin only** - requires authentication.
+
+```bash
+curl -X PUT http://localhost:5000/api/sermons/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "title": "Updated Title",
+    "topic": "Updated Topic",
+    "isUpcoming": true
+  }'
+```
+
+### **DELETE /api/sermons/:id**
+Delete a sermon. **Admin only** - requires authentication.
+
+```bash
+curl -X DELETE http://localhost:5000/api/sermons/1 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ---

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranding, type Branding } from "@/hooks/use-branding";
+import { useSermons } from "@/hooks/use-sermons";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -212,7 +213,27 @@ export default function AdminDashboardPage() {
     },
     onError: () => {
       toast({ title: "Failed to create sermon", variant: "destructive" });
+    }
+  });
+
+  const updateSermon = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertSermon> }) => {
+      const res = await fetch(buildApiUrl(`/api/sermons/${id}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update sermon");
+      return res.json();
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [apiRoutes.sermons.list] });
+      toast({ title: "Sermon updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update sermon", variant: "destructive" });
+    }
   });
 
   const deleteSermon = useMutation({
@@ -472,9 +493,16 @@ export default function AdminDashboardPage() {
                             {sermon.speaker} • {new Date(sermon.date).toLocaleDateString()}
                           </p>
                         </div>
-                        <Button variant="destructive" size="icon" onClick={() => deleteSermon.mutate(sermon.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <EditSermonDialog 
+                            sermon={sermon} 
+                            onSubmit={(data) => updateSermon.mutate({ id: sermon.id, data })} 
+                            isLoading={updateSermon.isPending} 
+                          />
+                          <Button variant="destructive" size="icon" onClick={() => deleteSermon.mutate(sermon.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                     {sermons?.length === 0 && (
@@ -691,6 +719,116 @@ function CreateSermonDialog({ onSubmit, isLoading }: { onSubmit: (data: InsertSe
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Sermon
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface EditSermonDialogProps {
+  sermon: Sermon;
+  onSubmit: (data: Partial<InsertSermon>) => void;
+  isLoading: boolean;
+}
+
+function EditSermonDialog({ sermon, onSubmit, isLoading }: EditSermonDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: sermon.title,
+    speaker: sermon.speaker,
+    date: sermon.date ? new Date(sermon.date).toISOString().slice(0, 16) : "",
+    series: sermon.series || "",
+    description: sermon.description || "",
+    videoUrl: sermon.videoUrl || "",
+    audioUrl: sermon.audioUrl || "",
+    thumbnailUrl: sermon.thumbnailUrl || "",
+    topic: sermon.topic || "",
+    isUpcoming: sermon.isUpcoming || false,
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      title: formData.title,
+      speaker: formData.speaker,
+      date: new Date(formData.date).toISOString(),
+      series: formData.series || undefined,
+      description: formData.description || undefined,
+      videoUrl: formData.videoUrl || undefined,
+      audioUrl: formData.audioUrl || undefined,
+      thumbnailUrl: formData.thumbnailUrl || undefined,
+      topic: formData.topic || undefined,
+      isUpcoming: formData.isUpcoming,
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="icon">
+          <Edit className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit Sermon</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="editTitle">Title</Label>
+              <Input id="editTitle" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
+            </div>
+            <div>
+              <Label htmlFor="editSpeaker">Speaker</Label>
+              <Input id="editSpeaker" value={formData.speaker} onChange={e => setFormData({...formData, speaker: e.target.value})} required />
+            </div>
+            <div>
+              <Label htmlFor="editDate">Date</Label>
+              <Input id="editDate" type="datetime-local" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
+            </div>
+            <div>
+              <Label htmlFor="editSeries">Series</Label>
+              <Input id="editSeries" value={formData.series} onChange={e => setFormData({...formData, series: e.target.value})} placeholder="Optional" />
+            </div>
+            <div>
+              <Label htmlFor="editTopic">Topic</Label>
+              <Input id="editTopic" value={formData.topic} onChange={e => setFormData({...formData, topic: e.target.value})} placeholder="Optional" />
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <input 
+                type="checkbox" 
+                id="editUpcoming" 
+                checked={formData.isUpcoming} 
+                onChange={e => setFormData({...formData, isUpcoming: e.target.checked})}
+                className="w-4 h-4"
+              />
+              <Label htmlFor="editUpcoming">Upcoming Message</Label>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="editDescription">Description</Label>
+            <Textarea id="editDescription" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="editVideoUrl">Video URL</Label>
+              <Input id="editVideoUrl" value={formData.videoUrl} onChange={e => setFormData({...formData, videoUrl: e.target.value})} placeholder="https://youtube.com/..." />
+            </div>
+            <div>
+              <Label htmlFor="editAudioUrl">Audio URL</Label>
+              <Input id="editAudioUrl" value={formData.audioUrl} onChange={e => setFormData({...formData, audioUrl: e.target.value})} placeholder="https://..." />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="editThumbnailUrl">Thumbnail URL</Label>
+            <Input id="editThumbnailUrl" value={formData.thumbnailUrl} onChange={e => setFormData({...formData, thumbnailUrl: e.target.value})} placeholder="https://..." />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Update Sermon
           </Button>
         </form>
       </DialogContent>
