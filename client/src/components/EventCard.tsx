@@ -1,11 +1,11 @@
 import { Link } from "wouter";
 import { format } from "date-fns";
-import { MapPin, Clock } from "lucide-react";
+import { MapPin, Clock, Calendar, Check, CalendarPlus } from "lucide-react";
 import type { Event } from "@/types/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useRsvpEvent } from "@/hooks/use-events";
+import { useRsvpEvent, useRemoveRsvp, useUserRsvps, useAddToCalendar } from "@/hooks/use-events";
 import { useToast } from "@/hooks/use-toast";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
@@ -14,11 +14,30 @@ interface EventCardProps {
   event: Event;
 }
 
+function generateCalendarLink(event: Event): string {
+  const eventDate = new Date(event.date);
+  const startDate = eventDate.toISOString().replace(/-|:|\.\d{3}/g, "").slice(0, 15);
+  const endDate = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000).toISOString().replace(/-|:|\.\d{3}/g, "").slice(0, 15);
+  
+  const title = encodeURIComponent(event.title);
+  const description = encodeURIComponent(event.description);
+  const location = encodeURIComponent(event.location);
+  
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${description}&location=${location}`;
+}
+
 export function EventCard({ event }: EventCardProps) {
   const { user } = useAuth();
-  const { mutate: rsvp, isPending } = useRsvpEvent();
+  const { mutate: rsvp, isPending: isRsvpPending } = useRsvpEvent();
+  const { mutate: removeRsvp, isPending: isRemovePending } = useRemoveRsvp();
+  const { mutate: addToCalendar, isPending: isAddingToCalendar } = useAddToCalendar();
+  const { data: userRsvps } = useUserRsvps();
   const { toast } = useToast();
   const eventDate = new Date(event.date);
+
+  const userRsvp = userRsvps?.find((r: any) => r.eventId === event.id);
+  const isRsvped = !!userRsvp;
+  const isAddedToCalendar = userRsvp?.addedToCalendar;
 
   const handleRsvp = () => {
     if (!user) {
@@ -37,6 +56,44 @@ export function EventCard({ event }: EventCardProps) {
           title: "Error",
           description: "Could not RSVP. Please try again.",
           variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const handleRemoveRsvp = () => {
+    removeRsvp(event.id, {
+      onSuccess: () => {
+        toast({
+          title: "RSVP Removed",
+          description: "You have been removed from this event.",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Could not remove RSVP. Please try again.",
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const handleAddToCalendar = () => {
+    const calendarUrl = generateCalendarLink(event);
+    window.open(calendarUrl, "_blank");
+    
+    addToCalendar(event.id, {
+      onSuccess: () => {
+        toast({
+          title: "Added to Calendar",
+          description: "Event has been added to your calendar.",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Note",
+          description: "Please add the event to your calendar manually if it didn't open.",
         });
       },
     });
@@ -81,13 +138,46 @@ export function EventCard({ event }: EventCardProps) {
           </div>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
-          <Button 
-            onClick={handleRsvp} 
-            disabled={isPending}
-            className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5"
-          >
-            {isPending ? "Confirming..." : "RSVP"}
-          </Button>
+          {isRsvped ? (
+            <>
+              <Button 
+                variant="default"
+                disabled={isRemovePending}
+                className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5 bg-green-600 hover:bg-green-700"
+                onClick={handleRemoveRsvp}
+              >
+                {isRemovePending ? "Removing..." : <><Check className="w-4 h-4 mr-1" /> Going</>}
+              </Button>
+              {!isAddedToCalendar ? (
+                <Button 
+                  variant="outline"
+                  disabled={isAddingToCalendar}
+                  className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5"
+                  onClick={handleAddToCalendar}
+                >
+                  {isAddingToCalendar ? "Adding..." : <><CalendarPlus className="w-4 h-4 mr-1" /> Add to Calendar</>}
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline"
+                  disabled
+                  className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5 bg-green-50"
+                >
+                  <Calendar className="w-4 h-4 mr-1" /> Added
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button 
+                onClick={handleRsvp} 
+                disabled={isRsvpPending}
+                className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5"
+              >
+                {isRsvpPending ? "Confirming..." : "RSVP"}
+              </Button>
+            </>
+          )}
           <Button variant="outline" asChild className="flex-1 md:flex-none text-sm md:text-base py-2 md:py-2.5">
             <Link href={`/events/${event.id}`}>Details</Link>
           </Button>

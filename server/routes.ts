@@ -497,9 +497,58 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.events.rsvp.path, isAuthenticated, async (req, res) => {
-    // Mock RSVP for now
-    res.json({ message: "RSVP successful" });
+  app.post(api.events.rsvp.path, isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const userId = req.user!.id;
+      
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const rsvp = await storage.rsvpToEvent(eventId, userId);
+      res.json({ message: "RSVP successful", rsvp });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's RSVPs
+  app.get("/api/events/rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const rsvps = await storage.getUserRsvps(userId);
+      res.json(rsvps);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Remove RSVP
+  app.delete("/api/events/:id/rsvp", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const userId = req.user!.id;
+      
+      await storage.removeRsvp(eventId, userId);
+      res.json({ message: "RSVP removed" });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Mark event as added to calendar
+  app.post("/api/events/:id/calendar", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const userId = req.user!.id;
+      
+      const rsvp = await storage.markAddedToCalendar(eventId, userId);
+      res.json({ message: "Added to calendar", rsvp });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
 
   // Update event

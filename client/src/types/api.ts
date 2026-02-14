@@ -113,6 +113,14 @@ export interface Donation {
   createdAt: string;
 }
 
+export interface EventRsvp {
+  id: number;
+  eventId: number;
+  userId: string;
+  addedToCalendar: boolean;
+  createdAt: string;
+}
+
 // Insert types (for creating new records)
 export type InsertEvent = Omit<Event, 'id' | 'createdAt'>;
 export type InsertSermon = Omit<Sermon, 'id' | 'createdAt'>;

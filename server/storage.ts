@@ -1,7 +1,7 @@
 import { 
-  users, branding, events, sermons, prayerRequests, donations,
-  type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation,
-  type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation
+  users, branding, events, sermons, prayerRequests, donations, eventRsvps,
+  type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp,
+  type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike, and, like } from "drizzle-orm";
@@ -45,6 +45,13 @@ export interface IStorage {
   // Donations
   createDonation(donation: InsertDonation): Promise<Donation>;
   getDonations(): Promise<Donation[]>;
+
+  // Event RSVPs
+  rsvpToEvent(eventId: number, userId: string): Promise<EventRsvp>;
+  removeRsvp(eventId: number, userId: string): Promise<void>;
+  getUserRsvps(userId: string): Promise<EventRsvp[]>;
+  getEventRsvps(eventId: number): Promise<EventRsvp[]>;
+  markAddedToCalendar(eventId: number, userId: string): Promise<EventRsvp>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -247,6 +254,41 @@ export class DatabaseStorage implements IStorage {
 
   async getDonations(): Promise<Donation[]> {
     return await db.select().from(donations).orderBy(desc(donations.createdAt));
+  }
+
+  // Event RSVPs
+  async rsvpToEvent(eventId: number, userId: string): Promise<EventRsvp> {
+    const existing = await db.select().from(eventRsvps).where(
+      and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, userId))
+    );
+    if (existing.length > 0) {
+      return existing[0];
+    }
+    const [rsvp] = await db.insert(eventRsvps).values({ eventId, userId }).returning();
+    return rsvp;
+  }
+
+  async removeRsvp(eventId: number, userId: string): Promise<void> {
+    await db.delete(eventRsvps).where(
+      and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, userId))
+    );
+  }
+
+  async getUserRsvps(userId: string): Promise<EventRsvp[]> {
+    return await db.select().from(eventRsvps).where(eq(eventRsvps.userId, userId));
+  }
+
+  async getEventRsvps(eventId: number): Promise<EventRsvp[]> {
+    return await db.select().from(eventRsvps).where(eq(eventRsvps.eventId, eventId));
+  }
+
+  async markAddedToCalendar(eventId: number, userId: string): Promise<EventRsvp> {
+    const [rsvp] = await db
+      .update(eventRsvps)
+      .set({ addedToCalendar: true })
+      .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, userId)))
+      .returning();
+    return rsvp;
   }
 }
 

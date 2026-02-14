@@ -81,6 +81,7 @@ export function useDeleteEvent() {
 }
 
 export function useRsvpEvent() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(buildApiUrl(apiRoutes.events.rsvp(id)), {
@@ -89,6 +90,56 @@ export function useRsvpEvent() {
       });
       if (!res.ok) throw new Error("Failed to RSVP");
       return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-rsvps"] });
+    },
+  });
+}
+
+export function useRemoveRsvp() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(buildApiUrl(apiRoutes.events.rsvp(id)), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to remove RSVP");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-rsvps"] });
+    },
+  });
+}
+
+export function useUserRsvps() {
+  return useQuery({
+    queryKey: ["user-rsvps"],
+    queryFn: async () => {
+      const res = await fetch(buildApiUrl(apiRoutes.events.rsvps), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch RSVPs");
+      return res.json();
+    },
+  });
+}
+
+export function useAddToCalendar() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(buildApiUrl(apiRoutes.events.addToCalendar(id)), {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to add to calendar");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-rsvps"] });
     },
   });
 }

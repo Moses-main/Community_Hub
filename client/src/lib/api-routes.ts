@@ -21,6 +21,8 @@ export const apiRoutes = {
     get: (id: number) => `/api/events/${id}`,
     create: "/api/events",
     rsvp: (id: number) => `/api/events/${id}/rsvp`,
+    rsvps: "/api/events/rsvps",
+    addToCalendar: (id: number) => `/api/events/${id}/calendar`,
   },
   sermons: {
     list: "/api/sermons",

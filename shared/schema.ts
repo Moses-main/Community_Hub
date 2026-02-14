@@ -24,6 +24,14 @@ export const events = pgTable("events", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const eventRsvps = pgTable("event_rsvps", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  userId: text("user_id").references(() => users.id).notNull(),
+  addedToCalendar: boolean("added_to_calendar").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const sermons = pgTable("sermons", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -71,6 +79,17 @@ export const donationsRelations = relations(donations, ({ one }) => ({
   }),
 }));
 
+export const eventRsvpsRelations = relations(eventRsvps, ({ one }) => ({
+  event: one(events, {
+    fields: [eventRsvps.eventId],
+    references: [events.id],
+  }),
+  user: one(users, {
+    fields: [eventRsvps.userId],
+    references: [users.id],
+  }),
+}));
+
 // === BASE SCHEMAS ===
 export const insertBrandingSchema = createInsertSchema(branding).omit({ id: true });
 
@@ -103,6 +122,7 @@ export const insertSermonSchema = z.object({
 
 export const insertPrayerRequestSchema = createInsertSchema(prayerRequests).omit({ id: true, createdAt: true, prayCount: true });
 export const insertDonationSchema = createInsertSchema(donations).omit({ id: true, createdAt: true });
+export const insertEventRsvpSchema = createInsertSchema(eventRsvps).omit({ id: true, createdAt: true });
 
 // === EXPLICIT API CONTRACT TYPES ===
 export type Branding = typeof branding.$inferSelect;
@@ -110,12 +130,14 @@ export type Event = typeof events.$inferSelect;
 export type Sermon = typeof sermons.$inferSelect;
 export type PrayerRequest = typeof prayerRequests.$inferSelect;
 export type Donation = typeof donations.$inferSelect;
+export type EventRsvp = typeof eventRsvps.$inferSelect;
 
 export type InsertBranding = z.infer<typeof insertBrandingSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type InsertSermon = z.infer<typeof insertSermonSchema>;
 export type InsertPrayerRequest = z.infer<typeof insertPrayerRequestSchema>;
 export type InsertDonation = z.infer<typeof insertDonationSchema>;
+export type InsertEventRsvp = z.infer<typeof insertEventRsvpSchema>;
 
 // Request types
 export type CreateEventRequest = InsertEvent;
