@@ -456,16 +456,16 @@ export class DatabaseStorage implements IStorage {
     offline: number;
     byService: { serviceType: string; count: number }[];
   }> {
-    let conditions = and(
+    const conditions = [
       gte(attendance.serviceDate, startDate),
       lte(attendance.serviceDate, endDate)
-    );
+    ];
     
     if (serviceType) {
-      conditions = and(conditions, eq(attendance.serviceType, serviceType as any));
+      conditions.push(eq(attendance.serviceType, serviceType as any));
     }
 
-    const records = await db.select().from(attendance).where(conditions);
+    const records = await db.select().from(attendance).where(and(...conditions));
     
     const total = records.length;
     const online = records.filter(r => r.isOnline).length;
