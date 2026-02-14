@@ -29,6 +29,8 @@ export const apiRoutes = {
     list: "/api/sermons",
     get: (id: number) => `/api/sermons/${id}`,
     create: "/api/sermons",
+    share: (id: number) => `/api/sermons/${id}/share`,
+    download: (id: number) => `/api/sermons/${id}/download`,
   },
   prayer: {
     list: "/api/prayer-requests",

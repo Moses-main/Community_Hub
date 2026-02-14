@@ -1,5 +1,6 @@
+import React, { useState, useMemo } from "react";
 import ReactPlayer from "react-player";
-import { useSermons } from "@/hooks/use-sermons";
+import { useSermons, type SermonFilters } from "@/hooks/use-sermons";
 import { SermonCard } from "@/components/SermonCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search } from "lucide-react";
 
 export default function SermonsPage() {
-  const { data: sermons, isLoading } = useSermons();
+  const [filters, setFilters] = useState<SermonFilters>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const { data: allSermons, isLoading } = useSermons();
+
+  const handleFilterChange = (key: keyof SermonFilters, value: string) => {
+    if (value === "all" || !value) {
+      const newFilters = { ...filters };
+      delete newFilters[key];
+      setFilters(newFilters);
+    } else {
+      setFilters({ ...filters, [key]: value });
+    }
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    if (value) {
+      setFilters({ ...filters, search: value });
+    } else {
+      const newFilters = { ...filters };
+      delete newFilters.search;
+      setFilters(newFilters);
+    }
+  };
+
+  const { data: filteredSermons } = useSermons(filters);
+
+  const uniqueSeries = useMemo(() => {
+    if (!allSermons) return [];
+    const series = allSermons.map(s => s.series).filter((s): s is string => Boolean(s));
+    return [...new Set(series)];
+  }, [allSermons]);
+
+  const uniqueSpeakers = useMemo(() => {
+    if (!allSermons) return [];
+    const speakers = allSermons.map(s => s.speaker).filter((s): s is string => Boolean(s));
+    return [...new Set(speakers)];
+  }, [allSermons]);
 
   return (
     <div className="min-h-screen bg-background pb-12 md:pb-20">
@@ -26,26 +64,43 @@ export default function SermonsPage() {
         <div className="flex flex-col md:flex-row gap-3 md:gap-4 mb-6 md:mb-10">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input placeholder="Search sermons..." className="pl-10" />
+            <Input 
+              placeholder="Search by title or pastor name..." 
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+            />
           </div>
-          <Select>
+          <Select value={filters.status || "all"} onValueChange={(value) => handleFilterChange("status", value)}>
+            <SelectTrigger className="w-full md:w-[180px] lg:w-[200px] bg-white">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border-gray-200 shadow-xl">
+              <SelectItem value="all">All Messages</SelectItem>
+              <SelectItem value="past">Past Messages</SelectItem>
+              <SelectItem value="upcoming">Upcoming Messages</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filters.series || "all"} onValueChange={(value) => handleFilterChange("series", value)}>
             <SelectTrigger className="w-full md:w-[180px] lg:w-[200px] bg-white">
               <SelectValue placeholder="Series" />
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-xl">
               <SelectItem value="all">All Series</SelectItem>
-              <SelectItem value="faith">Faith & Works</SelectItem>
-              <SelectItem value="gospel">The Gospel</SelectItem>
+              {uniqueSeries.map((series) => (
+                <SelectItem key={series} value={series}>{series}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Select>
+          <Select value={filters.speaker || "all"} onValueChange={(value) => handleFilterChange("speaker", value)}>
             <SelectTrigger className="w-full md:w-[180px] lg:w-[200px] bg-white">
               <SelectValue placeholder="Speaker" />
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-xl">
               <SelectItem value="all">All Speakers</SelectItem>
-              <SelectItem value="pastor">Pastor John</SelectItem>
-              <SelectItem value="guest">Guest Speakers</SelectItem>
+              {uniqueSpeakers.map((speaker) => (
+                <SelectItem key={speaker} value={speaker}>{speaker}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -61,7 +116,7 @@ export default function SermonsPage() {
               </div>
             ))
           ) : (
-            sermons?.map(sermon => (
+            filteredSermons?.map(sermon => (
               <SermonCard key={sermon.id} sermon={sermon} />
             ))
           )}
