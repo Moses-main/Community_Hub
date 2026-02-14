@@ -4,7 +4,13 @@ import {
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, like, or, and } from "drizzle-orm";
+
+export interface ISermonFilter {
+  speaker?: string;
+  series?: string;
+  isUpcoming?: boolean;
+}
 
 export interface IStorage {
   // Users
@@ -27,7 +33,7 @@ export interface IStorage {
   deleteEvent(id: number): Promise<void>;
   
   // Sermons
-  getSermons(): Promise<Sermon[]>;
+  getSermons(filter?: ISermonFilter): Promise<Sermon[]>;
   getSermon(id: number): Promise<Sermon | undefined>;
   createSermon(sermon: InsertSermon): Promise<Sermon>;
   updateSermon(id: number, sermon: Partial<InsertSermon>): Promise<Sermon>;
@@ -150,8 +156,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Sermons
-  async getSermons(): Promise<Sermon[]> {
-    return await db.select().from(sermons).orderBy(desc(sermons.date));
+  async getSermons(filter?: ISermonFilter): Promise<Sermon[]> {
+    let query = db.select().from(sermons).orderBy(desc(sermons.date));
+    
+    if (filter) {
+      const conditions = [];
+      if (filter.speaker) {
+        conditions.push(like(sermons.speaker, `%${filter.speaker}%`));
+      }
+      if (filter.series) {
+        conditions.push(like(sermons.series, `%${filter.series}%`));
+      }
+      if (filter.isUpcoming !== undefined) {
+        conditions.push(eq(sermons.isUpcoming, filter.isUpcoming));
+      }
+      
+      if (conditions.length > 0) {
+        return await db.select().from(sermons).where(and(...conditions)).orderBy(desc(sermons.date));
+      }
+    }
+    
+    return await query;
   }
 
   async getSermon(id: number): Promise<Sermon | undefined> {

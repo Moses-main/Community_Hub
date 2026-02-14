@@ -1,6 +1,6 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, type ISermonFilter } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -376,7 +376,15 @@ export async function registerRoutes(
 
   // Sermons
   app.get(api.sermons.list.path, async (req, res) => {
-    const sermons = await storage.getSermons();
+    const { speaker, series, status } = req.query;
+    const filter: ISermonFilter = {};
+    
+    if (speaker) filter.speaker = speaker as string;
+    if (series) filter.series = series as string;
+    if (status === 'upcoming') filter.isUpcoming = true;
+    if (status === 'past') filter.isUpcoming = false;
+    
+    const sermons = await storage.getSermons(filter);
     res.json(sermons);
   });
 
@@ -386,7 +394,61 @@ export async function registerRoutes(
     res.json(sermon);
   });
 
-  app.post(api.sermons.create.path, isAuthenticated, async (req, res) => {
+  // Share sermon - returns social media share links
+  app.get("/api/sermons/:id/share", async (req, res) => {
+    const sermon = await storage.getSermon(Number(req.params.id));
+    if (!sermon) return res.status(404).json({ message: "Sermon not found" });
+    
+    const baseUrl = process.env.BASE_URL || `https://${req.get('host')}`;
+    const sermonUrl = `${baseUrl}/sermons/${sermon.id}`;
+    const sermonTitle = encodeURIComponent(sermon.title);
+    const sermonDescription = sermon.description ? encodeURIComponent(sermon.description.substring(0, 100)) : '';
+    
+    const shareLinks = {
+      x: `https://twitter.com/intent/tweet?text=${sermonTitle}&url=${encodeURIComponent(sermonUrl)}`,
+      whatsapp: `https://wa.me/?text=${sermonTitle}%20${encodeURIComponent(sermonUrl)}`,
+      email: `mailto:?subject=${sermonTitle}&body=${sermonDescription}%20${encodeURIComponent(sermonUrl)}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(sermonUrl)}`,
+      instagram: `https://www.instagram.com/`,
+      tiktok: `https://www.tiktok.com/`,
+      copyLink: sermonUrl
+    };
+    
+    res.json(shareLinks);
+  });
+
+  // Download sermon audio/video
+  app.get("/api/sermons/:id/download", async (req, res) => {
+    const sermon = await storage.getSermon(Number(req.params.id));
+    if (!sermon) return res.status(404).json({ message: "Sermon not found" });
+    
+    const { type } = req.query;
+    let downloadUrl = null;
+    let filename = '';
+    
+    if (type === 'video' && sermon.videoUrl) {
+      downloadUrl = sermon.videoUrl;
+      filename = `${sermon.title}-video.mp4`;
+    } else if (type === 'audio' && sermon.audioUrl) {
+      downloadUrl = sermon.audioUrl;
+      filename = `${sermon.title}-audio.mp3`;
+    } else if (!type) {
+      if (sermon.audioUrl) {
+        downloadUrl = sermon.audioUrl;
+        filename = `${sermon.title}-audio.mp3`;
+      } else if (sermon.videoUrl) {
+        downloadUrl = sermon.videoUrl;
+        filename = `${sermon.title}-video.mp4`;
+      }
+    }
+    
+    if (!downloadUrl) return res.status(404).json({ message: "No download available" });
+    
+    res.json({ url: downloadUrl, filename, title: sermon.title });
+  });
+
+  // Admin only: Create sermon
+  app.post(api.sermons.create.path, isAuthenticated, isAdmin, async (req, res) => {
     try {
       const input = api.sermons.create.input.parse(req.body);
       const sermon = await storage.createSermon(input);
@@ -399,20 +461,24 @@ export async function registerRoutes(
     }
   });
 
-  // Update sermon
-  app.put("/api/sermons/:id", isAuthenticated, async (req, res) => {
+  // Update sermon (admin only)
+  app.put("/api/sermons/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const id = Number(req.params.id);
-      const { title, speaker, date, videoUrl, audioUrl, series, description, thumbnailUrl } = req.body;
-      const input: Partial<{ title: string; speaker: string; date: Date; videoUrl?: string; audioUrl?: string; series?: string; description?: string; thumbnailUrl?: string }> = {};
+      const { title, speaker, date, topic, videoUrl, videoFilePath, audioUrl, audioFilePath, series, description, thumbnailUrl, isUpcoming } = req.body;
+      const input: Partial<{ title: string; speaker: string; date: Date; topic?: string; videoUrl?: string; videoFilePath?: string; audioUrl?: string; audioFilePath?: string; series?: string; description?: string; thumbnailUrl?: string; isUpcoming?: boolean }> = {};
       if (title !== undefined) input.title = title;
       if (speaker !== undefined) input.speaker = speaker;
       if (date !== undefined) input.date = new Date(date);
+      if (topic !== undefined) input.topic = topic;
       if (videoUrl !== undefined) input.videoUrl = videoUrl;
+      if (videoFilePath !== undefined) input.videoFilePath = videoFilePath;
       if (audioUrl !== undefined) input.audioUrl = audioUrl;
+      if (audioFilePath !== undefined) input.audioFilePath = audioFilePath;
       if (series !== undefined) input.series = series;
       if (description !== undefined) input.description = description;
       if (thumbnailUrl !== undefined) input.thumbnailUrl = thumbnailUrl;
+      if (isUpcoming !== undefined) input.isUpcoming = isUpcoming;
       const sermon = await storage.updateSermon(id, input);
       res.json(sermon);
     } catch (err) {
@@ -423,8 +489,8 @@ export async function registerRoutes(
     }
   });
 
-  // Delete sermon
-  app.delete("/api/sermons/:id", isAuthenticated, async (req, res) => {
+  // Delete sermon (admin only)
+  app.delete("/api/sermons/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const id = Number(req.params.id);
       await storage.deleteSermon(id);
@@ -509,7 +575,9 @@ async function seedDatabase() {
       date: new Date(),
       description: "Discover why we need each other to grow in faith.",
       series: "Better Together",
-      videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // Placeholder
+      topic: "Community",
+      videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      isUpcoming: false,
       thumbnailUrl:
         "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=800&auto=format&fit=crop&q=60",
     });
@@ -519,8 +587,21 @@ async function seedDatabase() {
       date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
       description: "How to maintain inner peace when the world is crazy.",
       series: "Peace of Mind",
+      topic: "Peace",
+      isUpcoming: false,
       thumbnailUrl:
         "https://images.unsplash.com/photo-1507692049790-de58293a4697?w=800&auto=format&fit=crop&q=60",
+    });
+    await storage.createSermon({
+      title: "Walking in Faith",
+      speaker: "Pastor Emmanuel Moses",
+      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      description: "Learning to trust God in every step of our journey.",
+      series: "Faith Journey",
+      topic: "Faith",
+      isUpcoming: true,
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=60",
     });
   } else {
     for (const sermon of existingSermons) {

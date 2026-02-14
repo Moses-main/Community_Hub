@@ -94,6 +94,11 @@ export const api = {
     list: {
       method: "GET" as const,
       path: "/api/sermons",
+      query: z.object({
+        speaker: z.string().optional(),
+        series: z.string().optional(),
+        status: z.enum(['upcoming', 'past']).optional(),
+      }),
       responses: {
         200: z.array(z.custom<typeof sermons.$inferSelect>()),
       },
@@ -106,6 +111,37 @@ export const api = {
         404: errorSchemas.notFound,
       },
     },
+    share: {
+      method: "GET" as const,
+      path: "/api/sermons/:id/share",
+      responses: {
+        200: z.object({
+          x: z.string(),
+          whatsapp: z.string(),
+          email: z.string(),
+          facebook: z.string(),
+          instagram: z.string(),
+          tiktok: z.string(),
+          copyLink: z.string(),
+        }),
+        404: errorSchemas.notFound,
+      },
+    },
+    download: {
+      method: "GET" as const,
+      path: "/api/sermons/:id/download",
+      query: z.object({
+        type: z.enum(['video', 'audio']).optional(),
+      }),
+      responses: {
+        200: z.object({
+          url: z.string(),
+          filename: z.string(),
+          title: z.string(),
+        }),
+        404: errorSchemas.notFound,
+      },
+    },
     create: {
       method: "POST" as const,
       path: "/api/sermons",
@@ -114,6 +150,7 @@ export const api = {
         201: z.custom<typeof sermons.$inferSelect>(),
         400: errorSchemas.validation,
         401: errorSchemas.unauthorized,
+        403: z.object({ message: z.string() }),
       },
     },
   },
