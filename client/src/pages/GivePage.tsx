@@ -74,17 +74,25 @@ export default function GivePage() {
 
   return (
     <div className="min-h-screen bg-background pb-12 md:pb-20">
-      <div className="bg-primary text-primary-foreground py-12 md:py-20">
-        <div className="container px-3 md:px-4 text-center">
-          <h1 className="text-2xl md:text-4xl lg:text-5xl font-display font-bold mb-4 md:mb-6">
+      <div className="relative py-12 md:py-20">
+        <div className="absolute inset-0">
+          <img 
+            src="/card-verticle.avif" 
+            alt="Background" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-primary/80" />
+        </div>
+        <div className="container px-3 md:px-4 text-center relative z-10">
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-display font-bold mb-4 md:mb-6 text-white">
             Generosity
           </h1>
-          <p className="text-base md:text-xl opacity-90 max-w-2xl mx-auto">
+          <p className="text-base md:text-xl text-white/90 max-w-2xl mx-auto">
             "Each of you should give what you have decided in your heart to
             give, not reluctantly or under compulsion, for God loves a cheerful
             giver."
           </p>
-          <p className="mt-3 md:mt-4 opacity-75 text-sm md:text-base">2 Corinthians 9:7</p>
+          <p className="mt-3 md:mt-4 text-white/75 text-sm md:text-base">2 Corinthians 9:7</p>
         </div>
       </div>
 
