@@ -1,13 +1,14 @@
 import { useRoute } from "wouter";
 import { useSermon, useShareSermon, useDownloadSermon } from "@/hooks/use-sermons";
 import { format } from "date-fns";
-import { Play, Calendar, User, ArrowLeft, Share2, Download, Headphones, X, Check } from "lucide-react";
+import { Play, Calendar, User, ArrowLeft, Share2, Download, Headphones, X, Check, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { FaXTwitter, FaWhatsapp, FaFacebook, FaEnvelope, FaLinkedin, FaLink } from "react-icons/fa6";
 
 export default function SermonDetailPage() {
   const [, params] = useRoute<{ id: string }>("/sermons/:id");
@@ -18,10 +19,35 @@ export default function SermonDetailPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleShare = async () => {
-    if (!sermonId) return;
-    const result = await shareSermon.mutateAsync(sermonId);
-    window.open(result.x, '_blank');
+  useEffect(() => {
+    if (showShareModal && sermonId && !shareSermon.data) {
+      shareSermon.mutate(sermonId);
+    }
+  }, [showShareModal, sermonId]);
+
+  const handleShare = (platform: string) => {
+    const links = shareSermon.data;
+    if (!links) return;
+
+    switch (platform) {
+      case 'x':
+        window.open(links.x, '_blank');
+        break;
+      case 'whatsapp':
+        window.open(links.whatsapp, '_blank');
+        break;
+      case 'facebook':
+        window.open(links.facebook, '_blank');
+        break;
+      case 'email':
+        window.open(links.email, '_blank');
+        break;
+      case 'linkedin':
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(links.copyLink)}`, '_blank');
+        break;
+      default:
+        break;
+    }
   };
 
   const handleDownload = async (type?: "video" | "audio") => {
@@ -35,9 +61,9 @@ export default function SermonDetailPage() {
   };
 
   const copyLink = async () => {
-    if (!sermonId) return;
-    const result = await shareSermon.mutateAsync(sermonId);
-    await navigator.clipboard.writeText(result.copyLink);
+    const links = shareSermon.data;
+    if (!links) return;
+    await navigator.clipboard.writeText(links.copyLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -238,38 +264,55 @@ export default function SermonDetailPage() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <button
-                  onClick={handleShare}
-                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50"
+                  onClick={() => handleShare('x')}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
                 >
-                  <span className="text-xl">𝕏</span>
+                  <FaXTwitter className="w-6 h-6" style={{ color: '#000000' }} />
                   <span className="text-xs">X</span>
                 </button>
                 <button
-                  onClick={() => shareSermon.data?.whatsapp && window.open(shareSermon.data.whatsapp, '_blank')}
-                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50"
+                  onClick={() => handleShare('whatsapp')}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
                 >
-                  <span className="text-xl">💬</span>
+                  <FaWhatsapp className="w-6 h-6" style={{ color: '#25D366' }} />
                   <span className="text-xs">WhatsApp</span>
                 </button>
                 <button
-                  onClick={() => shareSermon.data?.facebook && window.open(shareSermon.data.facebook, '_blank')}
-                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50"
+                  onClick={() => handleShare('facebook')}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
                 >
-                  <span className="text-xl">📘</span>
+                  <FaFacebook className="w-6 h-6" style={{ color: '#1877F2' }} />
                   <span className="text-xs">Facebook</span>
                 </button>
                 <button
-                  onClick={() => shareSermon.data?.email && window.open(shareSermon.data.email, '_blank')}
-                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50"
+                  onClick={() => handleShare('email')}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
                 >
-                  <span className="text-xl">✉️</span>
+                  <FaEnvelope className="w-6 h-6" style={{ color: '#EA4335' }} />
                   <span className="text-xs">Email</span>
                 </button>
                 <button
-                  onClick={copyLink}
-                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50"
+                  onClick={() => handleShare('linkedin')}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
                 >
-                  {copied ? <Check className="w-5 h-5 text-green-500" /> : <span className="text-xl">🔗</span>}
+                  <FaLinkedin className="w-6 h-6" style={{ color: '#0A66C2' }} />
+                  <span className="text-xs">LinkedIn</span>
+                </button>
+                <button
+                  onClick={copyLink}
+                  disabled={!shareSermon.data}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {copied ? (
+                    <Check className="w-6 h-6 text-green-500" />
+                  ) : (
+                    <FaLink className="w-6 h-6 text-gray-600" />
+                  )}
                   <span className="text-xs">{copied ? "Copied!" : "Copy Link"}</span>
                 </button>
               </div>
