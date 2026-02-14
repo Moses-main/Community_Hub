@@ -45,34 +45,34 @@ export default function SermonsPage() {
               onChange={(e) => handleFilterChange("speaker", e.target.value)}
             />
           </div>
-          <Select value={filters.status || ""} onValueChange={(value) => handleFilterChange("status", value)}>
+          <Select value={filters.status || "all"} onValueChange={(value) => handleFilterChange("status", value)}>
             <SelectTrigger className="w-full md:w-[180px] lg:w-[200px] bg-white">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-xl">
-              <SelectItem value="">All Messages</SelectItem>
+              <SelectItem value="all">All Messages</SelectItem>
               <SelectItem value="past">Past Messages</SelectItem>
               <SelectItem value="upcoming">Upcoming Messages</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={filters.series || ""} onValueChange={(value) => handleFilterChange("series", value)}>
+          <Select value={filters.series || "all"} onValueChange={(value) => handleFilterChange("series", value)}>
             <SelectTrigger className="w-full md:w-[180px] lg:w-[200px] bg-white">
               <SelectValue placeholder="Series" />
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-xl">
-              <SelectItem value="">All Series</SelectItem>
+              <SelectItem value="all">All Series</SelectItem>
               <SelectItem value="Faith">Faith & Works</SelectItem>
               <SelectItem value="Gospel">The Gospel</SelectItem>
               <SelectItem value="Peace">Peace</SelectItem>
               <SelectItem value="Community">Community</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={filters.speaker || ""} onValueChange={(value) => handleFilterChange("speaker", value)}>
+          <Select value={filters.speaker || "all"} onValueChange={(value) => handleFilterChange("speaker", value)}>
             <SelectTrigger className="w-full md:w-[180px] lg:w-[200px] bg-white">
               <SelectValue placeholder="Speaker" />
             </SelectTrigger>
             <SelectContent className="bg-white border-gray-200 shadow-xl">
-              <SelectItem value="">All Speakers</SelectItem>
+              <SelectItem value="all">All Speakers</SelectItem>
               <SelectItem value="John">Pastor John</SelectItem>
               <SelectItem value="Jane">Pastor Jane</SelectItem>
               <SelectItem value="Emmanuel">Pastor Emmanuel</SelectItem>
