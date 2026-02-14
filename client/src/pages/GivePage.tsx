@@ -74,15 +74,15 @@ export default function GivePage() {
 
   return (
     <div className="min-h-screen bg-background pb-12 md:pb-20">
-      <div className="relative py-12 md:py-20">
-        <div className="absolute inset-0">
+      <div className="relative py-12 md:py-20 overflow-hidden">
+        <div className="absolute inset-0 flex items-center justify-center">
           <img 
             src="/tokens.avif" 
             alt="Background" 
-            className="w-full h-full object-cover blur-[1px]"
+            className="w-1/2 h-1/2 object-contain opacity-60"
           />
         </div>
-        <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-white/30 backdrop-blur-[1px]" />
         <div className="container px-3 md:px-4 text-center relative z-10">
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-display font-bold mb-4 md:mb-6 text-gray-900">
             Generosity
