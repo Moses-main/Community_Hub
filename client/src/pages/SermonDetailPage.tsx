@@ -24,6 +24,24 @@ export default function SermonDetailPage() {
   const [copied, setCopied] = useState(false);
   const [checkedIn, setCheckedIn] = useState(false);
 
+  const handleOnlineCheckin = async () => {
+    if (!user || !sermon) return;
+    try {
+      await recordAttendance.mutateAsync({
+        userId: user.id,
+        serviceType: sermon.isUpcoming ? "ONLINE_LIVE" : "ONLINE_REPLAY",
+        serviceId: sermonId!,
+        serviceName: sermon.title,
+        serviceDate: new Date(sermon.date).toISOString(),
+        watchDuration: 600,
+        isReplay: !sermon.isUpcoming,
+      });
+      setCheckedIn(true);
+    } catch (err) {
+      console.error("Failed to check in:", err);
+    }
+  };
+  
   useEffect(() => {
     if (showShareModal && sermonId && !shareSermon.data) {
       shareSermon.mutate(sermonId);
@@ -71,25 +89,6 @@ export default function SermonDetailPage() {
     await navigator.clipboard.writeText(links.copyLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleOnlineCheckin = async () => {
-    if (!user || !sermon) return;
-    
-    try {
-      await recordAttendance.mutateAsync({
-        userId: user.id,
-        serviceType: sermon.isUpcoming ? "ONLINE_LIVE" : "ONLINE_REPLAY",
-        serviceId: sermonId!,
-        serviceName: sermon.title,
-        serviceDate: new Date(sermon.date).toISOString(),
-        watchDuration: 600, // 10 minutes minimum
-        isReplay: !sermon.isUpcoming,
-      });
-      setCheckedIn(true);
-    } catch (err) {
-      console.error("Failed to record attendance:", err);
-    }
   };
 
   if (isLoading) {

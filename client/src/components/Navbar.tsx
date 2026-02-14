@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck } from "lucide-react";
+import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck, QrCode } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
@@ -186,6 +186,18 @@ export function Navbar() {
                     >
                       <CalendarCheck className="w-5 h-5" />
                       My Attendance
+                    </Link>
+                    <Link
+                      href="/attendance/scan"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`text-lg font-medium p-3 rounded-xl transition-colors flex items-center gap-2 ${
+                        isActive("/attendance/scan")
+                          ? "bg-primary/10 text-primary"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <QrCode className="w-5 h-5" />
+                      Scan QR
                     </Link>
                     <button
                       onClick={() => {
