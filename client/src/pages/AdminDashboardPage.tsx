@@ -473,35 +473,36 @@ export default function AdminDashboardPage() {
                         </Button>
                       )}
                     </div>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                      <div className="min-w-[1100px]">
                       <table className="w-full">
                         <thead>
-                          <tr className="border-b border-gray-100">
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Name</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Phone</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">House Cell Location</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">House Fellowship</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Verified</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Joined</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
+                          <tr className="border-b border-gray-200 bg-gray-50">
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Name</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Email</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Phone</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">House Cell Location</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">House Fellowship</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Verified</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Joined</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Role</th>
                           </tr>
                         </thead>
                         <tbody>
                           {displayUsers?.map((u) => (
-                            <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
-                              <td className="py-3 px-4 font-medium text-gray-900">
+                            <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-4 px-4 font-medium text-gray-900 text-sm">
                                 {u.firstName ? `${u.firstName} ${u.lastName || ''}` : '-'}
                               </td>
-                              <td className="py-3 px-4 text-gray-600">{u.email}</td>
-                              <td className="py-3 px-4 text-gray-500">{u.phone || '-'}</td>
-                              <td className="py-3 px-4">
+                              <td className="py-4 px-4 text-gray-600 text-sm">{u.email}</td>
+                              <td className="py-4 px-4 text-gray-500 text-sm">{u.phone || '-'}</td>
+                              <td className="py-4 px-4">
                                 <div className="flex items-center gap-2">
                                   <Input
                                     placeholder="Enter location"
                                     value={houseCellInputs[u.id] || u.houseCellLocation || ''}
                                     onChange={(e) => setHouseCellInputs({ ...houseCellInputs, [u.id]: e.target.value })}
-                                    className="h-8 w-32 text-sm"
+                                    className="h-9 w-40 text-sm"
                                   />
                                   <Button
                                     size="sm"
@@ -513,14 +514,14 @@ export default function AdminDashboardPage() {
                                       }
                                     }}
                                     disabled={updateHouseCell.isPending || !houseCellInputs[u.id]}
-                                    className="h-8"
+                                    className="h-9"
                                   >
                                     Save
                                   </Button>
                                 </div>
                               </td>
-                              <td className="py-3 px-4 text-gray-500">{u.houseFellowship || '-'}</td>
-                              <td className="py-3 px-4">
+                              <td className="py-4 px-4 text-gray-600 text-sm">{u.houseFellowship || '-'}</td>
+                              <td className="py-4 px-4">
                                 {u.isVerified ? (
                                   <Badge className="bg-green-500 text-white">Verified</Badge>
                                 ) : (
@@ -531,17 +532,17 @@ export default function AdminDashboardPage() {
                                       variant="default"
                                       onClick={() => verifyUser.mutate(u.id)}
                                       disabled={verifyUser.isPending}
-                                      className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+                                      className="h-8 text-xs bg-blue-600 hover:bg-blue-700"
                                     >
                                       Verify
                                     </Button>
                                   </div>
                                 )}
                               </td>
-                              <td className="py-3 px-4 text-gray-500">
+                              <td className="py-4 px-4 text-gray-500 text-sm">
                                 {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
                               </td>
-                              <td className="py-3 px-4">
+                              <td className="py-4 px-4">
                                 <Select
                                   value={u.role || 'MEMBER'}
                                   onValueChange={(value) => {
@@ -551,10 +552,10 @@ export default function AdminDashboardPage() {
                                   }}
                                   disabled={updateUserRole.isPending}
                                 >
-                                  <SelectTrigger className="w-[160px] bg-white">
+                                  <SelectTrigger className="w-[180px] h-9 bg-white">
                                     <SelectValue />
                                   </SelectTrigger>
-                                  <SelectContent className="bg-white border-gray-200 shadow-xl">
+                                  <SelectContent className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl">
                                     {USER_ROLES.map((role) => (
                                       <SelectItem key={role.value} value={role.value} className="cursor-pointer">
                                         {role.label}
@@ -570,6 +571,7 @@ export default function AdminDashboardPage() {
                       {displayUsers?.length === 0 && (
                         <p className="text-center py-8 text-gray-500">No users found</p>
                       )}
+                      </div>
                     </div>
                   </div>
                 )}
