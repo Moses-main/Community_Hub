@@ -75,11 +75,14 @@ export default function GivePage() {
   return (
     <div className="min-h-screen bg-background pb-12 md:pb-20">
       <div className="relative py-12 md:py-20 overflow-hidden">
-        <div 
-          className="absolute inset-0 opacity-30"
-          style={{ backgroundImage: 'url(/tokens.avif)', backgroundSize: '150px', backgroundRepeat: 'repeat' }}
-        />
-        <div className="absolute inset-0 bg-white/30 backdrop-blur-[1px]" />
+        <div className="absolute inset-0">
+          <img 
+            src="/card-verticle.avif" 
+            alt="Background" 
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="absolute inset-0 bg-white/40" />
         <div className="container px-3 md:px-4 text-center relative z-10">
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-display font-bold mb-4 md:mb-6 text-gray-900">
             Generosity
