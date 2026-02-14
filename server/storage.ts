@@ -1,10 +1,13 @@
 import { 
   users, branding, events, sermons, prayerRequests, donations, eventRsvps,
+  attendance, attendanceLinks, attendanceSettings,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp,
-  type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp
+  type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp,
+  type Attendance, type AttendanceLink, type AttendanceSettings,
+  type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, like, or, and } from "drizzle-orm";
+import { eq, desc, like, or, and, sql, gte, lte } from "drizzle-orm";
 
 export interface ISermonFilter {
   speaker?: string;
@@ -59,6 +62,33 @@ export interface IStorage {
   getUserRsvps(userId: string): Promise<EventRsvp[]>;
   getEventRsvps(eventId: number): Promise<EventRsvp[]>;
   markAddedToCalendar(eventId: number, userId: string): Promise<EventRsvp>;
+
+  // Attendance
+  createAttendance(attendance: InsertAttendance): Promise<Attendance>;
+  getAttendanceByUser(userId: string): Promise<Attendance[]>;
+  getAttendanceByService(serviceType: string, serviceDate: Date): Promise<Attendance[]>;
+  getAttendanceById(id: number): Promise<Attendance | undefined>;
+  updateAttendance(id: number, updates: Partial<InsertAttendance>): Promise<Attendance>;
+  deleteAttendance(id: number): Promise<void>;
+  getUserAttendanceForService(userId: string, serviceType: string, serviceDate: Date): Promise<Attendance | undefined>;
+  
+  // Attendance Links
+  createAttendanceLink(link: InsertAttendanceLink): Promise<AttendanceLink>;
+  getAttendanceLinkByToken(token: string): Promise<AttendanceLink | undefined>;
+  getAttendanceLinksByService(serviceType: string, serviceId?: number): Promise<AttendanceLink[]>;
+  deactivateAttendanceLink(id: number): Promise<void>;
+  
+  // Attendance Settings
+  getAttendanceSetting(key: string): Promise<string | undefined>;
+  updateAttendanceSetting(key: string, value: string): Promise<void>;
+  
+  // Attendance Analytics
+  getAttendanceStats(startDate: Date, endDate: Date, serviceType?: string): Promise<{
+    total: number;
+    online: number;
+    offline: number;
+    byService: { serviceType: string; count: number }[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -320,6 +350,139 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, userId)))
       .returning();
     return rsvp;
+  }
+
+  // Attendance
+  async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
+    const [record] = await db.insert(attendance).values(insertAttendance).returning();
+    return record;
+  }
+
+  async getAttendanceByUser(userId: string): Promise<Attendance[]> {
+    return await db.select().from(attendance).where(eq(attendance.userId, userId)).orderBy(desc(attendance.serviceDate));
+  }
+
+  async getAttendanceByService(serviceType: string, serviceDate: Date): Promise<Attendance[]> {
+    const startOfDay = new Date(serviceDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(serviceDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return await db.select().from(attendance).where(
+      and(
+        eq(attendance.serviceType, serviceType as any),
+        gte(attendance.serviceDate, startOfDay),
+        lte(attendance.serviceDate, endOfDay)
+      )
+    );
+  }
+
+  async getAttendanceById(id: number): Promise<Attendance | undefined> {
+    const [record] = await db.select().from(attendance).where(eq(attendance.id, id));
+    return record;
+  }
+
+  async updateAttendance(id: number, updates: Partial<InsertAttendance>): Promise<Attendance> {
+    const [record] = await db
+      .update(attendance)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(attendance.id, id))
+      .returning();
+    return record;
+  }
+
+  async deleteAttendance(id: number): Promise<void> {
+    await db.delete(attendance).where(eq(attendance.id, id));
+  }
+
+  async getUserAttendanceForService(userId: string, serviceType: string, serviceDate: Date): Promise<Attendance | undefined> {
+    const startOfDay = new Date(serviceDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(serviceDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const [record] = await db.select().from(attendance).where(
+      and(
+        eq(attendance.userId, userId),
+        eq(attendance.serviceType, serviceType as any),
+        gte(attendance.serviceDate, startOfDay),
+        lte(attendance.serviceDate, endOfDay)
+      )
+    );
+    return record;
+  }
+
+  // Attendance Links
+  async createAttendanceLink(link: InsertAttendanceLink): Promise<AttendanceLink> {
+    const [record] = await db.insert(attendanceLinks).values(link).returning();
+    return record;
+  }
+
+  async getAttendanceLinkByToken(token: string): Promise<AttendanceLink | undefined> {
+    const [record] = await db.select().from(attendanceLinks).where(eq(attendanceLinks.uniqueToken, token));
+    return record;
+  }
+
+  async getAttendanceLinksByService(serviceType: string, serviceId?: number): Promise<AttendanceLink[]> {
+    if (serviceId) {
+      return await db.select().from(attendanceLinks).where(
+        and(eq(attendanceLinks.serviceType, serviceType as any), eq(attendanceLinks.serviceId, serviceId))
+      );
+    }
+    return await db.select().from(attendanceLinks).where(eq(attendanceLinks.serviceType, serviceType as any));
+  }
+
+  async deactivateAttendanceLink(id: number): Promise<void> {
+    await db.update(attendanceLinks).set({ isActive: false }).where(eq(attendanceLinks.id, id));
+  }
+
+  // Attendance Settings
+  async getAttendanceSetting(key: string): Promise<string | undefined> {
+    const [setting] = await db.select().from(attendanceSettings).where(eq(attendanceSettings.key, key));
+    return setting?.value;
+  }
+
+  async updateAttendanceSetting(key: string, value: string): Promise<void> {
+    await db.insert(attendanceSettings).values({ key, value }).onConflictDoUpdate({
+      target: attendanceSettings.key,
+      set: { value, updatedAt: new Date() }
+    });
+  }
+
+  // Attendance Analytics
+  async getAttendanceStats(startDate: Date, endDate: Date, serviceType?: string): Promise<{
+    total: number;
+    online: number;
+    offline: number;
+    byService: { serviceType: string; count: number }[];
+  }> {
+    let conditions = and(
+      gte(attendance.serviceDate, startDate),
+      lte(attendance.serviceDate, endDate)
+    );
+    
+    if (serviceType) {
+      conditions = and(conditions, eq(attendance.serviceType, serviceType as any));
+    }
+
+    const records = await db.select().from(attendance).where(conditions);
+    
+    const total = records.length;
+    const online = records.filter(r => r.isOnline).length;
+    const offline = total - online;
+
+    const byServiceMap = new Map<string, number>();
+    for (const record of records) {
+      const current = byServiceMap.get(record.serviceType) || 0;
+      byServiceMap.set(record.serviceType, current + 1);
+    }
+    
+    const byService = Array.from(byServiceMap.entries()).map(([serviceType, count]) => ({
+      serviceType,
+      count
+    }));
+
+    return { total, online, offline, byService };
   }
 }
 

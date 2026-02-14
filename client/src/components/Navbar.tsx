@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings } from "lucide-react";
+import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
@@ -101,6 +101,12 @@ export function Navbar() {
                         </Link>
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
+                      <Link href="/attendance" className="flex items-center gap-3 text-gray-700">
+                        <CalendarCheck className="w-5 h-5 text-primary" />
+                        <span className="font-medium">My Attendance</span>
+                      </Link>
+                    </DropdownMenuItem>
                   </div>
                   <DropdownMenuSeparator className="my-1" />
                   <div className="py-1">
@@ -168,6 +174,18 @@ export function Navbar() {
                     >
                       <LayoutDashboard className="w-5 h-5" />
                       {user.isAdmin ? "Admin Dashboard" : "My Dashboard"}
+                    </Link>
+                    <Link
+                      href="/attendance"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`text-lg font-medium p-3 rounded-xl transition-colors flex items-center gap-2 ${
+                        isActive("/attendance")
+                          ? "bg-primary/10 text-primary"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <CalendarCheck className="w-5 h-5" />
+                      My Attendance
                     </Link>
                     <button
                       onClick={() => {

@@ -5,6 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { randomBytes } from "crypto";
 
 // Extend Express Request type to include user
 interface AuthenticatedRequest extends Request {
@@ -854,6 +855,345 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === ATTENDANCE ROUTES ===
+
+  // Get user's attendance history
+  app.get("/api/attendance/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const attendanceRecords = await storage.getAttendanceByUser(userId);
+      res.json(attendanceRecords);
+    } catch (err) {
+      console.error("Error fetching attendance:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Self check-in for a service
+  app.post("/api/attendance/checkin", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { serviceType, serviceId, serviceName, serviceDate, notes } = req.body;
+
+      if (!serviceType || !serviceName || !serviceDate) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const existingAttendance = await storage.getUserAttendanceForService(
+        userId,
+        serviceType,
+        new Date(serviceDate)
+      );
+
+      if (existingAttendance) {
+        return res.status(400).json({ message: "Already checked in for this service" });
+      }
+
+      const attendance = await storage.createAttendance({
+        userId,
+        serviceType,
+        serviceId: serviceId || null,
+        serviceName,
+        serviceDate: new Date(serviceDate),
+        attendanceType: "SELF_CHECKIN",
+        checkInTime: new Date(),
+        isOnline: false,
+        notes: notes || null,
+        createdBy: userId,
+      });
+
+      res.status(201).json(attendance);
+    } catch (err) {
+      console.error("Error checking in:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Manual check-in (admin/leader only)
+  app.post("/api/attendance/manual", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { targetUserId, serviceType, serviceId, serviceName, serviceDate, notes } = req.body;
+
+      if (!targetUserId || !serviceType || !serviceName || !serviceDate) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const existingAttendance = await storage.getUserAttendanceForService(
+        targetUserId,
+        serviceType,
+        new Date(serviceDate)
+      );
+
+      if (existingAttendance) {
+        return res.status(400).json({ message: "User already checked in for this service" });
+      }
+
+      const attendance = await storage.createAttendance({
+        userId: targetUserId,
+        serviceType,
+        serviceId: serviceId || null,
+        serviceName,
+        serviceDate: new Date(serviceDate),
+        attendanceType: "MANUAL",
+        checkInTime: new Date(),
+        isOnline: false,
+        notes: notes || null,
+        createdBy: userId,
+      });
+
+      res.status(201).json(attendance);
+    } catch (err) {
+      console.error("Error manual check-in:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Online attendance tracking - record watch session
+  app.post("/api/attendance/online", async (req, res) => {
+    try {
+      const { userId, serviceType, serviceId, serviceName, serviceDate, watchDuration, isReplay } = req.body;
+
+      if (!userId || !serviceType || !serviceName || !serviceDate) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const thresholdMinutes = parseInt(await storage.getAttendanceSetting("online_watch_threshold_minutes") || "10");
+      const thresholdSeconds = thresholdMinutes * 60;
+
+      if (watchDuration < thresholdSeconds) {
+        return res.status(200).json({ message: "Watch time below threshold", recorded: false });
+      }
+
+      const existingAttendance = await storage.getUserAttendanceForService(
+        userId,
+        serviceType,
+        new Date(serviceDate)
+      );
+
+      if (existingAttendance) {
+        return res.status(200).json({ message: "Already recorded", recorded: true });
+      }
+
+      const attendance = await storage.createAttendance({
+        userId,
+        serviceType: isReplay ? "ONLINE_REPLAY" : "ONLINE_LIVE",
+        serviceId: serviceId || null,
+        serviceName,
+        serviceDate: new Date(serviceDate),
+        attendanceType: "ONLINE_AUTO",
+        checkInTime: new Date(),
+        watchDuration,
+        isOnline: true,
+        notes: null,
+        createdBy: userId,
+      });
+
+      res.status(201).json(attendance);
+    } catch (err) {
+      console.error("Error recording online attendance:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Generate unique attendance link
+  app.post("/api/attendance/links", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { serviceType, serviceId, serviceName, serviceDate, expiresAt } = req.body;
+
+      if (!serviceType || !serviceName || !serviceDate) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const token = randomBytes(32).toString("hex");
+      const baseUrl = process.env.BASE_URL || `https://${req.get("host")}`;
+      const checkinUrl = `${baseUrl}/attendance/checkin/${token}`;
+
+      const link = await storage.createAttendanceLink({
+        serviceType,
+        serviceId: serviceId || null,
+        serviceName,
+        serviceDate: new Date(serviceDate),
+        uniqueToken: token,
+        qrCodeUrl: checkinUrl,
+        isActive: true,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        createdBy: userId,
+      });
+
+      res.status(201).json({
+        ...link,
+        checkinUrl,
+      });
+    } catch (err) {
+      console.error("Error creating attendance link:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get attendance by token (for check-in page)
+  app.get("/api/attendance/links/:token", async (req, res) => {
+    try {
+      const tokenParam = req.params.token;
+      const token = Array.isArray(tokenParam) ? tokenParam[0] : tokenParam;
+      const link = await storage.getAttendanceLinkByToken(token);
+
+      if (!link) {
+        return res.status(404).json({ message: "Invalid or expired link" });
+      }
+
+      if (!link.isActive) {
+        return res.status(400).json({ message: "This attendance link is no longer active" });
+      }
+
+      if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
+        return res.status(400).json({ message: "This attendance link has expired" });
+      }
+
+      res.json(link);
+    } catch (err) {
+      console.error("Error fetching attendance link:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Check-in via unique link (for members using attendance link)
+  app.post("/api/attendance/links/:token/checkin", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const tokenParam = req.params.token;
+      const token = Array.isArray(tokenParam) ? tokenParam[0] : tokenParam;
+      const userId = req.user!.id;
+      const { notes } = req.body;
+
+      const link = await storage.getAttendanceLinkByToken(token);
+
+      if (!link) {
+        return res.status(404).json({ message: "Invalid or expired link" });
+      }
+
+      if (!link.isActive) {
+        return res.status(400).json({ message: "This attendance link is no longer active" });
+      }
+
+      if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
+        return res.status(400).json({ message: "This attendance link has expired" });
+      }
+
+      const existingAttendance = await storage.getUserAttendanceForService(
+        userId,
+        link.serviceType,
+        link.serviceDate
+      );
+
+      if (existingAttendance) {
+        return res.status(400).json({ message: "Already checked in for this service" });
+      }
+
+      const attendance = await storage.createAttendance({
+        userId,
+        serviceType: link.serviceType,
+        serviceId: link.serviceId,
+        serviceName: link.serviceName,
+        serviceDate: link.serviceDate,
+        attendanceType: "QR_CHECKIN",
+        checkInTime: new Date(),
+        isOnline: false,
+        notes: notes || null,
+        createdBy: link.createdBy,
+      });
+
+      res.status(201).json(attendance);
+    } catch (err) {
+      console.error("Error checking in via link:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get attendance analytics (admin/leaders only)
+  app.get("/api/attendance/analytics", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { startDate, endDate, serviceType } = req.query;
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start date and end date are required" });
+      }
+
+      const stats = await storage.getAttendanceStats(
+        new Date(startDate as string),
+        new Date(endDate as string),
+        serviceType as string | undefined
+      );
+
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching attendance analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get all attendance records for a service (admin/leaders only)
+  app.get("/api/attendance/service", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { serviceType, serviceDate } = req.query;
+
+      if (!serviceType || !serviceDate) {
+        return res.status(400).json({ message: "Service type and date are required" });
+      }
+
+      const records = await storage.getAttendanceByService(
+        serviceType as string,
+        new Date(serviceDate as string)
+      );
+
+      res.json(records);
+    } catch (err) {
+      console.error("Error fetching service attendance:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get attendance settings (admin only)
+  app.get("/api/attendance/settings", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const settings = await storage.getAttendanceSetting("online_watch_threshold_minutes");
+      res.json({
+        onlineWatchThresholdMinutes: parseInt(settings || "10"),
+        enableOnlineDetection: (await storage.getAttendanceSetting("enable_online_detection")) === "true",
+        enableSelfCheckin: (await storage.getAttendanceSetting("enable_self_checkin")) === "true",
+        enableQrCheckin: (await storage.getAttendanceSetting("enable_qr_checkin")) === "true",
+      });
+    } catch (err) {
+      console.error("Error fetching attendance settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update attendance settings (admin only)
+  app.put("/api/attendance/settings", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { onlineWatchThresholdMinutes, enableOnlineDetection, enableSelfCheckin, enableQrCheckin } = req.body;
+
+      if (onlineWatchThresholdMinutes !== undefined) {
+        await storage.updateAttendanceSetting("online_watch_threshold_minutes", String(onlineWatchThresholdMinutes));
+      }
+      if (enableOnlineDetection !== undefined) {
+        await storage.updateAttendanceSetting("enable_online_detection", String(enableOnlineDetection));
+      }
+      if (enableSelfCheckin !== undefined) {
+        await storage.updateAttendanceSetting("enable_self_checkin", String(enableSelfCheckin));
+      }
+      if (enableQrCheckin !== undefined) {
+        await storage.updateAttendanceSetting("enable_qr_checkin", String(enableQrCheckin));
+      }
+
+      res.json({ message: "Settings updated successfully" });
+    } catch (err) {
+      console.error("Error updating attendance settings:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });
