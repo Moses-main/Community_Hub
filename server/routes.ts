@@ -540,24 +540,14 @@ export async function registerRoutes(
     }
   });
 
-  // Get user's RSVPs with event details
+  // Get user's RSVPs with event details - simplified version
   app.get("/api/events/rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user!.id;
       const rsvps = await storage.getUserRsvps(userId);
       
-      const rsvpsWithEvents = await Promise.all(
-        rsvps.map(async (rsvp) => {
-          const eventId = rsvp.eventId ? Number(rsvp.eventId) : null;
-          if (!eventId || isNaN(eventId)) {
-            return { ...rsvp, event: null };
-          }
-          const event = await storage.getEvent(eventId);
-          return { ...rsvp, event };
-        })
-      );
-      
-      res.json(rsvpsWithEvents);
+      // Return raw RSVPs first - no joining
+      res.json(rsvps);
     } catch (err) {
       console.error("Error fetching RSVPs:", err);
       res.status(500).json({ message: "Internal server error" });
