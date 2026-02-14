@@ -8,10 +8,14 @@ const { Pool } = pg;
 // Use DATABASE_URL if provided, otherwise fall back to the default from config.
 const connectionString = process.env.DATABASE_URL || config.database.url;
 
-// For Render PostgreSQL with sslmode=require in the URL, don't set SSL in Pool config
-// The SSL is handled by the connection string itself
+console.log('DATABASE_URL:', connectionString ? 'set' : 'not set');
+
+// For Render PostgreSQL, handle SSL properly
 export const pool = new Pool({
   connectionString,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 export const db = drizzle(pool, { schema });
