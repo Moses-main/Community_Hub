@@ -42,7 +42,7 @@ export default function HomePage() {
             
             <h1 className="font-display font-bold text-3xl sm:text-4xl md:text-5xl lg:text-7xl text-white mb-4 md:mb-6 leading-tight">
               Experience the
-              <span className="block text-white">
+              <span className="block text-white font-stylish italic">
                 Power of Faith
               </span>
             </h1>
