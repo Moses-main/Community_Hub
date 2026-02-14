@@ -23,6 +23,7 @@ export const apiRoutes = {
     rsvp: (id: number) => `/api/events/${id}/rsvp`,
     rsvps: "/api/events/rsvps",
     addToCalendar: (id: number) => `/api/events/${id}/calendar`,
+    withRsvps: (id: number) => `/api/events/${id}/with-rsvps`,
   },
   sermons: {
     list: "/api/sermons",

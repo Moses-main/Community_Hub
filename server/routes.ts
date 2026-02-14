@@ -548,13 +548,18 @@ export async function registerRoutes(
       
       const rsvpsWithEvents = await Promise.all(
         rsvps.map(async (rsvp) => {
-          const event = await storage.getEvent(rsvp.eventId);
+          const eventId = Number(rsvp.eventId);
+          if (isNaN(eventId)) {
+            return { ...rsvp, event: null };
+          }
+          const event = await storage.getEvent(eventId);
           return { ...rsvp, event };
         })
       );
       
       res.json(rsvpsWithEvents);
     } catch (err) {
+      console.error("Error fetching RSVPs:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -590,6 +595,7 @@ export async function registerRoutes(
     try {
       const eventId = Number(req.params.id);
       const userId = req.user!.id;
+      const isAdmin = req.user!.email === 'admin@wccrm.com';
       
       const event = await storage.getEvent(eventId);
       if (!event) {
@@ -599,10 +605,33 @@ export async function registerRoutes(
       const rsvps = await storage.getEventRsvps(eventId);
       const isCreator = event.creatorId === userId;
       
+      // Show RSVPs to creator or admin
+      const canViewRsvps = isCreator || isAdmin;
+      
+      // If can view RSVPs, get user details
+      let rsvpsWithUsers = undefined;
+      if (canViewRsvps) {
+        rsvpsWithUsers = await Promise.all(
+          rsvps.map(async (rsvp) => {
+            const user = await storage.getUserById(rsvp.userId);
+            return {
+              ...rsvp,
+              user: user ? {
+                id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                phone: user.phone,
+              } : null,
+            };
+          })
+        );
+      }
+      
       res.json({
         ...event,
         rsvpCount: rsvps.length,
-        rsvps: isCreator ? rsvps : undefined,
+        rsvps: rsvpsWithUsers,
       });
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
