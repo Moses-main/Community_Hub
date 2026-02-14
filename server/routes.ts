@@ -79,7 +79,24 @@ export async function registerRoutes(
 
   // Get current user
   app.get("/api/auth/user", isAuthenticated, async (req: AuthenticatedRequest, res) => {
-    res.json(req.user);
+    const user = await storage.getUserById(req.user!.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      address: user.address,
+      houseFellowship: user.houseFellowship,
+      houseCellLocation: user.houseCellLocation,
+      parish: user.parish,
+      role: user.role,
+      isAdmin: user.email === 'admin@wccrm.com',
+      createdAt: user.createdAt,
+    });
   });
 
   // Login
@@ -111,6 +128,11 @@ export async function registerRoutes(
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        phone: user.phone,
+        address: user.address,
+        houseFellowship: user.houseFellowship,
+        houseCellLocation: user.houseCellLocation,
+        parish: user.parish,
         isAdmin: user.email === 'admin@wccrm.com'
       });
     } catch (err) {
@@ -157,6 +179,11 @@ export async function registerRoutes(
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        phone: user.phone,
+        address: user.address,
+        houseFellowship: user.houseFellowship,
+        houseCellLocation: user.houseCellLocation,
+        parish: user.parish,
         isAdmin: user.email === 'admin@wccrm.com'
       });
     } catch (err) {
@@ -284,6 +311,139 @@ export async function registerRoutes(
     res.json(updatedUser);
   });
 
+  // === MEMBER ROUTES ===
+
+  // Get current user's profile
+  app.get("/api/members/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    const user = await storage.getUserById(req.user!.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      address: user.address,
+      houseFellowship: user.houseFellowship,
+      houseCellLocation: user.houseCellLocation,
+      parish: user.parish,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    });
+  });
+
+  // Update current user's profile
+  app.put("/api/members/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    const userId = req.user!.id;
+    const { firstName, lastName, phone, address, houseFellowship, parish, houseCellLocation } = req.body;
+    
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, {
+      firstName: firstName ?? user.firstName,
+      lastName: lastName ?? user.lastName,
+      phone: phone ?? user.phone,
+      address: address ?? user.address,
+      houseFellowship: houseFellowship ?? user.houseFellowship,
+      parish: parish ?? user.parish,
+      houseCellLocation: houseCellLocation ?? user.houseCellLocation,
+    });
+
+    res.json({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      phone: updatedUser.phone,
+      address: updatedUser.address,
+      houseFellowship: updatedUser.houseFellowship,
+      houseCellLocation: updatedUser.houseCellLocation,
+      parish: updatedUser.parish,
+      role: updatedUser.role,
+      createdAt: updatedUser.createdAt,
+      updatedAt: updatedUser.updatedAt,
+    });
+  });
+
+  // Search members (admin only)
+  app.get("/api/members/search", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    const query = req.query.q;
+    const q = Array.isArray(query) ? query[0] : query;
+    if (!q || typeof q !== 'string') {
+      return res.status(400).json({ message: "Search query required" });
+    }
+    const users = await storage.searchUsers(q);
+    res.json(users.map(user => ({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      address: user.address,
+      houseFellowship: user.houseFellowship,
+      houseCellLocation: user.houseCellLocation,
+      parish: user.parish,
+      role: user.role,
+      createdAt: user.createdAt,
+    })));
+  });
+
+  // Update user's house cell location (admin only)
+  app.put("/api/members/:id/house-cell", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    const userIdParam = req.params.id;
+    const userId = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
+    const houseCellLocationInput = req.body.houseCellLocation;
+    const houseCellLocation = typeof houseCellLocationInput === 'string' ? houseCellLocationInput : String(houseCellLocationInput);
+    
+    if (!houseCellLocation || !userId) {
+      return res.status(400).json({ message: "House cell location and user ID are required" });
+    }
+
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUserHouseCell(userId, houseCellLocation);
+    res.json({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      houseCellLocation: updatedUser.houseCellLocation,
+    });
+  });
+
+  // Verify user (admin only)
+  app.post("/api/admin/users/:id/verify", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    const userIdParam = req.params.id;
+    const userId = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
+    
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const user = await storage.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const verifiedUser = await storage.verifyUser(userId);
+    res.json({
+      id: verifiedUser.id,
+      email: verifiedUser.email,
+      firstName: verifiedUser.firstName,
+      lastName: verifiedUser.lastName,
+      isVerified: verifiedUser.isVerified,
+    });
+  });
+
   // === APP ROUTES ===
 
   // Branding
@@ -310,7 +470,57 @@ export async function registerRoutes(
   // Events
   app.get(api.events.list.path, async (req, res) => {
     const events = await storage.getEvents();
-    res.json(events);
+    const eventsWithRsvpCount = await Promise.all(
+      events.map(async (event) => {
+        const rsvps = await storage.getEventRsvps(event.id);
+        return { ...event, rsvpCount: rsvps.length };
+      })
+    );
+    res.json(eventsWithRsvpCount);
+  });
+
+  app.get("/api/events/list-with-rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    const userId = req.user!.id;
+    const events = await storage.getEvents();
+    const userRsvps = await storage.getUserRsvps(userId);
+    const userRsvpEventIds = new Set(userRsvps.map(r => r.eventId));
+    
+    const eventsWithRsvpCount = await Promise.all(
+      events.map(async (event) => {
+        const rsvps = await storage.getEventRsvps(event.id);
+        return { 
+          ...event, 
+          rsvpCount: rsvps.length,
+          hasRsvped: userRsvpEventIds.has(event.id),
+        };
+      })
+    );
+    res.json(eventsWithRsvpCount);
+  });
+
+  // Get user's RSVPs - must be BEFORE /:id route
+  app.get("/api/events/rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const rsvps = await storage.getUserRsvps(userId);
+      
+      // Fetch event details for each RSVP
+      const rsvpsWithEvents = await Promise.all(
+        rsvps.map(async (rsvp) => {
+          const eventId = Number(rsvp.eventId);
+          if (isNaN(eventId)) {
+            return { ...rsvp, event: null };
+          }
+          const event = await storage.getEvent(eventId);
+          return { ...rsvp, event };
+        })
+      );
+      
+      res.json(rsvpsWithEvents);
+    } catch (err) {
+      console.error("Error fetching RSVPs:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
 
   app.get(api.events.get.path, async (req, res) => {
@@ -326,6 +536,7 @@ export async function registerRoutes(
       const eventData = {
         ...input,
         date: new Date(input.date),
+        creatorId: req.user!.id,
       };
       const event = await storage.createEvent(eventData);
       res.status(201).json(event);
@@ -337,12 +548,98 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.events.rsvp.path, isAuthenticated, async (req, res) => {
-    // Mock RSVP for now
-    res.json({ message: "RSVP successful" });
+  app.post(api.events.rsvp.path, isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const userId = req.user!.id;
+      
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const rsvp = await storage.rsvpToEvent(eventId, userId);
+      res.json({ message: "RSVP successful", rsvp });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
 
-  // Update event
+  // Remove RSVP
+  app.delete("/api/events/:id/rsvp", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const userId = req.user!.id;
+      
+      await storage.removeRsvp(eventId, userId);
+      res.json({ message: "RSVP removed" });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Mark event as added to calendar
+  app.post("/api/events/:id/calendar", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const userId = req.user!.id;
+      
+      const rsvp = await storage.markAddedToCalendar(eventId, userId);
+      res.json({ message: "Added to calendar", rsvp });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get event with RSVP count
+  app.get("/api/events/:id/with-rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const userId = req.user!.id;
+      const isAdmin = req.user!.isAdmin;
+      
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const rsvps = await storage.getEventRsvps(eventId);
+      const isCreator = event.creatorId === userId;
+      
+      // Show RSVPs to creator or admin
+      const canViewRsvps = isCreator || isAdmin;
+      
+      // If can view RSVPs, get user details
+      let rsvpsWithUsers = undefined;
+      if (canViewRsvps) {
+        rsvpsWithUsers = await Promise.all(
+          rsvps.map(async (rsvp) => {
+            const user = await storage.getUserById(rsvp.userId);
+            return {
+              ...rsvp,
+              user: user ? {
+                id: user.id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                phone: user.phone,
+              } : null,
+            };
+          })
+        );
+      }
+      
+      res.json({
+        ...event,
+        rsvpCount: rsvps.length,
+        rsvps: rsvpsWithUsers,
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update event (auth required)
   app.put("/api/events/:id", isAuthenticated, async (req, res) => {
     try {
       const id = Number(req.params.id);

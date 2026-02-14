@@ -7,6 +7,11 @@ export const apiRoutes = {
     logout: "/api/auth/logout",
     verifyEmail: "/api/auth/verify-email",
   },
+  members: {
+    me: "/api/members/me",
+    search: "/api/members/search",
+    updateHouseCell: (id: string) => `/api/members/${id}/house-cell`,
+  },
   admin: {
     users: "/api/admin/users",
     getUser: (id: number) => `/api/admin/users/${id}`,
@@ -16,6 +21,9 @@ export const apiRoutes = {
     get: (id: number) => `/api/events/${id}`,
     create: "/api/events",
     rsvp: (id: number) => `/api/events/${id}/rsvp`,
+    rsvps: "/api/events/rsvps",
+    addToCalendar: (id: number) => `/api/events/${id}/calendar`,
+    withRsvps: (id: number) => `/api/events/${id}/with-rsvps`,
   },
   sermons: {
     list: "/api/sermons",

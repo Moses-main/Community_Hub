@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranding, type Branding } from "@/hooks/use-branding";
+import { useEventWithRsvps } from "@/hooks/use-events";
 import { useSermons } from "@/hooks/use-sermons";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart } from "lucide-react";
+import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart, Search, MapPin, Clock, User, Mail, Phone } from "lucide-react";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import type { Event, Sermon, InsertEvent, InsertSermon, UserRole } from "@/types/api";
@@ -28,6 +29,7 @@ interface AdminUser {
   phone?: string;
   address?: string;
   houseFellowship?: string;
+  houseCellLocation?: string;
   parish?: string;
   role?: UserRole;
   isVerified?: boolean;
@@ -131,6 +133,13 @@ export default function AdminDashboardPage() {
   const { user, isLoading: isUserLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [filteredUsers, setFilteredUsers] = useState<AdminUser[] | null>(null);
+  const [houseCellInputs, setHouseCellInputs] = useState<Record<string, string>>({});
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+
+  const { data: eventWithRsvps, isLoading: isRsvpsLoading } = useEventWithRsvps(selectedEventId ?? 0);
 
   const { data: users, isLoading: isUsersLoading, refetch: refetchUsers } = useQuery<AdminUser[]>({
     queryKey: ["/api/admin/users"],
@@ -179,6 +188,26 @@ export default function AdminDashboardPage() {
     },
     onError: () => {
       toast({ title: "Failed to create event", variant: "destructive" });
+    },
+  });
+
+  const updateEvent = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertEvent> }) => {
+      const res = await fetch(buildApiUrl(`/api/events/${id}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update event");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [apiRoutes.events.list] });
+      toast({ title: "Event updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update event", variant: "destructive" });
     },
   });
 
@@ -270,6 +299,81 @@ export default function AdminDashboardPage() {
     },
   });
 
+  const searchMembers = useMutation({
+    mutationFn: async (query: string) => {
+      const res = await fetch(buildApiUrl(`/api/members/search?q=${encodeURIComponent(query)}`), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to search members");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setFilteredUsers(data);
+      toast({ title: `Found ${data.length} member(s)` });
+    },
+    onError: () => {
+      toast({ title: "Failed to search members", variant: "destructive" });
+    },
+  });
+
+  const updateHouseCell = useMutation({
+    mutationFn: async ({ userId, houseCellLocation }: { userId: string; houseCellLocation: string }) => {
+      const res = await fetch(buildApiUrl(`/api/members/${userId}/house-cell`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ houseCellLocation }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update house cell");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "House cell location updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update house cell", variant: "destructive" });
+    },
+  });
+
+  const verifyUser = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetch(buildApiUrl(`/api/admin/users/${userId}/verify`), {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to verify user");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Member verified successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to verify member", variant: "destructive" });
+    },
+  });
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      searchMembers.mutate(query);
+    } else {
+      setFilteredUsers(null);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setRoleFilter("all");
+    setFilteredUsers(null);
+  };
+
+  const displayUsers = (filteredUsers || users)?.filter(user => 
+    roleFilter === "all" || user.role === roleFilter || (!user.role && roleFilter === "MEMBER")
+  );
+  const isSearching = filteredUsers !== null || roleFilter !== "all";
+
   const { data: branding, isLoading: isBrandingLoading } = useBranding();
   const updateBranding = useMutation({
     mutationFn: async (data: Partial<Branding>) => {
@@ -360,69 +464,136 @@ export default function AdminDashboardPage() {
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Name</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Email</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Phone</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Parish</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">House Fellowship</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Verified</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Joined</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {users?.map((u) => (
-                          <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
-                            <td className="py-3 px-4 font-medium text-gray-900">
-                              {u.firstName ? `${u.firstName} ${u.lastName || ''}` : '-'}
-                            </td>
-                            <td className="py-3 px-4 text-gray-600">{u.email}</td>
-                            <td className="py-3 px-4 text-gray-500">{u.phone || '-'}</td>
-                            <td className="py-3 px-4 text-gray-500">{u.parish || '-'}</td>
-                            <td className="py-3 px-4 text-gray-500">{u.houseFellowship || '-'}</td>
-                            <td className="py-3 px-4">
-                              {u.isVerified ? (
-                                <Badge className="bg-green-500 text-white">Verified</Badge>
-                              ) : (
-                                <Badge variant="secondary" className="bg-gray-100 text-gray-600">Pending</Badge>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-gray-500">
-                              {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
-                            </td>
-                            <td className="py-3 px-4">
-                              <Select
-                                value={u.role || 'MEMBER'}
-                                onValueChange={(value) => {
-                                  if (value !== u.role) {
-                                    updateUserRole.mutate({ userId: u.id, role: value as UserRole });
-                                  }
-                                }}
-                                disabled={updateUserRole.isPending}
-                              >
-                                <SelectTrigger className="w-[160px] bg-white">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border-gray-200 shadow-xl">
-                                  {USER_ROLES.map((role) => (
-                                    <SelectItem key={role.value} value={role.value} className="cursor-pointer">
-                                      {role.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search members by name, email, phone, house fellowship..."
+                          value={searchQuery}
+                          onChange={(e) => handleSearch(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      <Select value={roleFilter} onValueChange={setRoleFilter}>
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue placeholder="Filter by role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Roles</SelectItem>
+                          {USER_ROLES.map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
+                              {role.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {(isSearching || roleFilter !== "all") && (
+                        <Button type="button" variant="outline" onClick={clearSearch}>
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                      <div className="min-w-[1100px]">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-200 bg-gray-50">
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Name</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Email</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Phone</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">House Cell Location</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">House Fellowship</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Verified</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Joined</th>
+                            <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Role</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {users?.length === 0 && (
-                      <p className="text-center py-8 text-gray-500">No users found</p>
-                    )}
+                        </thead>
+                        <tbody>
+                          {displayUsers?.map((u) => (
+                            <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-4 px-4 font-medium text-gray-900 text-sm">
+                                {u.firstName ? `${u.firstName} ${u.lastName || ''}` : '-'}
+                              </td>
+                              <td className="py-4 px-4 text-gray-600 text-sm">{u.email}</td>
+                              <td className="py-4 px-4 text-gray-500 text-sm">{u.phone || '-'}</td>
+                              <td className="py-4 px-4">
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    placeholder="Enter location"
+                                    value={houseCellInputs[u.id] || u.houseCellLocation || ''}
+                                    onChange={(e) => setHouseCellInputs({ ...houseCellInputs, [u.id]: e.target.value })}
+                                    className="h-9 w-40 text-sm"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const location = houseCellInputs[u.id];
+                                      if (location) {
+                                        updateHouseCell.mutate({ userId: u.id, houseCellLocation: location });
+                                      }
+                                    }}
+                                    disabled={updateHouseCell.isPending || !houseCellInputs[u.id]}
+                                    className="h-9"
+                                  >
+                                    Save
+                                  </Button>
+                                </div>
+                              </td>
+                              <td className="py-4 px-4 text-gray-600 text-sm">{u.houseFellowship || '-'}</td>
+                              <td className="py-4 px-4">
+                                {u.isVerified ? (
+                                  <Badge className="bg-green-500 text-white">Verified</Badge>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="secondary" className="bg-gray-100 text-gray-600">Pending</Badge>
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => verifyUser.mutate(u.id)}
+                                      disabled={verifyUser.isPending}
+                                      className="h-8 text-xs bg-blue-600 hover:bg-blue-700"
+                                    >
+                                      Verify
+                                    </Button>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-4 px-4 text-gray-500 text-sm">
+                                {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-'}
+                              </td>
+                              <td className="py-4 px-4">
+                                <Select
+                                  value={u.role || 'MEMBER'}
+                                  onValueChange={(value) => {
+                                    if (value !== u.role) {
+                                      updateUserRole.mutate({ userId: u.id, role: value as UserRole });
+                                    }
+                                  }}
+                                  disabled={updateUserRole.isPending}
+                                >
+                                  <SelectTrigger className="w-[180px] h-9 bg-white">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-white/95 backdrop-blur-sm border-gray-200 shadow-xl">
+                                    {USER_ROLES.map((role) => (
+                                      <SelectItem key={role.value} value={role.value} className="cursor-pointer">
+                                        {role.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {displayUsers?.length === 0 && (
+                        <p className="text-center py-8 text-gray-500">No users found</p>
+                      )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -454,9 +625,16 @@ export default function AdminDashboardPage() {
                             {new Date(event.date).toLocaleDateString()} • {event.location}
                           </p>
                         </div>
-                        <Button variant="destructive" size="icon" onClick={() => deleteEvent.mutate(event.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setSelectedEventId(Number(event.id))}>
+                            <Users className="h-4 w-4 mr-1" />
+                            RSVPs
+                          </Button>
+                          <EditEventDialog event={event} onSubmit={(data) => updateEvent.mutate({ id: event.id, data })} isLoading={updateEvent.isPending} />
+                          <Button variant="destructive" size="icon" onClick={() => deleteEvent.mutate(event.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                     {events?.length === 0 && (
@@ -588,6 +766,8 @@ export default function AdminDashboardPage() {
             </div>
           </TabsContent>
         </Tabs>
+
+        <EventRsvpDialog eventId={selectedEventId} open={selectedEventId !== null} onClose={() => setSelectedEventId(null)} />
       </div>
     </div>
   );
@@ -645,6 +825,117 @@ function CreateEventDialog({ onSubmit, isLoading }: { onSubmit: (data: InsertEve
             Create Event
           </Button>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditEventDialog({ event, onSubmit, isLoading }: { event: Event; onSubmit: (data: Partial<InsertEvent>) => void; isLoading: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: event.title,
+    description: event.description,
+    date: new Date(event.date).toISOString().slice(0, 16),
+    location: event.location,
+    imageUrl: event.imageUrl || ""
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      title: formData.title,
+      description: formData.description,
+      date: new Date(formData.date).toISOString(),
+      location: formData.location,
+      imageUrl: formData.imageUrl || undefined,
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline"><Edit className="h-4 w-4" /></Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Event</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="edit-title">Title</Label>
+            <Input id="edit-title" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
+          </div>
+          <div>
+            <Label htmlFor="edit-description">Description</Label>
+            <Textarea id="edit-description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required />
+          </div>
+          <div>
+            <Label htmlFor="edit-date">Date</Label>
+            <Input id="edit-date" type="datetime-local" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
+          </div>
+          <div>
+            <Label htmlFor="edit-location">Location</Label>
+            <Input id="edit-location" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} required />
+          </div>
+          <div>
+            <Label htmlFor="edit-imageUrl">Image URL</Label>
+            <Input id="edit-imageUrl" value={formData.imageUrl} onChange={e => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://..." />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EventRsvpDialog({ eventId, open, onClose }: { eventId: number | null; open: boolean; onClose: () => void }) {
+  const { data: eventData, isLoading } = useEventWithRsvps(eventId ?? 0);
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Event RSVPs</DialogTitle>
+          <DialogDescription>
+            {eventData?.title || "Loading..."}
+          </DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : !eventData?.rsvps || eventData.rsvps.length === 0 ? (
+          <p className="text-center py-8 text-muted-foreground">No RSVPs yet</p>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">{eventData.rsvps.length} people RSVP'd</p>
+            <div className="space-y-3">
+              {eventData.rsvps.map((rsvp: any) => (
+                <div key={rsvp.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{rsvp.user?.firstName} {rsvp.user?.lastName}</p>
+                      <p className="text-sm text-muted-foreground">{rsvp.user?.email}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant="outline">{rsvp.rsvpStatus || "going"}</Badge>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {rsvp.createdAt ? new Date(rsvp.createdAt).toLocaleDateString() : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

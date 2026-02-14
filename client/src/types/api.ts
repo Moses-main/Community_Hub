@@ -50,11 +50,13 @@ export interface User {
   phone?: string;
   address?: string;
   houseFellowship?: string;
+  houseCellLocation?: string;
   parish?: string;
   role?: UserRole;
   isAdmin?: boolean;
   isVerified?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UpdateUserProfile {
@@ -63,6 +65,7 @@ export interface UpdateUserProfile {
   phone?: string;
   address?: string;
   houseFellowship?: string;
+  houseCellLocation?: string;
   parish?: string;
 }
 
@@ -73,7 +76,10 @@ export interface Event {
   date: string;
   location: string;
   imageUrl?: string;
-  createdAt: string;
+  creatorId?: string;
+  createdAt?: string;
+  rsvpCount?: number;
+  hasRsvped?: boolean;
 }
 
 export interface Sermon {
@@ -111,6 +117,14 @@ export interface Donation {
   donorEmail?: string;
   isAnonymous?: boolean;
   message?: string;
+  createdAt: string;
+}
+
+export interface EventRsvp {
+  id: number;
+  eventId: number;
+  userId: string;
+  addedToCalendar: boolean;
   createdAt: string;
 }
 

@@ -1,28 +1,122 @@
 import { useRoute } from "wouter";
-import { useEvent } from "@/hooks/use-events";
+import { useEventWithRsvps, useRsvpEvent, useUserRsvps, useAddToCalendar } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
-import { useRsvpEvent } from "@/hooks/use-events";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Calendar, Clock, MapPin, ArrowLeft, Share2, CalendarPlus } from "lucide-react";
+import { Calendar, Clock, MapPin, ArrowLeft, Share2, CalendarPlus, Check, Facebook, Twitter, Linkedin, Instagram, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
+import { useState } from "react";
+
+function generateCalendarLink(event: any): string {
+  const eventDate = new Date(event.date);
+  const startDate = eventDate.toISOString().replace(/-|:|\.\d{3}/g, "").slice(0, 15);
+  const endDate = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000).toISOString().replace(/-|:|\.\d{3}/g, "").slice(0, 15);
+  
+  const title = encodeURIComponent(event.title);
+  const description = encodeURIComponent(event.description);
+  const location = encodeURIComponent(event.location);
+  
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${description}&location=${location}`;
+}
+
+function SocialShareMenu({ event, onClose }: { event: any; onClose: () => void }) {
+  const eventUrl = `${window.location.origin}/events/${event.id}`;
+  const eventTitle = event.title;
+  
+  const shareOptions = [
+    { 
+      name: 'Facebook', 
+      icon: Facebook, 
+      color: 'bg-blue-600 hover:bg-blue-700',
+      url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`
+    },
+    { 
+      name: 'X (Twitter)', 
+      icon: Twitter, 
+      color: 'bg-black hover:bg-gray-800',
+      url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(eventTitle)}&url=${encodeURIComponent(eventUrl)}`
+    },
+    { 
+      name: 'WhatsApp', 
+      icon: (props: any) => <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-4 h-4" {...props} />, 
+      color: 'bg-green-500 hover:bg-green-600',
+      url: `https://wa.me/?text=${encodeURIComponent(eventTitle + ' ' + eventUrl)}`
+    },
+    { 
+      name: 'Instagram', 
+      icon: Instagram, 
+      color: 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 hover:opacity-90',
+      url: `https://www.instagram.com/`
+    },
+    { 
+      name: 'LinkedIn', 
+      icon: Linkedin, 
+      color: 'bg-blue-700 hover:bg-blue-800',
+      url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`
+    },
+  ];
+
+  const handleShare = (url: string) => {
+    window.open(url, '_blank', 'width=600,height=400');
+    onClose();
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(eventUrl);
+    } catch {}
+    onClose();
+  };
+
+  return (
+    <div className="absolute bottom-full mb-2 left-0 bg-white border rounded-lg shadow-lg py-2 min-w-[180px] z-20">
+      {shareOptions.map((option) => (
+        <button
+          key={option.name}
+          onClick={() => handleShare(option.url)}
+          className={`w-full px-4 py-2 text-left text-sm text-white flex items-center gap-2 ${option.color} transition-colors`}
+        >
+          <option.icon className="w-4 h-4" />
+          {option.name}
+        </button>
+      ))}
+      <button
+        onClick={handleCopyLink}
+        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-gray-700"
+      >
+        <LinkIcon className="w-4 h-4" />
+        Copy Link
+      </button>
+    </div>
+  );
+}
 
 export default function EventDetailPage() {
   const [, params] = useRoute<{ id: string }>("/events/:id");
   const eventId = params?.id ? parseInt(params.id) : null;
-  const { data: event, isLoading, error } = useEvent(eventId!);
+  const { data: event, isLoading, error } = useEventWithRsvps(eventId!);
+  const { data: userRsvps } = useUserRsvps();
   const { user } = useAuth();
-  const { mutate: rsvp, isPending } = useRsvpEvent();
+  const { mutate: rsvp, isPending: isRsvpPending } = useRsvpEvent();
+  const { mutate: addToCalendar, isPending: isAddingToCalendar } = useAddToCalendar();
   const { toast } = useToast();
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [justRsvped, setJustRsvped] = useState(false);
+
+  // Check if user has RSVP'd to this event (from server or just RSVP'd locally)
+  const userRsvp = userRsvps?.find((r: any) => Number(r.eventId) === Number(eventId));
+  const isRsvped = !!userRsvp || justRsvped;
+  const isAddedToCalendar = userRsvp?.addedToCalendar;
 
   const handleRsvp = () => {
     if (!user) {
       window.location.href = "/login";
       return;
     }
+    setJustRsvped(true);
     rsvp(eventId!, {
       onSuccess: () => {
         toast({
@@ -31,10 +125,32 @@ export default function EventDetailPage() {
         });
       },
       onError: () => {
+        setJustRsvped(false);
         toast({
           title: "Error",
           description: "Could not RSVP. Please try again.",
           variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const handleAddToCalendar = () => {
+    if (!event) return;
+    const calendarUrl = generateCalendarLink(event);
+    window.open(calendarUrl, "_blank");
+    
+    addToCalendar(eventId!, {
+      onSuccess: () => {
+        toast({
+          title: "Added to Calendar",
+          description: "Event has been added to your calendar.",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Note",
+          description: "Please add the event to your calendar manually if it didn't open.",
         });
       },
     });
@@ -94,6 +210,12 @@ export default function EventDetailPage() {
               <MapPin className="w-3.5 h-3.5 md:w-5 md:h-5" />
               <span>{event.location}</span>
             </div>
+            {(event as any).rsvpCount !== undefined && (
+              <div className="flex items-center gap-1.5 md:gap-2 text-green-600 font-medium">
+                <Calendar className="w-3.5 h-3.5 md:w-5 md:h-5" />
+                <span>{(event as any).rsvpCount} interested</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -144,25 +266,88 @@ export default function EventDetailPage() {
                   </div>
                 </div>
 
-                <Button 
-                  onClick={handleRsvp} 
-                  disabled={isPending}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-sm md:text-base py-2.5 md:py-3"
-                  size="lg"
-                >
-                  {isPending ? "Confirming..." : "RSVP Now"}
-                </Button>
-                
-                <div className="flex gap-2 md:gap-3 mt-3">
-                  <Button variant="outline" className="flex-1 text-xs md:text-sm py-2" size="sm">
-                    <Share2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
-                    Share
-                  </Button>
-                  <Button variant="outline" className="flex-1 text-xs md:text-sm py-2" size="sm">
-                    <CalendarPlus className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
-                    Add
-                  </Button>
-                </div>
+                {isRsvped ? (
+                  <>
+                    <Button 
+                      disabled
+                      className="w-full bg-green-600 text-sm md:text-base py-2.5 md:py-3"
+                      size="lg"
+                    >
+                      <Check className="w-4 h-4 mr-1.5" /> RSVPED
+                    </Button>
+                    
+                    <div className="flex gap-2 md:gap-3 mt-3">
+                      <div className="relative flex-1">
+                        <Button 
+                          variant="outline" 
+                          className="w-full text-xs md:text-sm py-2"
+                          onClick={() => setShowShareMenu(!showShareMenu)}
+                        >
+                          <Share2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
+                          Share
+                        </Button>
+                        {showShareMenu && (
+                          <SocialShareMenu event={event} onClose={() => setShowShareMenu(false)} />
+                        )}
+                      </div>
+                      {!isAddedToCalendar ? (
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 text-xs md:text-sm py-2"
+                          disabled={isAddingToCalendar}
+                          onClick={handleAddToCalendar}
+                        >
+                          <CalendarPlus className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
+                          {isAddingToCalendar ? "Adding..." : "Add to Calendar"}
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 text-xs md:text-sm py-2 bg-green-50"
+                          disabled
+                        >
+                          <Calendar className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
+                          Added
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Button 
+                      onClick={handleRsvp} 
+                      disabled={isRsvpPending}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-sm md:text-base py-2.5 md:py-3"
+                      size="lg"
+                    >
+                      {isRsvpPending ? "Confirming..." : "RSVP Now"}
+                    </Button>
+                    
+                    <div className="flex gap-2 md:gap-3 mt-3">
+                      <div className="relative flex-1">
+                        <Button 
+                          variant="outline" 
+                          className="w-full text-xs md:text-sm py-2"
+                          onClick={() => setShowShareMenu(!showShareMenu)}
+                        >
+                          <Share2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
+                          Share
+                        </Button>
+                        {showShareMenu && (
+                          <SocialShareMenu event={event} onClose={() => setShowShareMenu(false)} />
+                        )}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 text-xs md:text-sm py-2"
+                        onClick={handleAddToCalendar}
+                      >
+                        <CalendarPlus className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
+                        Add
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

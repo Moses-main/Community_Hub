@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMyPrayerRequests } from "@/hooks/use-prayer";
+import { useUserRsvps } from "@/hooks/use-events";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,11 +12,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/lib/api-config";
 import { User, Mail, Calendar, Shield, Heart, Loader2, Phone, MapPin, Home, Building, Edit } from "lucide-react";
 import { Link } from "wouter";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 
 export default function DashboardPage() {
   const { user, isLoading, refetch } = useAuth();
   const { data: myPrayers, isLoading: isPrayersLoading } = useMyPrayerRequests();
+  const { data: userRsvps, isLoading: isRsvpsLoading } = useUserRsvps();
   const { toast } = useToast();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -26,6 +28,7 @@ export default function DashboardPage() {
     address: user?.address || "",
     houseFellowship: user?.houseFellowship || "",
     parish: (user as any)?.parish || "",
+    houseCellLocation: user?.houseCellLocation || "",
   });
 
   useEffect(() => {
@@ -37,6 +40,7 @@ export default function DashboardPage() {
         address: user.address || "",
         houseFellowship: user.houseFellowship || "",
         parish: (user as any)?.parish || "",
+        houseCellLocation: user.houseCellLocation || "",
       });
     }
   }, [user]);
@@ -98,7 +102,7 @@ export default function DashboardPage() {
                   e.preventDefault();
                   setIsUpdating(true);
                   try {
-                    const res = await fetch(buildApiUrl("/api/auth/profile"), {
+                    const res = await fetch(buildApiUrl("/api/members/me"), {
                       method: "PUT",
                       headers: { "Content-Type": "application/json" },
                       credentials: "include",
@@ -173,6 +177,15 @@ export default function DashboardPage() {
                     placeholder="Enter your house fellowship"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="houseCellLocation">House Cell Location</Label>
+                  <Input
+                    id="houseCellLocation"
+                    value={formData.houseCellLocation}
+                    onChange={(e) => setFormData({ ...formData, houseCellLocation: e.target.value })}
+                    placeholder="Enter your house cell location"
+                  />
+                </div>
                 <Button type="submit" disabled={isUpdating} className="w-full">
                   {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
@@ -229,6 +242,13 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm text-gray-500">House Fellowship</p>
                   <p className="font-medium text-gray-900">{user.houseFellowship || "Not set"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Home className="h-4 w-4 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">House Cell Location</p>
+                  <p className="font-medium text-gray-900">{user.houseCellLocation || "Not set"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -304,6 +324,57 @@ export default function DashboardPage() {
                   <p>You haven't submitted any prayer requests yet.</p>
                   <Button variant="ghost" asChild className="mt-2">
                     <Link href="/prayer">Share a Prayer Request</Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2 border border-gray-100 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                My Interested Events
+              </CardTitle>
+              <CardDescription className="text-gray-500">Events you've RSVP'd to</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isRsvpsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                </div>
+              ) : userRsvps && userRsvps.length > 0 ? (
+                <div className="space-y-3">
+                  {userRsvps.slice(0, 5).map((rsvp: any) => (
+                    rsvp.event && (
+                      <Link key={rsvp.id} href={`/events/${rsvp.event.id}`}>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{rsvp.event.title}</p>
+                            <p className="text-xs text-gray-500">
+                              {format(new Date(rsvp.event.date), "MMM d, yyyy 'at' h:mm a")}
+                            </p>
+                          </div>
+                          {rsvp.addedToCalendar && (
+                            <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                              Added to Calendar
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    )
+                  ))}
+                  {userRsvps.length > 5 && (
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href="/events"><span>View All Events</span></Link>
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <p>You haven't RSVP'd to any events yet.</p>
+                  <Button variant="ghost" asChild className="mt-2">
+                    <Link href="/events">Browse Events</Link>
                   </Button>
                 </div>
               )}

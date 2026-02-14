@@ -31,6 +31,7 @@ export const users = pgTable('users', {
   phone: text('phone'),
   address: text('address'),
   houseFellowship: text('house_fellowship'),
+  houseCellLocation: text('house_cell_location'),
   parish: text('parish'),
   isAdmin: boolean('is_admin').default(false).notNull(),
   isVerified: boolean('is_verified').default(false).notNull(),
