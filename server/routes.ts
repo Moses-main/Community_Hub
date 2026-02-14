@@ -498,6 +498,18 @@ export async function registerRoutes(
     res.json(eventsWithRsvpCount);
   });
 
+  // Get user's RSVPs - must be BEFORE /:id route
+  app.get("/api/events/rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const rsvps = await storage.getUserRsvps(userId);
+      res.json(rsvps);
+    } catch (err) {
+      console.error("Error fetching RSVPs:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get(api.events.get.path, async (req, res) => {
     const event = await storage.getEvent(Number(req.params.id));
     if (!event) return res.status(404).json({ message: "Event not found" });
@@ -536,20 +548,6 @@ export async function registerRoutes(
       const rsvp = await storage.rsvpToEvent(eventId, userId);
       res.json({ message: "RSVP successful", rsvp });
     } catch (err) {
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Get user's RSVPs with event details - simplified version
-  app.get("/api/events/rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user!.id;
-      const rsvps = await storage.getUserRsvps(userId);
-      
-      // Return raw RSVPs first - no joining
-      res.json(rsvps);
-    } catch (err) {
-      console.error("Error fetching RSVPs:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });
