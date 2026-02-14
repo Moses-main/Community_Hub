@@ -13,7 +13,8 @@ import {
   Loader2, 
   Calendar,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  AlertCircle
 } from "lucide-react";
 
 const serviceTypeLabels: Record<string, string> = {
@@ -25,7 +26,7 @@ const serviceTypeLabels: Record<string, string> = {
 };
 
 export default function AttendanceAnalyticsPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [dateRange, setDateRange] = useState<"week" | "month" | "quarter">("month");
   
   const now = new Date();
@@ -48,6 +49,14 @@ export default function AttendanceAnalyticsPage() {
     startDate.toISOString(),
     endDate.toISOString()
   );
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!user?.isAdmin) {
     return (
@@ -76,7 +85,10 @@ export default function AttendanceAnalyticsPage() {
       <div className="container max-w-4xl mx-auto py-8 px-4">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-destructive">Failed to load attendance analytics</p>
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              <p>Failed to load attendance analytics. Please try again.</p>
+            </div>
           </CardContent>
         </Card>
       </div>

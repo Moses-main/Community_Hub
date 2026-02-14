@@ -83,7 +83,10 @@ export function useAttendanceStats(startDate: string, endDate: string, serviceTy
       const params = new URLSearchParams({ startDate, endDate });
       if (serviceType) params.append("serviceType", serviceType);
       const res = await fetch(buildApiUrl(`/api/attendance/analytics?${params}`), { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch attendance stats");
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: "Failed to fetch attendance stats" }));
+        throw new Error(error.message || "Failed to fetch attendance stats");
+      }
       return res.json();
     },
     enabled: !!startDate && !!endDate,
