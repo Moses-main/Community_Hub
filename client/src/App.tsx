@@ -24,6 +24,7 @@ import AttendanceHistoryPage from "@/pages/AttendanceHistoryPage";
 import AttendanceAnalyticsPage from "@/pages/AttendanceAnalyticsPage";
 import CheckinPage from "@/pages/CheckinPage";
 import QRScannerPage from "@/pages/QRScannerPage";
+import AbsentMembersPage from "@/pages/AbsentMembersPage";
 
 function Router() {
   return (
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/attendance/analytics" component={AttendanceAnalyticsPage} />
       <Route path="/attendance/checkin" component={CheckinPage} />
       <Route path="/attendance/scan" component={QRScannerPage} />
+      <Route path="/attendance/absent" component={AbsentMembersPage} />
       {/* Detail pages could be added here later e.g. /sermons/:id */}
       <Route component={NotFound} />
     </Switch>

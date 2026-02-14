@@ -484,6 +484,86 @@ export class DatabaseStorage implements IStorage {
 
     return { total, online, offline, byService };
   }
+
+  // Absence Detection
+  async getAbsentMembers(consecutiveMissed: number = 3): Promise<{
+    userId: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    missedCount: number;
+    lastAttendance: Date | null;
+    lastServiceDate: Date | null;
+  }[]> {
+    // Get all users
+    const usersList = await db.select().from(users);
+    
+    // Get all Sunday services in the last 12 weeks (approximately 3 months)
+    const twelveWeeksAgo = new Date();
+    twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 84);
+    
+    const services = await db
+      .select()
+      .from(attendance)
+      .where(
+        and(
+          eq(attendance.serviceType, "SUNDAY_SERVICE" as any),
+          gte(attendance.serviceDate, twelveWeeksAgo)
+        )
+      );
+    
+    // Group attendance by user
+    const attendanceByUser = new Map<string, Date[]>();
+    for (const record of services) {
+      if (record.userId) {
+        const existing = attendanceByUser.get(record.userId) || [];
+        existing.push(record.serviceDate);
+        attendanceByUser.set(record.userId, existing);
+      }
+    }
+    
+    // Find users who missed the required number of consecutive services
+    const absent: any[] = [];
+    
+    for (const userRecord of usersList) {
+      const userAttendance = attendanceByUser.get(userRecord.id) || [];
+      
+      if (userAttendance.length === 0) {
+        // Never attended - consider as absent
+        absent.push({
+          userId: userRecord.id,
+          email: userRecord.email,
+          firstName: userRecord.firstName,
+          lastName: userRecord.lastName,
+          missedCount: consecutiveMissed,
+          lastAttendance: null,
+          lastServiceDate: twelveWeeksAgo,
+        });
+      } else if (userAttendance.length < consecutiveMissed) {
+        // Attended but less than required
+        const sortedDates = userAttendance.sort((a, b) => b.getTime() - a.getTime());
+        const lastAttendance = sortedDates[0];
+        
+        // Check if they haven't attended recently (within last 4 weeks)
+        const fourWeeksAgo = new Date();
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+        
+        if (lastAttendance < fourWeeksAgo) {
+          absent.push({
+            userId: userRecord.id,
+            email: userRecord.email,
+            firstName: userRecord.firstName,
+            lastName: userRecord.lastName,
+            missedCount: consecutiveMissed - userAttendance.length,
+            lastAttendance,
+            lastServiceDate: lastAttendance,
+          });
+        }
+      }
+    }
+    
+    return absent;
+  }
 }
 
 export const storage = new DatabaseStorage();

@@ -737,6 +737,9 @@ export default function AdminDashboardPage() {
                       <Button variant="outline" size="sm" asChild>
                         <a href="/attendance" target="_blank">My Attendance History</a>
                       </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href="/attendance/absent" target="_blank">Absent Members</a>
+                      </Button>
                     </div>
                   </div>
 

@@ -1198,6 +1198,18 @@ export async function registerRoutes(
     }
   });
 
+  // Get absent members (admin only)
+  app.get("/api/attendance/absent", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const consecutiveMissed = parseInt(req.query.consecutiveMissed as string) || 3;
+      const absentMembers = await storage.getAbsentMembers(consecutiveMissed);
+      res.json(absentMembers);
+    } catch (err) {
+      console.error("Error fetching absent members:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Seed data function
   await seedDatabase();
 

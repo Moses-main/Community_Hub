@@ -273,3 +273,27 @@ export function useUpdateAttendanceSettings() {
     },
   });
 }
+
+export interface AbsentMember {
+  userId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  missedCount: number;
+  lastAttendance: string | null;
+  lastServiceDate: string | null;
+}
+
+export function useAbsentMembers(consecutiveMissed: number = 3) {
+  return useQuery<AbsentMember[]>({
+    queryKey: ["absent-members", consecutiveMissed],
+    queryFn: async (): Promise<AbsentMember[]> => {
+      const res = await fetch(
+        buildApiUrl(`/api/attendance/absent?consecutiveMissed=${consecutiveMissed}`),
+        { credentials: "include" }
+      );
+      if (!res.ok) throw new Error("Failed to fetch absent members");
+      return res.json();
+    },
+  });
+}
