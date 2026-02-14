@@ -125,7 +125,10 @@ export function useCreateAttendance() {
         body: JSON.stringify(data),
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to check in");
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: "Failed to check in" }));
+        throw new Error(error.message || "Failed to check in");
+      }
       return res.json();
     },
     onSuccess: () => {

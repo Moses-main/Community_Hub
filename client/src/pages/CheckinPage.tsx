@@ -51,6 +51,7 @@ export default function CheckinPage() {
       });
       setSuccess(true);
     } catch (err: any) {
+      console.error("Check-in error:", err);
       setError(err.message || "Failed to check in. Please try again.");
     }
   };
