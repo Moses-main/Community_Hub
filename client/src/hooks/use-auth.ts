@@ -6,11 +6,6 @@ import { apiRoutes } from "@/lib/api-routes";
 async function fetchUser(): Promise<User | null> {
   const response = await fetch(buildApiUrl(apiRoutes.auth.user), {
     credentials: "include",
-    headers: {
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Pragma": "no-cache",
-      "Expires": "0",
-    },
   });
 
   if (response.status === 401) {
@@ -28,11 +23,7 @@ async function logout(): Promise<void> {
   await fetch(buildApiUrl(apiRoutes.auth.logout), {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    },
   });
-  // Don't redirect here - let the mutation handle it
 }
 
 export function useAuth() {
