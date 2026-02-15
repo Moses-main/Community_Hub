@@ -39,15 +39,126 @@ export default function PrivacyPage() {
       
       if (!res.ok) throw new Error("Export failed");
       
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `my-data-${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const data = await res.json();
+      
+      // Generate PDF
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(20);
+      doc.setTextColor(40, 40, 40);
+      doc.text("My Church Data Export", 20, 20);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
+      
+      // Profile Section
+      doc.setFontSize(14);
+      doc.setTextColor(40, 40, 40);
+      doc.text("Profile Information", 20, 45);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(60, 60, 60);
+      let y = 55;
+      
+      if (data.profile) {
+        doc.text(`Name: ${data.profile.firstName || ""} ${data.profile.lastName || ""}`.trim(), 20, y);
+        y += 7;
+        doc.text(`Email: ${data.profile.email || "N/A"}`, 20, y);
+        y += 7;
+        doc.text(`Phone: ${data.profile.phone || "N/A"}`, 20, y);
+        y += 7;
+        doc.text(`House Fellowship: ${data.profile.houseFellowship || "N/A"}`, 20, y);
+        y += 7;
+        doc.text(`Parish: ${data.profile.parish || "N/A"}`, 20, y);
+        y += 7;
+        doc.text(`Role: ${data.profile.role || "N/A"}`, 20, y);
+        y += 7;
+        doc.text(`Member Since: ${data.profile.createdAt ? new Date(data.profile.createdAt).toLocaleDateString() : "N/A"}`, 20, y);
+        y += 15;
+      }
+      
+      // Attendance Section
+      doc.setFontSize(14);
+      doc.setTextColor(40, 40, 40);
+      doc.text("Attendance History", 20, y);
+      y += 10;
+      
+      doc.setFontSize(11);
+      doc.setTextColor(60, 60, 60);
+      
+      if (data.attendance && data.attendance.length > 0) {
+        doc.text(`Total Services Attended: ${data.attendance.length}`, 20, y);
+        y += 10;
+        
+        // Table header
+        doc.setFillColor(240, 240, 240);
+        doc.rect(20, y, 170, 8, "F");
+        doc.setFontSize(9);
+        doc.setTextColor(40, 40, 40);
+        doc.text("Date", 22, y + 5);
+        doc.text("Service", 60, y + 5);
+        doc.text("Type", 120, y + 5);
+        doc.text("Status", 160, y + 5);
+        y += 10;
+        
+        doc.setFontSize(8);
+        doc.setTextColor(60, 60, 60);
+        
+        // Show first 20 records
+        const recordsToShow = data.attendance.slice(0, 20);
+        for (const att of recordsToShow) {
+          if (y > 270) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(att.serviceDate ? new Date(att.serviceDate).toLocaleDateString() : "N/A", 22, y);
+          doc.text((att.serviceName || "").substring(0, 25), 60, y);
+          doc.text(att.serviceType || "N/A", 120, y);
+          doc.text(att.isOnline ? "Online" : "In Person", 160, y);
+          y += 6;
+        }
+        
+        if (data.attendance.length > 20) {
+          y += 5;
+          doc.setFontSize(9);
+          doc.text(`... and ${data.attendance.length - 20} more records`, 20, y);
+        }
+      } else {
+        doc.text("No attendance records found.", 20, y);
+      }
+      
+      y += 20;
+      
+      // Event RSVPs Section
+      if (y > 240) {
+        doc.addPage();
+        y = 20;
+      }
+      
+      doc.setFontSize(14);
+      doc.setTextColor(40, 40, 40);
+      doc.text("Event RSVPs", 20, y);
+      y += 10;
+      
+      doc.setFontSize(11);
+      doc.setTextColor(60, 60, 60);
+      
+      if (data.eventRsvps && data.eventRsvps.length > 0) {
+        doc.text(`Total Events RSVP'd: ${data.eventRsvps.length}`, 20, y);
+      } else {
+        doc.text("No event RSVPs found.", 20, y);
+      }
+      
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text("This document was generated in accordance with GDPR data portability rights.", 20, 285);
+      
+      // Save PDF
+      doc.save(`my-church-data-${new Date().toISOString().split("T")[0]}.pdf`);
       
       setExportSuccess(true);
     } catch (err) {

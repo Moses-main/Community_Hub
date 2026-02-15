@@ -1,13 +1,13 @@
 import { 
   users, branding, events, sermons, prayerRequests, donations, eventRsvps,
-  attendance, attendanceLinks, attendanceSettings,
+  attendance, attendanceLinks, attendanceSettings, memberMessages,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp,
-  type Attendance, type AttendanceLink, type AttendanceSettings,
-  type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings
+  type Attendance, type AttendanceLink, type AttendanceSettings, type MemberMessage,
+  type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings, type InsertMemberMessage
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, like, or, and, sql, gte, lte } from "drizzle-orm";
+import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
 
 export interface ISermonFilter {
   speaker?: string;
@@ -175,6 +175,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async markUserContacted(id: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ lastContactedAt: new Date() })
+      .where(eq(users.id, id));
   }
 
   // Branding
@@ -491,12 +498,25 @@ export class DatabaseStorage implements IStorage {
     email: string;
     firstName: string | null;
     lastName: string | null;
+    phone: string | null;
     missedCount: number;
     lastAttendance: Date | null;
     lastServiceDate: Date | null;
+    lastContactedAt: Date | null;
   }[]> {
-    // Get all users
-    const usersList = await db.select().from(users);
+    // Get all users who haven't been contacted in the last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const usersList = await db
+      .select()
+      .from(users)
+      .where(
+        or(
+          sql`${users.lastContactedAt} IS NULL`,
+          lt(users.lastContactedAt, sevenDaysAgo)
+        )
+      );
     
     // Get all Sunday services in the last 12 weeks (approximately 3 months)
     const twelveWeeksAgo = new Date();
@@ -535,9 +555,11 @@ export class DatabaseStorage implements IStorage {
           email: userRecord.email,
           firstName: userRecord.firstName,
           lastName: userRecord.lastName,
+          phone: userRecord.phone,
           missedCount: consecutiveMissed,
           lastAttendance: null,
           lastServiceDate: twelveWeeksAgo,
+          lastContactedAt: userRecord.lastContactedAt,
         });
       } else if (userAttendance.length < consecutiveMissed) {
         // Attended but less than required
@@ -554,15 +576,113 @@ export class DatabaseStorage implements IStorage {
             email: userRecord.email,
             firstName: userRecord.firstName,
             lastName: userRecord.lastName,
+            phone: userRecord.phone,
             missedCount: consecutiveMissed - userAttendance.length,
             lastAttendance,
             lastServiceDate: lastAttendance,
+            lastContactedAt: userRecord.lastContactedAt,
           });
         }
       }
     }
     
     return absent;
+  }
+
+  // Member Messages
+  async createMessage(message: InsertMemberMessage): Promise<MemberMessage> {
+    const [record] = await db.insert(memberMessages).values(message).returning();
+    return record;
+  }
+
+  async getUserMessages(userId: string): Promise<MemberMessage[]> {
+    return await db
+      .select()
+      .from(memberMessages)
+      .where(eq(memberMessages.userId, userId))
+      .orderBy(desc(memberMessages.createdAt));
+  }
+
+  async getUnreadMessageCount(userId: string): Promise<number> {
+    const result = await db
+      .select()
+      .from(memberMessages)
+      .where(and(eq(memberMessages.userId, userId), eq(memberMessages.isRead, false)));
+    return result.length;
+  }
+
+  async markMessageAsRead(messageId: number): Promise<void> {
+    await db
+      .update(memberMessages)
+      .set({ isRead: true, readAt: new Date() })
+      .where(eq(memberMessages.id, messageId));
+  }
+
+  async markAllMessagesAsRead(userId: string): Promise<void> {
+    await db
+      .update(memberMessages)
+      .set({ isRead: true, readAt: new Date() })
+      .where(and(eq(memberMessages.userId, userId), eq(memberMessages.isRead, false)));
+  }
+
+  async deleteOldMessages(daysOld: number = 5): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    
+    const result = await db
+      .delete(memberMessages)
+      .where(and(
+        lt(memberMessages.createdAt, cutoffDate),
+        eq(memberMessages.isRead, true)
+      ));
+    
+    return result.rowCount || 0;
+  }
+
+  async replyToMessage(
+    originalMessageId: number,
+    userId: string,
+    content: string,
+    senderId: string
+  ): Promise<MemberMessage> {
+    const [original] = await db
+      .select()
+      .from(memberMessages)
+      .where(eq(memberMessages.id, originalMessageId));
+    
+    if (!original) {
+      throw new Error("Original message not found");
+    }
+
+    const [reply] = await db.insert(memberMessages).values({
+      userId: original.userId,
+      type: original.type,
+      title: `Re: ${original.title}`,
+      content,
+      priority: original.priority,
+      createdBy: senderId,
+      replyToId: originalMessageId,
+      senderId,
+    }).returning();
+
+    return reply;
+  }
+
+  async getMessageThread(messageId: number): Promise<MemberMessage[]> {
+    const [original] = await db
+      .select()
+      .from(memberMessages)
+      .where(eq(memberMessages.id, messageId));
+    
+    if (!original) return [];
+
+    const replies = await db
+      .select()
+      .from(memberMessages)
+      .where(eq(memberMessages.replyToId, messageId))
+      .orderBy(asc(memberMessages.createdAt));
+
+    return [original, ...replies];
   }
 }
 

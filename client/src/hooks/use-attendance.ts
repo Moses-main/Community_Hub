@@ -279,9 +279,11 @@ export interface AbsentMember {
   email: string;
   firstName: string | null;
   lastName: string | null;
+  phone: string | null;
   missedCount: number;
   lastAttendance: string | null;
   lastServiceDate: string | null;
+  lastContactedAt: string | null;
 }
 
 export function useAbsentMembers(consecutiveMissed: number = 3) {

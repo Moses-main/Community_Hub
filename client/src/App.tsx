@@ -26,6 +26,8 @@ import CheckinPage from "@/pages/CheckinPage";
 import QRScannerPage from "@/pages/QRScannerPage";
 import AbsentMembersPage from "@/pages/AbsentMembersPage";
 import PrivacyPage from "@/pages/PrivacyPage";
+import MessagesPage from "@/pages/MessagesPage";
+import { useWebSocket } from "@/hooks/use-websocket";
 
 function Router() {
   return (
@@ -49,9 +51,23 @@ function Router() {
       <Route path="/attendance/scan" component={QRScannerPage} />
       <Route path="/attendance/absent" component={AbsentMembersPage} />
       <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/messages" component={MessagesPage} />
       {/* Detail pages could be added here later e.g. /sermons/:id */}
       <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function AppContent() {
+  useWebSocket();
+
+  return (
+    <TooltipProvider>
+      <Layout>
+        <Router />
+      </Layout>
+      <Toaster />
+    </TooltipProvider>
   );
 }
 
@@ -60,12 +76,7 @@ function App() {
     <HelmetProvider>
       <div className="w-full min-h-screen">
         <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <Layout>
-              <Router />
-            </Layout>
-            <Toaster />
-          </TooltipProvider>
+          <AppContent />
         </QueryClientProvider>
       </div>
     </HelmetProvider>

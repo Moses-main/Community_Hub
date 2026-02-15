@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useUnreadCount } from "@/hooks/use-messages";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck, QrCode, Shield } from "lucide-react";
+import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck, QrCode, Shield, Bell } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
@@ -17,6 +18,7 @@ import { buildApiUrl } from "@/lib/api-config";
 export function Navbar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const { data: unreadCount } = useUnreadCount();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -30,7 +32,7 @@ export function Navbar() {
   const isActive = (path: string) => location === path;
 
   return (
-    <nav className="sticky top-0 z-50 w-full md:bg-white/30 md:backdrop-blur-lg border-b border-gray-100/50 shadow-sm">
+    <nav className="sticky top-0 z-50 w-full md:bg-white/80 md:backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
       <div className="container mx-auto px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
         {/* Logo */}
         <Link
@@ -70,9 +72,15 @@ export function Navbar() {
             <div className="hidden md:block">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 px-3 py-2 h-auto rounded-full hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-all">
-                    <div className="w-9 h-9 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold shadow-sm">
-                      {user.firstName ? user.firstName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                  <Button variant="ghost" className="flex items-center gap-2 px-3 py-2 h-auto rounded-full hover:bg-gray-100 border border-transparent hover:border-gray-200 transition-all relative">
+                    <div className="relative">
+                      <div className="w-9 h-9 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold shadow-sm">
+                        {user.firstName ? user.firstName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                      </div>
+                      {unreadCount?.count ? (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white">
+                        </span>
+                      ) : null}
                     </div>
                     <span className="hidden lg:inline text-sm font-medium text-gray-700">
                       {user.firstName || user.email.split('@')[0]}
@@ -111,6 +119,19 @@ export function Navbar() {
                       <Link href="/privacy" className="flex items-center gap-3 text-gray-700">
                         <Shield className="w-5 h-5 text-primary" />
                         <span className="font-medium">Privacy & Data</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
+                      <Link href="/messages" className="flex items-center gap-3 text-gray-700 w-full">
+                        <div className="relative">
+                          <Bell className="w-5 h-5 text-primary" />
+                          {unreadCount?.count ? (
+                            <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold px-1">
+                              {unreadCount.count > 9 ? '9+' : unreadCount.count}
+                            </span>
+                          ) : null}
+                        </div>
+                        <span className="font-medium flex-1">Messages</span>
                       </Link>
                     </DropdownMenuItem>
                   </div>
@@ -204,6 +225,18 @@ export function Navbar() {
                     >
                       <QrCode className="w-5 h-5" />
                       Scan QR
+                    </Link>
+                    <Link
+                      href="/messages"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`text-lg font-medium p-3 rounded-xl transition-colors flex items-center gap-2 ${
+                        isActive("/messages")
+                          ? "bg-primary/10 text-primary"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Bell className="w-5 h-5" />
+                      Messages
                     </Link>
                     <button
                       onClick={() => {

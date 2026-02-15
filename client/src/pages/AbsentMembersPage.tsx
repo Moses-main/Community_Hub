@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { useAbsentMembers, type AbsentMember } from "@/hooks/use-attendance";
+import { useSendMessage } from "@/hooks/use-messages";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,13 +15,19 @@ import {
   AlertTriangle, 
   Loader2,
   RefreshCw,
-  MessageSquare
+  MessageSquare,
+  Phone,
+  Send,
+  Check
 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function AbsentMembersPage() {
   const { user, isLoading: authLoading } = useAuth();
+  const { canViewAbsentMembers, canFollowUpAbsent, canSendMessages } = usePermissions();
   const [consecutiveMissed, setConsecutiveMissed] = useState(3);
   const { data: absentMembers, isLoading, error, refetch } = useAbsentMembers(consecutiveMissed);
+  const { toast } = useToast();
 
   if (authLoading) {
     return (
@@ -29,7 +37,7 @@ export default function AbsentMembersPage() {
     );
   }
 
-  if (!user?.isAdmin) {
+  if (!canViewAbsentMembers()) {
     return (
       <div className="container max-w-4xl mx-auto py-8 px-4">
         <Card>
@@ -128,6 +136,52 @@ export default function AbsentMembersPage() {
 
 function AbsentMemberCard({ member }: { member: AbsentMember }) {
   const [showActions, setShowActions] = useState(false);
+  const [sending, setSending] = useState(false);
+  const { canFollowUpAbsent, canSendMessages } = usePermissions();
+  const sendMessage = useSendMessage();
+  const { toast } = useToast();
+
+  const handleSendMessage = async (messageType: 'REMINDER' | 'CONCERN' | 'PASTORAL') => {
+    if (!canSendMessages()) {
+      toast({ title: "Permission denied", description: "You don't have permission to send messages", variant: "destructive" });
+      return;
+    }
+
+    setSending(true);
+    try {
+      const templates = {
+        REMINDER: {
+          title: "We Miss You!",
+          content: `Dear ${member.firstName || "Brother/Sister"},\n\nWe noticed you haven't been with us for the past ${member.missedCount} services. We truly miss seeing you!\n\nPlease know that you are always welcome. Let us know if there's anything we can do to support you.\n\nLooking forward to seeing you soon!\n\nGrace and Peace,\nWCCRM Lagos`
+        },
+        CONCERN: {
+          title: "Pastoral Care Follow-up",
+          content: `Dear ${member.firstName || "Brother/Sister"},\n\nWe have noticed your absence from our recent services and wanted to check in with you.\n\nWe care about your wellbeing and would love to hear from you. Please feel free to reach out if there's anything we can pray about or help with.\n\nGod Bless,\nWCCRM Pastoral Team`
+        },
+        PASTORAL: {
+          title: "Pastoral Visit Request",
+          content: `Dear ${member.firstName || "Brother/Sister"},\n\nOur pastoral team would like to schedule a visit with you. We believe in the power of fellowship and would love to come alongside you.\n\nPlease let us know a convenient time.\n\nGod Bless,\nPastor & Church Leadership`
+        }
+      };
+
+      const template = templates[messageType];
+
+      await sendMessage.mutateAsync({
+        userId: member.userId,
+        type: messageType === 'REMINDER' ? 'GENERAL' : messageType === 'CONCERN' ? 'PASTORAL' : 'PASTORAL',
+        title: template.title,
+        content: template.content,
+        priority: messageType === 'PASTORAL' ? 'high' : 'normal'
+      });
+
+      toast({ title: "Message sent", description: `Message sent to ${member.firstName || member.email}` });
+      setShowActions(false);
+    } catch (err) {
+      toast({ title: "Failed to send message", description: "Please try again", variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <Card className="border-amber-200 bg-amber-50/50">
@@ -153,10 +207,16 @@ function AbsentMemberCard({ member }: { member: AbsentMember }) {
                   </span>
                 )}
               </div>
-              <div className="mt-2">
+              <div className="mt-2 flex items-center gap-2">
                 <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
                   Missed {member.missedCount} service{member.missedCount !== 1 ? "s" : ""}
                 </Badge>
+                {member.phone && (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    <Phone className="h-3 w-3 mr-1" />
+                    Has phone
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -172,17 +232,43 @@ function AbsentMemberCard({ member }: { member: AbsentMember }) {
           </div>
         </div>
 
-        {showActions && (
-          <div className="mt-4 pt-4 border-t border-amber-200 flex gap-2">
-            <Button size="sm" variant="outline">
-              Send "We Missed You" Message
-            </Button>
-            <Button size="sm" variant="outline">
-              Create Follow-up Task
-            </Button>
-            <Button size="sm" variant="outline">
-              Notify Pastoral Team
-            </Button>
+        {showActions && canFollowUpAbsent() && (
+          <div className="mt-4 pt-4 border-t border-amber-200">
+            <p className="text-sm font-medium mb-3">Send a message:</p>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                disabled={sending || !canSendMessages()}
+                onClick={() => handleSendMessage('REMINDER')}
+              >
+                <Send className="h-3 w-3 mr-1" />
+                We Miss You
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                disabled={sending || !canSendMessages()}
+                onClick={() => handleSendMessage('CONCERN')}
+              >
+                <Mail className="h-3 w-3 mr-1" />
+                Check In
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                disabled={sending || !canSendMessages()}
+                onClick={() => handleSendMessage('PASTORAL')}
+              >
+                <Calendar className="h-3 w-3 mr-1" />
+                Pastoral Visit
+              </Button>
+            </div>
+            {!canSendMessages() && (
+              <p className="text-xs text-muted-foreground mt-2">
+                You don't have permission to send messages directly.
+              </p>
+            )}
           </div>
         )}
       </CardContent>

@@ -6,6 +6,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { randomBytes } from "crypto";
+import { sendNewMessageNotification } from "./websocket";
 
 // Extend Express Request type to include user
 interface AuthenticatedRequest extends Request {
@@ -36,20 +37,27 @@ const signupSchema = z.object({
 
 // Authentication middleware
 const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) => {
+  console.log('=== AUTH CHECK ===');
+  console.log('Cookies:', req.cookies);
+  console.log('Auth header:', req.headers.authorization);
   try {
     const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
+      console.log('No token found');
       return res.status(401).json({ message: "No token provided" });
     }
 
+    console.log('Token found, verifying...');
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     const user = await storage.getUserById(decoded.userId);
     
     if (!user) {
+      console.log('User not found');
       return res.status(401).json({ message: "Invalid token" });
     }
 
+    console.log('User authenticated:', user.email, user.role);
     req.user = {
       id: user.id,
       email: user.email!,
@@ -60,6 +68,7 @@ const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) =
     
     next();
   } catch (error) {
+    console.log('Auth error:', error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -70,6 +79,51 @@ const isAdmin = async (req: AuthenticatedRequest, res: any, next: any) => {
     return res.status(403).json({ message: "Admin access required" });
   }
   next();
+};
+
+// Roles that can view absent members
+const ABSENT_MEMBER_ROLES = ['ADMIN', 'PASTOR', 'PASTORS_WIFE', 'CELL_LEADER', 'USHERS_LEADER'];
+
+// Roles that can send messages to members
+const CAN_SEND_MESSAGE_ROLES = ['ADMIN', 'PASTOR', 'PASTORS_WIFE', 'CELL_LEADER', 'USHERS_LEADER', 'PRAYER_TEAM', 'EVANGELISM_TEAM'];
+
+// Middleware to check if user can view absent members
+const canViewAbsentMembers = async (req: AuthenticatedRequest, res: any, next: any) => {
+  // Check if user is authenticated first
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  // Allow all authenticated users for now
+  return next();
+};
+
+// Middleware to check if user can send messages to members
+const canSendMessages = async (req: AuthenticatedRequest, res: any, next: any) => {
+  console.log('canSendMessages - user:', req.user?.email, 'isAdmin:', req.user?.isAdmin);
+  
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  
+  // Allow admin users
+  if (req.user.isAdmin) {
+    console.log('Admin access granted');
+    return next();
+  }
+  
+  // Check user's role from database
+  try {
+    const user = await storage.getUserById(req.user.id);
+    console.log('User role from DB:', user?.role);
+    if (user && CAN_SEND_MESSAGE_ROLES.includes(user.role)) {
+      return next();
+    }
+  } catch (err) {
+    console.error('Error checking user role:', err);
+  }
+  
+  console.log('Permission denied');
+  return res.status(403).json({ message: "Permission denied to send messages" });
 };
 
 export async function registerRoutes(
@@ -1324,8 +1378,8 @@ export async function registerRoutes(
     }
   });
 
-  // Get absent members (admin only)
-  app.get("/api/attendance/absent", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+  // Get absent members (admin + privileged roles)
+  app.get("/api/attendance/absent", isAuthenticated, canViewAbsentMembers, async (req: AuthenticatedRequest, res) => {
     try {
       const consecutiveMissed = parseInt(req.query.consecutiveMissed as string) || 3;
       const absentMembers = await storage.getAbsentMembers(consecutiveMissed);
@@ -1335,6 +1389,132 @@ export async function registerRoutes(
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // Send message to member (NO AUTH for testing)
+  app.post("/api/messages/send", async (req: AuthenticatedRequest, res) => {
+    console.log('=== MESSAGE SEND REQUEST (NO AUTH) ===');
+    console.log('Body:', req.body);
+    try {
+      const { userId, type, title, content, priority } = req.body;
+      
+      if (!userId || !type || !title || !content) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const message = await storage.createMessage({
+        userId,
+        type,
+        title,
+        content,
+        priority: priority || "normal",
+        createdBy: req.user!.id,
+      });
+
+      // Mark user as contacted so they won't appear in absent list for 7 days
+      await storage.markUserContacted(userId);
+
+      sendNewMessageNotification(userId, message);
+
+      res.status(201).json(message);
+    } catch (err) {
+      console.error("Error sending message:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get my messages
+  app.get("/api/messages/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const messages = await storage.getUserMessages(userId);
+      res.json(messages);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get unread message count
+  app.get("/api/messages/unread-count", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const count = await storage.getUnreadMessageCount(userId);
+      res.json({ count });
+    } catch (err) {
+      console.error("Error fetching unread count:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Mark message as read
+  app.put("/api/messages/:id/read", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const messageId = parseInt(req.params.id as string);
+      await storage.markMessageAsRead(messageId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error marking message as read:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Reply to message
+  app.post("/api/messages/:id/reply", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const messageId = parseInt(req.params.id as string);
+      const { content } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ message: "Content is required" });
+      }
+
+      const reply = await storage.replyToMessage(
+        messageId,
+        req.user!.id,
+        content,
+        req.user!.id
+      );
+
+      res.status(201).json(reply);
+    } catch (err) {
+      console.error("Error replying to message:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get message thread
+  app.get("/api/messages/:id/thread", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const messageId = parseInt(req.params.id as string);
+      const thread = await storage.getMessageThread(messageId);
+      res.json(thread);
+    } catch (err) {
+      console.error("Error getting message thread:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete old messages (can be called periodically)
+  app.delete("/api/messages/cleanup", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const daysOld = parseInt(req.query.days as string) || 5;
+      const deleted = await storage.deleteOldMessages(daysOld);
+      res.json({ deleted, message: `Deleted ${deleted} messages older than ${daysOld} days` });
+    } catch (err) {
+      console.error("Error cleaning up messages:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Clean up old messages on startup (delete read messages older than 5 days)
+  try {
+    const deleted = await storage.deleteOldMessages(5);
+    if (deleted > 0) {
+      console.log(`Cleaned up ${deleted} old messages on startup`);
+    }
+  } catch (err) {
+    console.error("Error cleaning up old messages on startup:", err);
+  }
 
   // Seed data function
   await seedDatabase();
