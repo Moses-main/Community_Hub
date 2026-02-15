@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 
 export default function LogoutPage() {
   const [location, navigate] = useLocation();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const logout = async () => {
@@ -16,12 +18,16 @@ export default function LogoutPage() {
       } catch (err) {
         console.error("Logout error:", err);
       } finally {
-        navigate("/");
+        // Clear all auth-related queries
+        queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+        queryClient.clear();
+        // Force a full page reload to ensure clean state
+        window.location.href = "/";
       }
     };
 
     logout();
-  }, [navigate]);
+  }, [navigate, queryClient]);
 
   return null;
 }
