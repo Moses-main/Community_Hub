@@ -381,6 +381,7 @@ export async function registerRoutes(
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'none',
+      path: '/',
     });
     res.json({ message: "Logged out successfully" });
   });
