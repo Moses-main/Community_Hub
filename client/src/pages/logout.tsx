@@ -1,33 +1,35 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
-import { apiRoutes } from "@/lib/api-routes";
-import { buildApiUrl } from "@/lib/api-config";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function LogoutPage() {
-  const [location, navigate] = useLocation();
-  const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+  const { logout, isLoggingOut } = useAuth();
 
   useEffect(() => {
-    const logout = async () => {
-      try {
-        await fetch(buildApiUrl(apiRoutes.auth.logout), {
-          method: "POST",
-          credentials: "include",
-        });
-      } catch (err) {
-        console.error("Logout error:", err);
-      } finally {
-        // Clear all auth-related queries
-        queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
-        queryClient.clear();
+    if (!isLoggingOut) {
+      logout();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggingOut) {
+      // Wait a moment for the logout to complete, then redirect
+      const timer = setTimeout(() => {
+        navigate("/");
         // Force a full page reload to ensure clean state
-        window.location.href = "/";
-      }
-    };
+        window.location.reload();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggingOut, navigate]);
 
-    logout();
-  }, [navigate, queryClient]);
-
-  return null;
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-4 text-muted-foreground">Logging out...</p>
+      </div>
+    </div>
+  );
 }
