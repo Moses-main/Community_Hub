@@ -19,30 +19,25 @@ async function fetchUser(): Promise<User | null> {
   return response.json();
 }
 
-async function logout(): Promise<void> {
-  await fetch(buildApiUrl(apiRoutes.auth.logout), {
-    method: "POST",
-    credentials: "include",
-  });
-}
-
 export function useAuth() {
   const queryClient = useQueryClient();
   const { data: user, isLoading } = useQuery<User | null>({
-    queryKey: ["/api/auth/user", window.location.search],
+    queryKey: ["auth", "user"],
     queryFn: fetchUser,
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const logoutMutation = useMutation({
-    mutationFn: logout,
-    retry: false,
-    onSuccess: () => {
-      // Clear all auth-related queries
-      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.clear();
+    mutationFn: async () => {
+      queryClient.setQueryData<User | null>(["auth", "user"], null);
+      await fetch(buildApiUrl(apiRoutes.auth.logout), {
+        method: "POST",
+        credentials: "include",
+      });
+      window.location.href = "/";
     },
+    retry: false,
   });
 
   return {
@@ -51,6 +46,6 @@ export function useAuth() {
     isAuthenticated: !!user,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
-    refetch: () => queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] }),
+    refetch: () => queryClient.invalidateQueries({ queryKey: ["auth", "user"] }),
   };
 }

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import { Helmet } from "react-helmet";
@@ -29,6 +30,7 @@ export default function AuthPage() {
   });
   const { toast } = useToast();
   const [location, navigate] = useRoute("");
+  const queryClient = useQueryClient();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -74,8 +76,12 @@ export default function AuthPage() {
           : "Your account has been created successfully.",
       });
 
-      // On successful login/register - redirect with a timestamp to bypass cache
-      window.location.href = "/?auth=" + Date.now();
+      // Reset auth query cache to force fresh fetch on next page load
+      queryClient.setQueryData(["auth", "user"], null);
+      queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
+
+      // On successful login/register - redirect to home
+      window.location.href = "/";
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
       setError(errorMessage);

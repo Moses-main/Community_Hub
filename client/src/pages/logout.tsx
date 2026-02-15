@@ -10,17 +10,11 @@ export default function LogoutPage() {
     if (!isLoggingOut) {
       logout();
     }
-  }, []);
+  }, [logout, isLoggingOut]);
 
   useEffect(() => {
     if (!isLoggingOut) {
-      // Wait a moment for the logout to complete, then redirect
-      const timer = setTimeout(() => {
-        navigate("/");
-        // Force a full page reload to ensure clean state
-        window.location.reload();
-      }, 500);
-      return () => clearTimeout(timer);
+      navigate("/");
     }
   }, [isLoggingOut, navigate]);
 
