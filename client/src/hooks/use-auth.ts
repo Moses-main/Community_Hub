@@ -25,12 +25,12 @@ export function useAuth() {
     queryKey: ["auth", "user"],
     queryFn: fetchUser,
     retry: false,
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      queryClient.setQueryData(["auth", "user"], null);
       try {
         await fetch(buildApiUrl(apiRoutes.auth.logout), {
           method: "POST",
@@ -43,7 +43,7 @@ export function useAuth() {
     },
     retry: false,
     onSuccess: () => {
-      window.location.href = "/";
+      window.location.href = "/login";
     },
   });
 
