@@ -40,6 +40,7 @@ export const users = pgTable('users', {
   resetPasswordToken: text('reset_password_token'),
   resetPasswordExpires: timestamp('reset_password_expires'),
   role: userRoleEnum('role').default('MEMBER').notNull(),
+  lastContactedAt: timestamp('last_contacted_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

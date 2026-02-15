@@ -1,5 +1,5 @@
 export * from "./models/auth";
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./models/auth";
@@ -153,3 +153,140 @@ export type CreateEventRequest = InsertEvent;
 export type CreateSermonRequest = InsertSermon;
 export type CreatePrayerRequestRequest = InsertPrayerRequest;
 export type CreateDonationRequest = InsertDonation;
+
+// === ATTENDANCE TABLES ===
+
+export const serviceTypeEnum = pgEnum('service_type', [
+  'SUNDAY_SERVICE',
+  'MIDWEEK_SERVICE', 
+  'SPECIAL_EVENT',
+  'ONLINE_LIVE',
+  'ONLINE_REPLAY'
+]);
+
+export const attendanceTypeEnum = pgEnum('attendance_type', [
+  'SELF_CHECKIN',
+  'MANUAL',
+  'ONLINE_AUTO',
+  'QR_CHECKIN'
+]);
+
+export const attendance = pgTable("attendance", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id),
+  serviceType: serviceTypeEnum("service_type").notNull(),
+  serviceId: integer("service_id"),
+  serviceName: text("service_name").notNull(),
+  serviceDate: timestamp("service_date").notNull(),
+  attendanceType: attendanceTypeEnum("attendance_type").notNull(),
+  checkInTime: timestamp("check_in_time"),
+  watchDuration: integer("watch_duration"),
+  isOnline: boolean("is_online").default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: text("created_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const attendanceLinks = pgTable("attendance_links", {
+  id: serial("id").primaryKey(),
+  serviceType: serviceTypeEnum("service_type").notNull(),
+  serviceId: integer("service_id"),
+  serviceName: text("service_name").notNull(),
+  serviceDate: timestamp("service_date").notNull(),
+  uniqueToken: text("unique_token").notNull().unique(),
+  qrCodeUrl: text("qr_code_url"),
+  isActive: boolean("is_active").default(true),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: text("created_by").references(() => users.id),
+});
+
+export const attendanceSettings = pgTable("attendance_settings", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
+  description: text("description"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// === ATTENDANCE RELATIONS ===
+export const attendanceRelations = relations(attendance, ({ one }) => ({
+  user: one(users, {
+    fields: [attendance.userId],
+    references: [users.id],
+  }),
+  creator: one(users, {
+    fields: [attendance.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const attendanceLinksRelations = relations(attendanceLinks, ({ one }) => ({
+  creator: one(users, {
+    fields: [attendanceLinks.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// === ATTENDANCE SCHEMAS ===
+export const insertAttendanceSchema = createInsertSchema(attendance).omit({ id: true });
+export const insertAttendanceLinkSchema = createInsertSchema(attendanceLinks).omit({ id: true });
+export const insertAttendanceSettingsSchema = createInsertSchema(attendanceSettings).omit({ id: true });
+
+// === MEMBER MESSAGES ===
+export const messageTypeEnum = pgEnum('message_type', [
+  'ABSENCE_ALERT',
+  'GENERAL',
+  'PASTORAL',
+  'ANNOUNCEMENT'
+]);
+
+export const messagePriorityEnum = pgEnum('message_priority', [
+  'high',
+  'normal',
+  'low'
+]);
+
+export const memberMessages = pgTable("member_messages", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id),
+  type: messageTypeEnum("type").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  priority: messagePriorityEnum("priority").default("normal"),
+  createdBy: text("created_by").references(() => users.id),
+  replyToId: integer("reply_to_id"),
+  senderId: text("sender_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const memberMessagesRelations = relations(memberMessages, ({ one }) => ({
+  user: one(users, {
+    fields: [memberMessages.userId],
+    references: [users.id],
+  }),
+  creator: one(users, {
+    fields: [memberMessages.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertMemberMessageSchema = createInsertSchema(memberMessages).omit({ id: true, createdAt: true });
+
+// === ATTENDANCE TYPES ===
+export type Attendance = typeof attendance.$inferSelect;
+export type AttendanceLink = typeof attendanceLinks.$inferSelect;
+export type AttendanceSettings = typeof attendanceSettings.$inferSelect;
+export type MemberMessage = typeof memberMessages.$inferSelect;
+
+export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
+export type InsertAttendanceLink = z.infer<typeof insertAttendanceLinkSchema>;
+export type InsertAttendanceSettings = z.infer<typeof insertAttendanceSettingsSchema>;
+export type InsertMemberMessage = z.infer<typeof insertMemberMessageSchema>;
+
+// Request types
+export type CreateAttendanceRequest = InsertAttendance;
+export type CreateAttendanceLinkRequest = InsertAttendanceLink;

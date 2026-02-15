@@ -38,13 +38,13 @@ export default function SermonsPage() {
   const uniqueSeries = useMemo(() => {
     if (!allSermons) return [];
     const series = allSermons.map(s => s.series).filter((s): s is string => Boolean(s));
-    return [...new Set(series)];
+    return Array.from(new Set(series));
   }, [allSermons]);
 
   const uniqueSpeakers = useMemo(() => {
     if (!allSermons) return [];
     const speakers = allSermons.map(s => s.speaker).filter((s): s is string => Boolean(s));
-    return [...new Set(speakers)];
+    return Array.from(new Set(speakers));
   }, [allSermons]);
 
   return (

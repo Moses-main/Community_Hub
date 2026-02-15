@@ -2,15 +2,19 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMyPrayerRequests } from "@/hooks/use-prayer";
 import { useUserRsvps } from "@/hooks/use-events";
+import { useMyMessages, useUnreadCount, useMarkAsRead, useSendMessage, useReplyToMessage } from "@/hooks/use-messages";
+import { usePermissions } from "@/hooks/use-permissions";
+import { useAbsentMembers } from "@/hooks/use-attendance";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/lib/api-config";
-import { User, Mail, Calendar, Shield, Heart, Loader2, Phone, MapPin, Home, Building, Edit } from "lucide-react";
+import { User, Mail, Calendar, Shield, Heart, Loader2, Phone, MapPin, Home, Building, Edit, MessageSquare, Bell, Check, Users, UserX, Send, Reply } from "lucide-react";
 import { Link } from "wouter";
 import { formatDistanceToNow, format } from "date-fns";
 
@@ -18,9 +22,20 @@ export default function DashboardPage() {
   const { user, isLoading, refetch } = useAuth();
   const { data: myPrayers, isLoading: isPrayersLoading } = useMyPrayerRequests();
   const { data: userRsvps, isLoading: isRsvpsLoading } = useUserRsvps();
+  const { data: myMessages, isLoading: isMessagesLoading } = useMyMessages();
+  const { data: unreadCount } = useUnreadCount();
+  const markAsRead = useMarkAsRead();
+  const sendMessage = useSendMessage();
+  const replyToMessage = useReplyToMessage();
+  const { canViewAbsentMembers, canFollowUpAbsent, canSendMessages } = usePermissions();
+  const { data: absentMembers, isLoading: isAbsentLoading, error: absentError } = useAbsentMembers(3);
   const { toast } = useToast();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [showAbsentActions, setShowAbsentActions] = useState<string | null>(null);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replyContent, setReplyContent] = useState("");
   const [formData, setFormData] = useState({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
@@ -193,6 +208,30 @@ export default function DashboardPage() {
               </form>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {selectedMessage?.priority === 'high' && (
+                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Urgent</span>
+                  )}
+                  {selectedMessage?.title}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedMessage && format(new Date(selectedMessage.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="text-gray-700 whitespace-pre-wrap">{selectedMessage?.content}</p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setSelectedMessage(null)}>
+                  Close
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -281,6 +320,131 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2 border border-gray-100 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
+                <Bell className="h-5 w-5 text-primary" />
+                My Messages
+                {unreadCount?.count ? (
+                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {unreadCount.count} new
+                  </span>
+                ) : null}
+              </CardTitle>
+              <CardDescription className="text-gray-500">Updates from your pastors and church leaders</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isMessagesLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                </div>
+              ) : myMessages && myMessages.length > 0 ? (
+                <div className="space-y-3">
+                  {myMessages.slice(0, 5).map((message) => (
+                    <div 
+                      key={message.id} 
+                      className={`p-3 rounded-lg transition-colors ${
+                        message.isRead ? 'bg-gray-50' : 'bg-primary/5 border-l-4 border-primary'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div 
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => {
+                            if (!message.isRead) {
+                              markAsRead.mutate(message.id);
+                            }
+                            setSelectedMessage(message);
+                            setIsReplying(false);
+                            setReplyContent("");
+                          }}
+                        >
+                          <p className="font-medium text-gray-900 truncate">{message.title}</p>
+                          <p className="text-sm text-gray-500 line-clamp-1">{message.content}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 ml-2">
+                          {message.priority === 'high' && (
+                            <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Urgent</span>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedMessage(message);
+                              setIsReplying(true);
+                            }}
+                          >
+                            <Reply className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      {selectedMessage?.id === message.id && isReplying && (
+                        <div className="mt-3 pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+                          <Textarea
+                            placeholder="Type your reply..."
+                            value={replyContent}
+                            onChange={(e) => setReplyContent(e.target.value)}
+                            rows={2}
+                            className="mb-2"
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => { setIsReplying(false); setReplyContent(""); }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button 
+                              size="sm"
+                              disabled={!replyContent.trim() || replyToMessage.isPending}
+                              onClick={async () => {
+                                try {
+                                  await replyToMessage.mutateAsync({
+                                    messageId: message.id,
+                                    content: replyContent
+                                  });
+                                  toast({ title: "Reply sent", description: "Your response has been sent." });
+                                  setReplyContent("");
+                                  setIsReplying(false);
+                                } catch {
+                                  toast({ title: "Failed to send reply", variant: "destructive" });
+                                }
+                              }}
+                            >
+                              {replyToMessage.isPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <Send className="h-3 w-3 mr-1" />
+                                  Send
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {myMessages.length > 5 && (
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href="/messages"><span>View All Messages ({myMessages.length})</span></Link>
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p>No messages yet.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -382,25 +546,131 @@ export default function DashboardPage() {
           </Card>
 
           <Card className="md:col-span-2 border border-gray-100 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg text-gray-900">Quick Actions</CardTitle>
-              <CardDescription className="text-gray-500">Common tasks and links</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-4">
-              <Button variant="outline" asChild>
-                <Link href="/prayer">Submit Prayer Request</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/events">View Events</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/sermons">Watch Sermons</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/give">Give</Link>
-              </Button>
-            </CardContent>
-          </Card>
+              <CardHeader>
+                <CardTitle className="text-lg text-gray-900">Quick Actions</CardTitle>
+                <CardDescription className="text-gray-500">Common tasks and links</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-4">
+                <Button variant="outline" asChild>
+                  <Link href="/prayer">Submit Prayer Request</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/events">View Events</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/sermons">Watch Sermons</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/give">Give</Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {canViewAbsentMembers() && (
+              <Card className="md:col-span-2 border border-amber-200 shadow-sm bg-amber-50/50">
+                <CardHeader>
+                  <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
+                    <UserX className="h-5 w-5 text-amber-600" />
+                    Members Needing Follow-up
+                    {absentMembers && absentMembers.length > 0 && (
+                      <span className="ml-auto text-sm font-normal text-amber-700">
+                        {absentMembers.length} absent
+                      </span>
+                    )}
+                  </CardTitle>
+                  <CardDescription className="text-gray-500">
+                    Members who have missed recent services - reach out to them!
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isAbsentLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    </div>
+                  ) : absentError ? (
+                    <div className="text-center py-4 text-red-500">
+                      <p>Failed to load absent members</p>
+                      <p className="text-xs text-gray-500">{(absentError as Error).message}</p>
+                    </div>
+                  ) : absentMembers && absentMembers.length > 0 ? (
+                    <div className="space-y-3">
+                      {absentMembers.slice(0, 5).map((member) => (
+                        <div key={member.userId} className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-full bg-amber-100">
+                              <UserX className="h-4 w-4 text-amber-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {member.firstName || "Member"} {member.lastName || ""}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Missed {member.missedCount} services
+                              </p>
+                            </div>
+                          </div>
+                          {canFollowUpAbsent() && canSendMessages() && (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={async () => {
+                                  console.log('Button clicked, sending to:', member.userId);
+                                  alert('Sending message to ' + (member.firstName || member.email));
+                                  try {
+                                    const result = await sendMessage.mutateAsync({
+                                      userId: member.userId,
+                                      type: 'GENERAL',
+                                      title: 'We Miss You!',
+                                      content: `Dear ${member.firstName || 'Brother/Sister'},\n\nWe noticed you haven't been with us for the past ${member.missedCount} services. We truly miss seeing you!\n\nPlease know that you are always welcome. Let us know if there's anything we can do to support you.\n\nLooking forward to seeing you soon!\n\nGrace and Peace,\nWCCRM`,
+                                      priority: 'normal'
+                                    });
+                                    console.log('Message sent successfully:', result);
+                                    toast({ 
+                                      title: "Message sent! ✅", 
+                                      description: `${member.firstName || 'Member'} will be removed from the absent list for 7 days.` 
+                                    });
+                                  } catch (err: any) {
+                                    console.error('Error sending message:', err);
+                                    toast({ 
+                                      title: "Failed to send message", 
+                                      description: err.message || "You may not have permission.", 
+                                      variant: "destructive" 
+                                    });
+                                  }
+                                }}
+                                disabled={sendMessage.isPending}
+                              >
+                                {sendMessage.isPending ? (
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Send className="h-3 w-3 mr-1" />
+                                )}
+                                Send Message
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {absentMembers.length > 5 && (
+                        <Button variant="outline" className="w-full" asChild>
+                          <Link href="/attendance/absent">
+                            <Users className="h-4 w-4 mr-2" />
+                            View All {absentMembers.length} Members
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-gray-500">
+                      <Users className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                      <p>All members are active!</p>
+                      <p className="text-sm">No absent members detected at this time.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
         </div>
       </div>
     </div>

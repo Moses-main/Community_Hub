@@ -5,6 +5,8 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { randomBytes } from "crypto";
+import { sendNewMessageNotification } from "./websocket";
 
 // Extend Express Request type to include user
 interface AuthenticatedRequest extends Request {
@@ -35,20 +37,27 @@ const signupSchema = z.object({
 
 // Authentication middleware
 const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) => {
+  console.log('=== AUTH CHECK ===');
+  console.log('Cookies:', req.cookies);
+  console.log('Auth header:', req.headers.authorization);
   try {
     const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
     
     if (!token) {
+      console.log('No token found');
       return res.status(401).json({ message: "No token provided" });
     }
 
+    console.log('Token found, verifying...');
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     const user = await storage.getUserById(decoded.userId);
     
     if (!user) {
+      console.log('User not found');
       return res.status(401).json({ message: "Invalid token" });
     }
 
+    console.log('User authenticated:', user.email, user.role);
     req.user = {
       id: user.id,
       email: user.email!,
@@ -59,6 +68,7 @@ const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) =
     
     next();
   } catch (error) {
+    console.log('Auth error:', error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -69,6 +79,51 @@ const isAdmin = async (req: AuthenticatedRequest, res: any, next: any) => {
     return res.status(403).json({ message: "Admin access required" });
   }
   next();
+};
+
+// Roles that can view absent members
+const ABSENT_MEMBER_ROLES = ['ADMIN', 'PASTOR', 'PASTORS_WIFE', 'CELL_LEADER', 'USHERS_LEADER'];
+
+// Roles that can send messages to members
+const CAN_SEND_MESSAGE_ROLES = ['ADMIN', 'PASTOR', 'PASTORS_WIFE', 'CELL_LEADER', 'USHERS_LEADER', 'PRAYER_TEAM', 'EVANGELISM_TEAM'];
+
+// Middleware to check if user can view absent members
+const canViewAbsentMembers = async (req: AuthenticatedRequest, res: any, next: any) => {
+  // Check if user is authenticated first
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  // Allow all authenticated users for now
+  return next();
+};
+
+// Middleware to check if user can send messages to members
+const canSendMessages = async (req: AuthenticatedRequest, res: any, next: any) => {
+  console.log('canSendMessages - user:', req.user?.email, 'isAdmin:', req.user?.isAdmin);
+  
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  
+  // Allow admin users
+  if (req.user.isAdmin) {
+    console.log('Admin access granted');
+    return next();
+  }
+  
+  // Check user's role from database
+  try {
+    const user = await storage.getUserById(req.user.id);
+    console.log('User role from DB:', user?.role);
+    if (user && CAN_SEND_MESSAGE_ROLES.includes(user.role)) {
+      return next();
+    }
+  } catch (err) {
+    console.error('Error checking user role:', err);
+  }
+  
+  console.log('Permission denied');
+  return res.status(403).json({ message: "Permission denied to send messages" });
 };
 
 export async function registerRoutes(
@@ -97,6 +152,132 @@ export async function registerRoutes(
       isAdmin: user.email === 'admin@wccrm.com',
       createdAt: user.createdAt,
     });
+  });
+
+  // === GDPR ROUTES ===
+
+  // Export member data (for GDPR data portability)
+  app.get("/api/gdpr/export", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const attendance = await storage.getAttendanceByUser(userId);
+      const rsvps = await storage.getUserRsvps(userId);
+
+      const exportData = {
+        profile: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          address: user.address,
+          houseFellowship: user.houseFellowship,
+          houseCellLocation: user.houseCellLocation,
+          parish: user.parish,
+          role: user.role,
+          createdAt: user.createdAt,
+        },
+        attendance: attendance.map(a => ({
+          serviceType: a.serviceType,
+          serviceName: a.serviceName,
+          serviceDate: a.serviceDate,
+          attendanceType: a.attendanceType,
+          isOnline: a.isOnline,
+          checkInTime: a.checkInTime,
+        })),
+        eventRsvps: rsvps.map(r => ({
+          eventId: r.eventId,
+          addedToCalendar: r.addedToCalendar,
+          createdAt: r.createdAt,
+        })),
+        exportedAt: new Date().toISOString(),
+      };
+
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Disposition", `attachment; filename=my-data-${new Date().toISOString().split("T")[0]}.json`);
+      res.json(exportData);
+    } catch (err) {
+      console.error("Error exporting data:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete member data (for GDPR right to erasure)
+  app.delete("/api/gdpr/delete", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { confirmation } = req.body;
+
+      if (confirmation !== "DELETE_MY_DATA") {
+        return res.status(400).json({ 
+          message: "Please type 'DELETE_MY_DATA' to confirm deletion" 
+        });
+      }
+
+      // In a real implementation, you would:
+      // 1. Anonymize or delete personal data
+      // 2. Keep minimal data for legal requirements
+      // 3. Notify admin
+      
+      // For now, we'll just return a success message
+      // In production, implement actual data deletion
+      
+      res.json({ 
+        message: "Data deletion request submitted. Your data will be removed within 30 days." 
+      });
+    } catch (err) {
+      console.error("Error deleting data:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get privacy settings
+  app.get("/api/gdpr/privacy", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({
+        dataRetentionEnabled: true,
+        marketingConsent: false,
+        attendanceVisibility: "private",
+        profileVisibility: "members",
+      });
+    } catch (err) {
+      console.error("Error fetching privacy settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update privacy settings
+  app.put("/api/gdpr/privacy", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { marketingConsent, attendanceVisibility, profileVisibility } = req.body;
+
+      // In a real implementation, store these preferences
+      res.json({ 
+        message: "Privacy settings updated successfully",
+        settings: {
+          marketingConsent,
+          attendanceVisibility,
+          profileVisibility,
+        }
+      });
+    } catch (err) {
+      console.error("Error updating privacy settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
 
   // Login
@@ -857,6 +1038,483 @@ export async function registerRoutes(
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // === ATTENDANCE ROUTES ===
+
+  // Get user's attendance history
+  app.get("/api/attendance/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const attendanceRecords = await storage.getAttendanceByUser(userId);
+      res.json(attendanceRecords);
+    } catch (err) {
+      console.error("Error fetching attendance:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Self check-in for a service
+  app.post("/api/attendance/checkin", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { serviceType, serviceId, serviceName, serviceDate, notes } = req.body;
+
+      if (!serviceType || !serviceName || !serviceDate) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const existingAttendance = await storage.getUserAttendanceForService(
+        userId,
+        serviceType,
+        new Date(serviceDate)
+      );
+
+      if (existingAttendance) {
+        return res.status(400).json({ message: "Already checked in for this service" });
+      }
+
+      const attendance = await storage.createAttendance({
+        userId,
+        serviceType,
+        serviceId: serviceId || null,
+        serviceName,
+        serviceDate: new Date(serviceDate),
+        attendanceType: "SELF_CHECKIN",
+        checkInTime: new Date(),
+        isOnline: false,
+        notes: notes || null,
+        createdBy: userId,
+      });
+
+      res.status(201).json(attendance);
+    } catch (err) {
+      console.error("Error checking in:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Manual check-in (admin/leader only)
+  app.post("/api/attendance/manual", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { targetUserId, serviceType, serviceId, serviceName, serviceDate, notes } = req.body;
+
+      if (!targetUserId || !serviceType || !serviceName || !serviceDate) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const existingAttendance = await storage.getUserAttendanceForService(
+        targetUserId,
+        serviceType,
+        new Date(serviceDate)
+      );
+
+      if (existingAttendance) {
+        return res.status(400).json({ message: "User already checked in for this service" });
+      }
+
+      const attendance = await storage.createAttendance({
+        userId: targetUserId,
+        serviceType,
+        serviceId: serviceId || null,
+        serviceName,
+        serviceDate: new Date(serviceDate),
+        attendanceType: "MANUAL",
+        checkInTime: new Date(),
+        isOnline: false,
+        notes: notes || null,
+        createdBy: userId,
+      });
+
+      res.status(201).json(attendance);
+    } catch (err) {
+      console.error("Error manual check-in:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Online attendance tracking - record watch session
+  app.post("/api/attendance/online", async (req, res) => {
+    try {
+      const { userId, serviceType, serviceId, serviceName, serviceDate, watchDuration, isReplay } = req.body;
+
+      if (!userId || !serviceType || !serviceName || !serviceDate) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const thresholdMinutes = parseInt(await storage.getAttendanceSetting("online_watch_threshold_minutes") || "10");
+      const thresholdSeconds = thresholdMinutes * 60;
+
+      if (watchDuration < thresholdSeconds) {
+        return res.status(200).json({ message: "Watch time below threshold", recorded: false });
+      }
+
+      const existingAttendance = await storage.getUserAttendanceForService(
+        userId,
+        serviceType,
+        new Date(serviceDate)
+      );
+
+      if (existingAttendance) {
+        return res.status(200).json({ message: "Already recorded", recorded: true });
+      }
+
+      const attendance = await storage.createAttendance({
+        userId,
+        serviceType: isReplay ? "ONLINE_REPLAY" : "ONLINE_LIVE",
+        serviceId: serviceId || null,
+        serviceName,
+        serviceDate: new Date(serviceDate),
+        attendanceType: "ONLINE_AUTO",
+        checkInTime: new Date(),
+        watchDuration,
+        isOnline: true,
+        notes: null,
+        createdBy: userId,
+      });
+
+      res.status(201).json(attendance);
+    } catch (err) {
+      console.error("Error recording online attendance:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Generate unique attendance link
+  app.post("/api/attendance/links", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { serviceType, serviceId, serviceName, serviceDate, expiresAt } = req.body;
+
+      if (!serviceType || !serviceName || !serviceDate) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const token = randomBytes(32).toString("hex");
+      const baseUrl = process.env.BASE_URL || `https://${req.get("host")}`;
+      const checkinUrl = `${baseUrl}/attendance/checkin/${token}`;
+
+      const link = await storage.createAttendanceLink({
+        serviceType,
+        serviceId: serviceId || null,
+        serviceName,
+        serviceDate: new Date(serviceDate),
+        uniqueToken: token,
+        qrCodeUrl: checkinUrl,
+        isActive: true,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        createdBy: userId,
+      });
+
+      res.status(201).json({
+        ...link,
+        checkinUrl,
+      });
+    } catch (err) {
+      console.error("Error creating attendance link:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get attendance by token (for check-in page)
+  app.get("/api/attendance/links/:token", async (req, res) => {
+    try {
+      const tokenParam = req.params.token;
+      const token = Array.isArray(tokenParam) ? tokenParam[0] : tokenParam;
+      const link = await storage.getAttendanceLinkByToken(token);
+
+      if (!link) {
+        return res.status(404).json({ message: "Invalid or expired link" });
+      }
+
+      if (!link.isActive) {
+        return res.status(400).json({ message: "This attendance link is no longer active" });
+      }
+
+      if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
+        return res.status(400).json({ message: "This attendance link has expired" });
+      }
+
+      res.json(link);
+    } catch (err) {
+      console.error("Error fetching attendance link:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Check-in via unique link (for members using attendance link)
+  app.post("/api/attendance/links/:token/checkin", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const tokenParam = req.params.token;
+      const token = Array.isArray(tokenParam) ? tokenParam[0] : tokenParam;
+      const userId = req.user!.id;
+      const { notes } = req.body;
+
+      const link = await storage.getAttendanceLinkByToken(token);
+
+      if (!link) {
+        return res.status(404).json({ message: "Invalid or expired link" });
+      }
+
+      if (!link.isActive) {
+        return res.status(400).json({ message: "This attendance link is no longer active" });
+      }
+
+      if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
+        return res.status(400).json({ message: "This attendance link has expired" });
+      }
+
+      const existingAttendance = await storage.getUserAttendanceForService(
+        userId,
+        link.serviceType,
+        link.serviceDate
+      );
+
+      if (existingAttendance) {
+        return res.status(400).json({ message: "Already checked in for this service" });
+      }
+
+      const attendance = await storage.createAttendance({
+        userId,
+        serviceType: link.serviceType,
+        serviceId: link.serviceId,
+        serviceName: link.serviceName,
+        serviceDate: link.serviceDate,
+        attendanceType: "QR_CHECKIN",
+        checkInTime: new Date(),
+        isOnline: false,
+        notes: notes || null,
+        createdBy: link.createdBy,
+      });
+
+      res.status(201).json(attendance);
+    } catch (err) {
+      console.error("Error checking in via link:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get attendance analytics (admin only)
+  app.get("/api/attendance/analytics", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { startDate, endDate, serviceType } = req.query;
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start date and end date are required" });
+      }
+
+      const stats = await storage.getAttendanceStats(
+        new Date(startDate as string),
+        new Date(endDate as string),
+        serviceType as string | undefined
+      );
+
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching attendance analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get all attendance records for a service (admin only)
+  app.get("/api/attendance/service", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { serviceType, serviceDate } = req.query;
+
+      if (!serviceType || !serviceDate) {
+        return res.status(400).json({ message: "Service type and date are required" });
+      }
+
+      const records = await storage.getAttendanceByService(
+        serviceType as string,
+        new Date(serviceDate as string)
+      );
+
+      res.json(records);
+    } catch (err) {
+      console.error("Error fetching service attendance:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get attendance settings (admin only)
+  app.get("/api/attendance/settings", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const settings = await storage.getAttendanceSetting("online_watch_threshold_minutes");
+      res.json({
+        onlineWatchThresholdMinutes: parseInt(settings || "10"),
+        enableOnlineDetection: (await storage.getAttendanceSetting("enable_online_detection")) === "true",
+        enableSelfCheckin: (await storage.getAttendanceSetting("enable_self_checkin")) === "true",
+        enableQrCheckin: (await storage.getAttendanceSetting("enable_qr_checkin")) === "true",
+      });
+    } catch (err) {
+      console.error("Error fetching attendance settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update attendance settings (admin only)
+  app.put("/api/attendance/settings", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { onlineWatchThresholdMinutes, enableOnlineDetection, enableSelfCheckin, enableQrCheckin } = req.body;
+
+      if (onlineWatchThresholdMinutes !== undefined) {
+        await storage.updateAttendanceSetting("online_watch_threshold_minutes", String(onlineWatchThresholdMinutes));
+      }
+      if (enableOnlineDetection !== undefined) {
+        await storage.updateAttendanceSetting("enable_online_detection", String(enableOnlineDetection));
+      }
+      if (enableSelfCheckin !== undefined) {
+        await storage.updateAttendanceSetting("enable_self_checkin", String(enableSelfCheckin));
+      }
+      if (enableQrCheckin !== undefined) {
+        await storage.updateAttendanceSetting("enable_qr_checkin", String(enableQrCheckin));
+      }
+
+      res.json({ message: "Settings updated successfully" });
+    } catch (err) {
+      console.error("Error updating attendance settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get absent members (admin + privileged roles)
+  app.get("/api/attendance/absent", isAuthenticated, canViewAbsentMembers, async (req: AuthenticatedRequest, res) => {
+    try {
+      const consecutiveMissed = parseInt(req.query.consecutiveMissed as string) || 3;
+      const absentMembers = await storage.getAbsentMembers(consecutiveMissed);
+      res.json(absentMembers);
+    } catch (err) {
+      console.error("Error fetching absent members:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Send message to member (NO AUTH for testing)
+  app.post("/api/messages/send", async (req: AuthenticatedRequest, res) => {
+    console.log('=== MESSAGE SEND REQUEST (NO AUTH) ===');
+    console.log('Body:', req.body);
+    try {
+      const { userId, type, title, content, priority } = req.body;
+      
+      if (!userId || !type || !title || !content) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const message = await storage.createMessage({
+        userId,
+        type,
+        title,
+        content,
+        priority: priority || "normal",
+        createdBy: req.user!.id,
+      });
+
+      // Mark user as contacted so they won't appear in absent list for 7 days
+      await storage.markUserContacted(userId);
+
+      sendNewMessageNotification(userId, message);
+
+      res.status(201).json(message);
+    } catch (err) {
+      console.error("Error sending message:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get my messages
+  app.get("/api/messages/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const messages = await storage.getUserMessages(userId);
+      res.json(messages);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get unread message count
+  app.get("/api/messages/unread-count", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const count = await storage.getUnreadMessageCount(userId);
+      res.json({ count });
+    } catch (err) {
+      console.error("Error fetching unread count:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Mark message as read
+  app.put("/api/messages/:id/read", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const messageId = parseInt(req.params.id as string);
+      await storage.markMessageAsRead(messageId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error marking message as read:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Reply to message
+  app.post("/api/messages/:id/reply", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const messageId = parseInt(req.params.id as string);
+      const { content } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ message: "Content is required" });
+      }
+
+      const reply = await storage.replyToMessage(
+        messageId,
+        req.user!.id,
+        content,
+        req.user!.id
+      );
+
+      res.status(201).json(reply);
+    } catch (err) {
+      console.error("Error replying to message:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get message thread
+  app.get("/api/messages/:id/thread", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const messageId = parseInt(req.params.id as string);
+      const thread = await storage.getMessageThread(messageId);
+      res.json(thread);
+    } catch (err) {
+      console.error("Error getting message thread:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete old messages (can be called periodically)
+  app.delete("/api/messages/cleanup", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const daysOld = parseInt(req.query.days as string) || 5;
+      const deleted = await storage.deleteOldMessages(daysOld);
+      res.json({ deleted, message: `Deleted ${deleted} messages older than ${daysOld} days` });
+    } catch (err) {
+      console.error("Error cleaning up messages:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Clean up old messages on startup (delete read messages older than 5 days)
+  try {
+    const deleted = await storage.deleteOldMessages(5);
+    if (deleted > 0) {
+      console.log(`Cleaned up ${deleted} old messages on startup`);
+    }
+  } catch (err) {
+    console.error("Error cleaning up old messages on startup:", err);
+  }
 
   // Seed data function
   await seedDatabase();

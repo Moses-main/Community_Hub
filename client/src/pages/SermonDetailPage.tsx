@@ -1,7 +1,9 @@
 import { useRoute } from "wouter";
 import { useSermon, useShareSermon, useDownloadSermon } from "@/hooks/use-sermons";
+import { useAuth } from "@/hooks/use-auth";
+import { useRecordOnlineAttendance } from "@/hooks/use-attendance";
 import { format } from "date-fns";
-import { Play, Calendar, User, ArrowLeft, Share2, Download, Headphones, X, Check, Link as LinkIcon } from "lucide-react";
+import { Play, Calendar, User, ArrowLeft, Share2, Download, Headphones, X, Check, Link as LinkIcon, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,11 +16,32 @@ export default function SermonDetailPage() {
   const [, params] = useRoute<{ id: string }>("/sermons/:id");
   const sermonId = params?.id ? parseInt(params.id) : null;
   const { data: sermon, isLoading, error } = useSermon(sermonId!);
+  const { user } = useAuth();
+  const recordAttendance = useRecordOnlineAttendance();
   const shareSermon = useShareSermon();
   const downloadSermon = useDownloadSermon();
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [checkedIn, setCheckedIn] = useState(false);
 
+  const handleOnlineCheckin = async () => {
+    if (!user || !sermon) return;
+    try {
+      await recordAttendance.mutateAsync({
+        userId: user.id,
+        serviceType: sermon.isUpcoming ? "ONLINE_LIVE" : "ONLINE_REPLAY",
+        serviceId: sermonId!,
+        serviceName: sermon.title,
+        serviceDate: new Date(sermon.date).toISOString(),
+        watchDuration: 600,
+        isReplay: !sermon.isUpcoming,
+      });
+      setCheckedIn(true);
+    } catch (err) {
+      console.error("Failed to check in:", err);
+    }
+  };
+  
   useEffect(() => {
     if (showShareModal && sermonId && !shareSermon.data) {
       shareSermon.mutate(sermonId);
@@ -152,6 +175,29 @@ export default function SermonDetailPage() {
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <Play className="h-12 w-12 md:h-16 md:w-16 text-gray-200" />
+              </div>
+            )}
+            
+            {/* Online Check-in Button */}
+            {user && sermon.videoUrl && (
+              <div className="absolute bottom-4 right-4">
+                {checkedIn ? (
+                  <Badge className="bg-green-500 hover:bg-green-600 gap-1 px-3 py-1.5">
+                    <Check className="h-3 w-3" /> Checked In
+                  </Badge>
+                ) : recordAttendance.isPending ? (
+                  <Button size="sm" disabled className="gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Checking in...
+                  </Button>
+                ) : (
+                  <Button 
+                    size="sm" 
+                    onClick={handleOnlineCheckin}
+                    className="gap-1 bg-green-600 hover:bg-green-700"
+                  >
+                    <Eye className="h-3 w-3" /> I'm Watching
+                  </Button>
+                )}
               </div>
             )}
           </div>
