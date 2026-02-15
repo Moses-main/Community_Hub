@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useRoute } from "wouter";
+import { useLocation } from "wouter";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ export default function AuthPage() {
     name: "",
   });
   const { toast } = useToast();
-  const [location, navigate] = useRoute("");
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,8 +79,8 @@ export default function AuthPage() {
       // Set user data directly in cache for immediate UI update
       queryClient.setQueryData(["auth", "user"], data);
 
-      // On successful login/register - redirect to home
-      window.location.href = "/";
+      // On successful login/register - use client-side navigation to preserve cache
+      navigate("/");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An error occurred";
       setError(errorMessage);
