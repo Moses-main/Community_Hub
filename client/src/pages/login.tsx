@@ -76,9 +76,8 @@ export default function AuthPage() {
           : "Your account has been created successfully.",
       });
 
-      // Reset auth query cache to force fresh fetch on next page load
-      queryClient.setQueryData(["auth", "user"], null);
-      queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
+      // Set user data directly in cache for immediate UI update
+      queryClient.setQueryData(["auth", "user"], data);
 
       // On successful login/register - redirect to home
       window.location.href = "/";

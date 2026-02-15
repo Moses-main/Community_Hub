@@ -17,7 +17,7 @@ import { buildApiUrl } from "@/lib/api-config";
 
 export function Navbar() {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, isLoading: authLoading, logout } = useAuth();
   const { data: unreadCount } = useUnreadCount();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
