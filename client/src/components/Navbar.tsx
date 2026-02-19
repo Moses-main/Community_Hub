@@ -33,18 +33,18 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full md:bg-white/80 md:backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
-      <div className="container mx-auto px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
+      <div className="container mx-auto px-3 md:px-8 h-14 md:h-20 flex items-center justify-between">
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-3"
+          className="flex items-center gap-2"
         >
           <img 
             src="/church_logo.jpeg" 
             alt="WCCRM Lagos" 
-            className="h-10 md:h-12 w-auto rounded-full object-contain"
+            className="h-8 md:h-12 w-auto rounded-full object-contain"
           />
-          <span className="hidden sm:inline">
+          <span className="hidden sm:inline text-sm md:text-base">
             WCCRM<span className="text-primary"> Lagos</span>
           </span>
         </Link>

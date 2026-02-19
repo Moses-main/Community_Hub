@@ -1,5 +1,5 @@
 export * from "./models/auth";
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./models/auth";
@@ -21,14 +21,14 @@ export const events = pgTable("events", {
   date: timestamp("date").notNull(),
   location: text("location").notNull(),
   imageUrl: text("image_url"),
-  creatorId: text("creator_id").references(() => users.id),
+  creatorId: uuid("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const eventRsvps = pgTable("event_rsvps", {
   id: serial("id").primaryKey(),
   eventId: integer("event_id").references(() => events.id).notNull(),
-  userId: text("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
   addedToCalendar: boolean("added_to_calendar").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -52,7 +52,7 @@ export const sermons = pgTable("sermons", {
 
 export const prayerRequests = pgTable("prayer_requests", {
   id: serial("id").primaryKey(),
-  userId: text("user_id").references(() => users.id), // Link to auth users
+  userId: uuid("user_id").references(() => users.id), // Link to auth users
   authorName: text("author_name"), // For display if user is not linked or anonymous
   content: text("content").notNull(),
   isAnonymous: boolean("is_anonymous").default(false),
@@ -62,7 +62,7 @@ export const prayerRequests = pgTable("prayer_requests", {
 
 export const donations = pgTable("donations", {
   id: serial("id").primaryKey(),
-  userId: text("user_id").references(() => users.id),
+  userId: uuid("user_id").references(() => users.id),
   amount: integer("amount").notNull(), // In cents
   currency: text("currency").default("usd"),
   status: text("status").notNull(), // pending, succeeded, failed
@@ -173,7 +173,7 @@ export const attendanceTypeEnum = pgEnum('attendance_type', [
 
 export const attendance = pgTable("attendance", {
   id: serial("id").primaryKey(),
-  userId: text("user_id").references(() => users.id),
+  userId: uuid("user_id").references(() => users.id),
   serviceType: serviceTypeEnum("service_type").notNull(),
   serviceId: integer("service_id"),
   serviceName: text("service_name").notNull(),
@@ -184,7 +184,7 @@ export const attendance = pgTable("attendance", {
   isOnline: boolean("is_online").default(false),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
-  createdBy: text("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
@@ -199,7 +199,7 @@ export const attendanceLinks = pgTable("attendance_links", {
   isActive: boolean("is_active").default(true),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
-  createdBy: text("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id),
 });
 
 export const attendanceSettings = pgTable("attendance_settings", {
@@ -250,16 +250,16 @@ export const messagePriorityEnum = pgEnum('message_priority', [
 
 export const memberMessages = pgTable("member_messages", {
   id: serial("id").primaryKey(),
-  userId: text("user_id").references(() => users.id),
+  userId: uuid("user_id").references(() => users.id),
   type: messageTypeEnum("type").notNull(),
   title: text("title").notNull(),
   content: text("content").notNull(),
   isRead: boolean("is_read").default(false),
   readAt: timestamp("read_at"),
   priority: messagePriorityEnum("priority").default("normal"),
-  createdBy: text("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id),
   replyToId: integer("reply_to_id"),
-  senderId: text("sender_id").references(() => users.id),
+  senderId: uuid("sender_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -62,9 +62,9 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="container mx-auto px-3 py-6">
+        <div className="flex items-center justify-center min-h-[300px]">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -72,14 +72,14 @@ export default function DashboardPage() {
 
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 py-6">
         <Card className="max-w-md mx-auto">
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
             <CardDescription>Please log in to view your dashboard.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild>
+            <Button asChild size="sm">
               <Link href="/login">Sign In</Link>
             </Button>
           </CardContent>
@@ -89,22 +89,22 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 py-8">
+    <div className="min-h-screen bg-gray-50/50 py-6">
       <Helmet>
         <title>Dashboard | WCCRM Lagos</title>
       </Helmet>
 
-      <div className="container px-4 md:px-8 max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+      <div className="container px-3 md:px-8 max-w-5xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-display font-bold text-gray-900 mb-2">My Dashboard</h1>
-            <p className="text-gray-500">Welcome back, {user.firstName || user.email}!</p>
+            <h1 className="text-xl md:text-3xl font-display font-bold text-gray-900 mb-1 md:mb-2">My Dashboard</h1>
+            <p className="text-gray-500 text-sm">Welcome back, {user.firstName || user.email}!</p>
           </div>
           <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90">
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Profile
+              <Button size="sm" className="bg-primary hover:bg-primary/90">
+                <Edit className="mr-1.5 h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Edit Profile</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
