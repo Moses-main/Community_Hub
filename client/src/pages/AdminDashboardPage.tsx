@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart, Search, MapPin, Clock, User, Mail, Phone, BarChart3, Link, QrCode } from "lucide-react";
+import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart, Search, MapPin, Clock, User, Mail, Phone, BarChart3, Link, QrCode, TrendingUp } from "lucide-react";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import type { Event, Sermon, InsertEvent, InsertSermon, UserRole } from "@/types/api";
@@ -704,17 +704,29 @@ export default function AdminDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <div className="p-4 rounded-lg border bg-gradient-to-br from-blue-50 to-blue-100/50">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="p-2 rounded-lg bg-blue-500/10">
                           <BarChart3 className="h-5 w-5 text-blue-600" />
                         </div>
-                        <h3 className="font-semibold">View Analytics</h3>
+                        <h3 className="font-semibold">Analytics & Reports</h3>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">View comprehensive church analytics and reports</p>
+                      <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
+                        <a href="/analytics" target="_blank">Open Analytics</a>
+                      </Button>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-gradient-to-br from-purple-50 to-purple-100/50">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 rounded-lg bg-purple-500/10">
+                          <TrendingUp className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <h3 className="font-semibold">Attendance Analytics</h3>
                       </div>
                       <p className="text-sm text-gray-600 mb-4">View detailed attendance analytics and trends</p>
-                      <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
-                        <a href="/attendance/analytics" target="_blank">Open Analytics Dashboard</a>
+                      <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
+                        <a href="/attendance/analytics" target="_blank">Open Attendance</a>
                       </Button>
                     </div>
                     <div className="p-4 rounded-lg border bg-gradient-to-br from-green-50 to-green-100/50">

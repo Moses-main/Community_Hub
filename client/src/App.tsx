@@ -22,6 +22,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
 import AttendanceHistoryPage from "@/pages/AttendanceHistoryPage";
 import AttendanceAnalyticsPage from "@/pages/AttendanceAnalyticsPage";
+import AnalyticsPage from "@/pages/AnalyticsPage";
 import CheckinPage from "@/pages/CheckinPage";
 import QRScannerPage from "@/pages/QRScannerPage";
 import AbsentMembersPage from "@/pages/AbsentMembersPage";
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/admin" component={AdminDashboardPage} />
       <Route path="/attendance" component={AttendanceHistoryPage} />
       <Route path="/attendance/analytics" component={AttendanceAnalyticsPage} />
+      <Route path="/analytics" component={AnalyticsPage} />
       <Route path="/attendance/checkin" component={CheckinPage} />
       <Route path="/attendance/scan" component={QRScannerPage} />
       <Route path="/attendance/absent" component={AbsentMembersPage} />

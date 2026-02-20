@@ -89,6 +89,45 @@ export interface IStorage {
     offline: number;
     byService: { serviceType: string; count: number }[];
   }>;
+
+  // Dashboard & Reporting Analytics
+  getDashboardStats(): Promise<{
+    totalMembers: number;
+    totalDonations: number;
+    totalEvents: number;
+    totalSermons: number;
+    totalPrayers: number;
+    recentDonations: number;
+    recentAttendance: number;
+  }>;
+
+  getDonationAnalytics(startDate: Date, endDate: Date): Promise<{
+    total: number;
+    count: number;
+    average: number;
+    byMonth: { month: string; total: number }[];
+    byStatus: { status: string; count: number; total: number }[];
+  }>;
+
+  getMemberGrowthAnalytics(startDate: Date, endDate: Date): Promise<{
+    total: number;
+    newMembers: number;
+    byMonth: { month: string; count: number }[];
+  }>;
+
+  getEventAnalytics(startDate: Date, endDate: Date): Promise<{
+    total: number;
+    upcoming: number;
+    past: number;
+    totalRsvps: number;
+    byMonth: { month: string; count: number }[];
+  }>;
+
+  getPrayerAnalytics(startDate: Date, endDate: Date): Promise<{
+    total: number;
+    totalPrayers: number;
+    byMonth: { month: string; count: number }[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -683,6 +722,184 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(memberMessages.createdAt));
 
     return [original, ...replies];
+  }
+
+  // Dashboard & Reporting Analytics
+  async getDashboardStats(): Promise<{
+    totalMembers: number;
+    totalDonations: number;
+    totalEvents: number;
+    totalSermons: number;
+    totalPrayers: number;
+    recentDonations: number;
+    recentAttendance: number;
+  }> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [memberCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
+    const [donationSum] = await db.select({ total: sql<number>`coalesce(sum(amount), 0)` }).from(donations).where(eq(donations.status, 'succeeded'));
+    const [eventCount] = await db.select({ count: sql<number>`count(*)` }).from(events);
+    const [sermonCount] = await db.select({ count: sql<number>`count(*)` }).from(sermons);
+    const [prayerCount] = await db.select({ count: sql<number>`count(*)` }).from(prayerRequests);
+    
+    const [recentDonationsResult] = await db
+      .select({ total: sql<number>`coalesce(sum(amount), 0)` })
+      .from(donations)
+      .where(and(eq(donations.status, 'succeeded'), gte(donations.createdAt, thirtyDaysAgo)));
+    
+    const [recentAttendanceResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(attendance)
+      .where(gte(attendance.serviceDate, thirtyDaysAgo));
+
+    return {
+      totalMembers: memberCount?.count || 0,
+      totalDonations: (donationSum?.total || 0) / 100,
+      totalEvents: eventCount?.count || 0,
+      totalSermons: sermonCount?.count || 0,
+      totalPrayers: prayerCount?.count || 0,
+      recentDonations: (recentDonationsResult?.total || 0) / 100,
+      recentAttendance: recentAttendanceResult?.count || 0,
+    };
+  }
+
+  async getDonationAnalytics(startDate: Date, endDate: Date): Promise<{
+    total: number;
+    count: number;
+    average: number;
+    byMonth: { month: string; total: number }[];
+    byStatus: { status: string; count: number; total: number }[];
+  }> {
+    const records = await db
+      .select()
+      .from(donations)
+      .where(and(gte(donations.createdAt, startDate), lte(donations.createdAt, endDate)));
+
+    const succeededRecords = records.filter(r => r.status === 'succeeded');
+    const total = succeededRecords.reduce((sum, r) => sum + r.amount, 0) / 100;
+    const count = succeededRecords.length;
+    const average = count > 0 ? total / count : 0;
+
+    const byMonthMap = new Map<string, number>();
+    for (const record of succeededRecords) {
+      if (!record.createdAt) continue;
+      const month = record.createdAt.toISOString().slice(0, 7);
+      byMonthMap.set(month, (byMonthMap.get(month) || 0) + record.amount / 100);
+    }
+    const byMonth = Array.from(byMonthMap.entries())
+      .map(([month, total]) => ({ month, total }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    const byStatusMap = new Map<string, { count: number; total: number }>();
+    for (const record of records) {
+      const current = byStatusMap.get(record.status) || { count: 0, total: 0 };
+      byStatusMap.set(record.status, {
+        count: current.count + 1,
+        total: current.total + record.amount / 100,
+      });
+    }
+    const byStatus = Array.from(byStatusMap.entries()).map(([status, data]) => ({
+      status,
+      ...data,
+    }));
+
+    return { total, count, average, byMonth, byStatus };
+  }
+
+  async getMemberGrowthAnalytics(startDate: Date, endDate: Date): Promise<{
+    total: number;
+    newMembers: number;
+    byMonth: { month: string; count: number }[];
+  }> {
+    const [total] = await db.select({ count: sql<number>`count(*)` }).from(users);
+    
+    const newMembersRecords = await db
+      .select()
+      .from(users)
+      .where(and(gte(users.createdAt, startDate), lte(users.createdAt, endDate)));
+
+    const byMonthMap = new Map<string, number>();
+    for (const user of newMembersRecords) {
+      const month = user.createdAt.toISOString().slice(0, 7);
+      byMonthMap.set(month, (byMonthMap.get(month) || 0) + 1);
+    }
+    const byMonth = Array.from(byMonthMap.entries())
+      .map(([month, count]) => ({ month, count }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    return {
+      total: total?.count || 0,
+      newMembers: newMembersRecords.length,
+      byMonth,
+    };
+  }
+
+  async getEventAnalytics(startDate: Date, endDate: Date): Promise<{
+    total: number;
+    upcoming: number;
+    past: number;
+    totalRsvps: number;
+    byMonth: { month: string; count: number }[];
+  }> {
+    const now = new Date();
+    
+    const allEvents = await db.select().from(events);
+    const upcoming = allEvents.filter(e => new Date(e.date) > now).length;
+    const past = allEvents.filter(e => new Date(e.date) <= now).length;
+
+    const periodEvents = allEvents.filter(e => {
+      const date = new Date(e.date);
+      return date >= startDate && date <= endDate;
+    });
+
+    const byMonthMap = new Map<string, number>();
+    for (const event of periodEvents) {
+      const month = new Date(event.date).toISOString().slice(0, 7);
+      byMonthMap.set(month, (byMonthMap.get(month) || 0) + 1);
+    }
+    const byMonth = Array.from(byMonthMap.entries())
+      .map(([month, count]) => ({ month, count }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    const rsvps = await db.select().from(eventRsvps);
+
+    return {
+      total: allEvents.length,
+      upcoming,
+      past,
+      totalRsvps: rsvps.length,
+      byMonth,
+    };
+  }
+
+  async getPrayerAnalytics(startDate: Date, endDate: Date): Promise<{
+    total: number;
+    totalPrayers: number;
+    byMonth: { month: string; count: number }[];
+  }> {
+    const records = await db
+      .select()
+      .from(prayerRequests)
+      .where(and(gte(prayerRequests.createdAt, startDate), lte(prayerRequests.createdAt, endDate)));
+
+    const totalPrayers = records.reduce((sum, r) => sum + (r.prayCount || 0), 0);
+
+    const byMonthMap = new Map<string, number>();
+    for (const prayer of records) {
+      if (!prayer.createdAt) continue;
+      const month = prayer.createdAt.toISOString().slice(0, 7);
+      byMonthMap.set(month, (byMonthMap.get(month) || 0) + 1);
+    }
+    const byMonth = Array.from(byMonthMap.entries())
+      .map(([month, count]) => ({ month, count }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    return {
+      total: records.length,
+      totalPrayers,
+      byMonth,
+    };
   }
 }
 
