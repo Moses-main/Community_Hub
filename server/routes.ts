@@ -1320,6 +1320,85 @@ export async function registerRoutes(
     }
   });
 
+  // Get dashboard stats (admin only)
+  app.get("/api/analytics/dashboard", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const stats = await storage.getDashboardStats();
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching dashboard stats:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get donation analytics (admin only)
+  app.get("/api/analytics/donations", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+
+      const now = new Date();
+      const start = startDate ? new Date(startDate as string) : new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : now;
+
+      const stats = await storage.getDonationAnalytics(start, end);
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching donation analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get member growth analytics (admin only)
+  app.get("/api/analytics/members", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+
+      const now = new Date();
+      const start = startDate ? new Date(startDate as string) : new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : now;
+
+      const stats = await storage.getMemberGrowthAnalytics(start, end);
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching member growth analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get event analytics (admin only)
+  app.get("/api/analytics/events", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+
+      const now = new Date();
+      const start = startDate ? new Date(startDate as string) : new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : now;
+
+      const stats = await storage.getEventAnalytics(start, end);
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching event analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get prayer analytics (admin only)
+  app.get("/api/analytics/prayers", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+
+      const now = new Date();
+      const start = startDate ? new Date(startDate as string) : new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : now;
+
+      const stats = await storage.getPrayerAnalytics(start, end);
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching prayer analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get all attendance records for a service (admin only)
   app.get("/api/attendance/service", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
     try {
@@ -1521,7 +1600,11 @@ export async function registerRoutes(
   }
 
   // Seed data function
-  await seedDatabase();
+  try {
+    await seedDatabase();
+  } catch (err) {
+    console.error("Error seeding database on startup:", err);
+  }
 
   return httpServer;
 }
