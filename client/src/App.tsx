@@ -28,6 +28,7 @@ import QRScannerPage from "@/pages/QRScannerPage";
 import AbsentMembersPage from "@/pages/AbsentMembersPage";
 import PrivacyPage from "@/pages/PrivacyPage";
 import MessagesPage from "@/pages/MessagesPage";
+import MembersPage from "@/pages/MembersPage";
 import { useWebSocket } from "@/hooks/use-websocket";
 
 function Router() {
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/attendance/checkin" component={CheckinPage} />
       <Route path="/attendance/scan" component={QRScannerPage} />
       <Route path="/attendance/absent" component={AbsentMembersPage} />
+      <Route path="/members" component={MembersPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/messages" component={MessagesPage} />
       {/* Detail pages could be added here later e.g. /sermons/:id */}

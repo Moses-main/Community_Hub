@@ -579,6 +579,75 @@ export async function registerRoutes(
     })));
   });
 
+  // Get all members with pagination (admin only)
+  app.get("/api/members", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const role = req.query.role as string;
+      const houseFellowship = req.query.houseFellowship as string;
+      const search = req.query.search as string;
+
+      const allUsers = await storage.getAllUsers();
+      
+      let filteredUsers = [...allUsers];
+
+      if (role) {
+        filteredUsers = filteredUsers.filter(u => u.role === role);
+      }
+
+      if (houseFellowship) {
+        filteredUsers = filteredUsers.filter(u => u.houseFellowship === houseFellowship);
+      }
+
+      if (search) {
+        const searchLower = search.toLowerCase();
+        filteredUsers = filteredUsers.filter(u => 
+          u.firstName?.toLowerCase().includes(searchLower) ||
+          u.lastName?.toLowerCase().includes(searchLower) ||
+          u.email?.toLowerCase().includes(searchLower) ||
+          u.phone?.includes(search) ||
+          u.houseFellowship?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      const total = filteredUsers.length;
+      const start = (page - 1) * limit;
+      const end = start + limit;
+      const paginatedUsers = filteredUsers.slice(start, end);
+
+      res.json({
+        members: paginatedUsers.map(user => ({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          address: user.address,
+          houseFellowship: user.houseFellowship,
+          houseCellLocation: user.houseCellLocation,
+          parish: user.parish,
+          role: user.role,
+          isAdmin: user.isAdmin,
+          createdAt: user.createdAt,
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+        filters: {
+          roles: Array.from(new Set(allUsers.map(u => u.role))),
+          houseFellowships: Array.from(new Set(allUsers.map(u => u.houseFellowship).filter(Boolean) as string[])),
+        },
+      });
+    } catch (err) {
+      console.error("Error fetching members:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Update user's house cell location (admin only)
   app.put("/api/members/:id/house-cell", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
     const userIdParam = req.params.id;

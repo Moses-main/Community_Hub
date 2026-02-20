@@ -747,6 +747,9 @@ export default function AdminDashboardPage() {
                     <h3 className="font-semibold mb-3">Quick Actions</h3>
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" size="sm" asChild>
+                        <a href="/members" target="_blank">Member Directory</a>
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
                         <a href="/attendance" target="_blank">My Attendance History</a>
                       </Button>
                       <Button variant="outline" size="sm" asChild>

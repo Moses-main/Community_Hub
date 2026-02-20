@@ -1,0 +1,340 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { 
+  Search, 
+  Loader2, 
+  Users,
+  Mail,
+  Phone,
+  MapPin,
+  Home,
+  Building,
+  Shield,
+  ChevronLeft,
+  ChevronRight,
+  User
+} from "lucide-react";
+import { buildApiUrl } from "@/lib/api-config";
+
+interface Member {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  address: string | null;
+  houseFellowship: string | null;
+  houseCellLocation: string | null;
+  parish: string | null;
+  role: string;
+  isAdmin: boolean;
+  createdAt: string;
+}
+
+interface MembersResponse {
+  members: Member[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  filters: {
+    roles: string[];
+    houseFellowships: string[];
+  };
+}
+
+const roleColors: Record<string, string> = {
+  ADMIN: "bg-red-100 text-red-800",
+  PASTOR: "bg-purple-100 text-purple-800",
+  PASTORS_WIFE: "bg-purple-100 text-purple-800",
+  CELL_LEADER: "bg-blue-100 text-blue-800",
+  USHERS_LEADER: "bg-green-100 text-green-800",
+  PRAYER_TEAM: "bg-pink-100 text-pink-800",
+  FINANCE_TEAM: "bg-yellow-100 text-yellow-800",
+  CHILDREN_LEADER: "bg-orange-100 text-orange-800",
+  CHOIRMASTER: "bg-indigo-100 text-indigo-800",
+  CHORISTER: "bg-indigo-100 text-indigo-800",
+  SOUND_EQUIPMENT: "bg-gray-100 text-gray-800",
+  SECURITY: "bg-red-100 text-red-800",
+  SUNDAY_SCHOOL_TEACHER: "bg-teal-100 text-teal-800",
+  TECH_TEAM: "bg-slate-100 text-slate-800",
+  DECOR_TEAM: "bg-rose-100 text-rose-800",
+  EVANGELISM_TEAM: "bg-cyan-100 text-cyan-800",
+  USHER: "bg-green-100 text-green-800",
+  MEMBER: "bg-gray-100 text-gray-800",
+  USER: "bg-gray-100 text-gray-800",
+};
+
+const formatRole = (role: string) => {
+  return role.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+};
+
+export default function MembersPage() {
+  const { user, isLoading: authLoading } = useAuth();
+  const [data, setData] = useState<MembersResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [houseFellowshipFilter, setHouseFellowshipFilter] = useState("");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    async function fetchMembers() {
+      if (!user?.isAdmin) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: "20",
+        });
+        
+        if (search) params.append("search", search);
+        if (roleFilter) params.append("role", roleFilter);
+        if (houseFellowshipFilter) params.append("houseFellowship", houseFellowshipFilter);
+
+        const res = await fetch(buildApiUrl(`/api/members?${params}`), {
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch members");
+        }
+
+        const result = await res.json();
+        setData(result);
+      } catch (err: any) {
+        console.error("Error fetching members:", err);
+        setError(err.message || "Failed to load members");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (user?.isAdmin) {
+      fetchMembers();
+    }
+  }, [user, page, roleFilter, houseFellowshipFilter]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+  };
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user?.isAdmin) {
+    return (
+      <div className="container max-w-6xl mx-auto py-8 px-4">
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground">
+              You don&apos;t have permission to view this page.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container max-w-6xl mx-auto py-8 px-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Member Directory</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage and view all church members
+          </p>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {data?.pagination.total || 0} total members
+        </div>
+      </div>
+
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, phone, or house fellowship..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button type="submit">Search</Button>
+          </form>
+
+          <div className="flex flex-wrap gap-4 mt-4">
+            <select
+              value={roleFilter}
+              onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+            >
+              <option value="">All Roles</option>
+              {data?.filters.roles.map((role) => (
+                <option key={role} value={role}>
+                  {formatRole(role)}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={houseFellowshipFilter}
+              onChange={(e) => { setHouseFellowshipFilter(e.target.value); setPage(1); }}
+              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+            >
+              <option value="">All House Fellowships</option>
+              {data?.filters.houseFellowships.map((hf) => (
+                <option key={hf} value={hf}>
+                  {hf}
+                </option>
+              ))}
+            </select>
+
+            {(roleFilter || houseFellowshipFilter || search) && (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSearch("");
+                  setRoleFilter("");
+                  setHouseFellowshipFilter("");
+                  setPage(1);
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {loading && (
+        <div className="flex items-center justify-center min-h-[200px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
+
+      {error && (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && !error && data && (
+        <>
+          {data.members.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No members found</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {data.members.map((member) => (
+                  <Card key={member.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-base">
+                              {member.firstName} {member.lastName}
+                            </CardTitle>
+                            <span className={`text-xs px-2 py-1 rounded-full ${roleColors[member.role] || "bg-gray-100 text-gray-800"}`}>
+                              {formatRole(member.role)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Mail className="h-4 w-4" />
+                        <span className="truncate">{member.email}</span>
+                      </div>
+                      {member.phone && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Phone className="h-4 w-4" />
+                          <span>{member.phone}</span>
+                        </div>
+                      )}
+                      {member.houseFellowship && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Home className="h-4 w-4" />
+                          <span>{member.houseFellowship}</span>
+                        </div>
+                      )}
+                      {member.houseCellLocation && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span>{member.houseCellLocation}</span>
+                        </div>
+                      )}
+                      {member.parish && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Building className="h-4 w-4" />
+                          <span>{member.parish}</span>
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground pt-2">
+                        Member since {new Date(member.createdAt).toLocaleDateString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {data.pagination.totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {data.pagination.page} of {data.pagination.totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(data.pagination.totalPages, p + 1))}
+                    disabled={page === data.pagination.totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
