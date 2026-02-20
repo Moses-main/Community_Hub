@@ -84,6 +84,40 @@ export const fundraisingCampaigns = pgTable("fundraising_campaigns", {
   createdBy: uuid("created_by").references(() => users.id),
 });
 
+export const dailyDevotionals = pgTable("daily_devotionals", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  author: text("author"),
+  bibleVerse: text("bible_verse"),
+  theme: text("theme"),
+  imageUrl: text("image_url"),
+  publishDate: timestamp("publish_date").notNull(),
+  isPublished: boolean("is_published").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: uuid("created_by").references(() => users.id),
+});
+
+export const bibleReadingPlans = pgTable("bible_reading_plans", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  duration: integer("duration").notNull(), // Days
+  imageUrl: text("image_url"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: uuid("created_by").references(() => users.id),
+});
+
+export const bibleReadingProgress = pgTable("bible_reading_progress", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  planId: integer("plan_id").references(() => bibleReadingPlans.id).notNull(),
+  dayNumber: integer("day_number").notNull(),
+  completed: boolean("completed").default(false),
+  completedAt: timestamp("completed_at"),
+});
+
 // === RELATIONS ===
 export const prayerRequestsRelations = relations(prayerRequests, ({ one }) => ({
   user: one(users, {
@@ -109,6 +143,32 @@ export const fundraisingCampaignsRelations = relations(fundraisingCampaigns, ({ 
     references: [users.id],
   }),
   donations: many(donations),
+}));
+
+export const dailyDevotionalsRelations = relations(dailyDevotionals, ({ one }) => ({
+  creator: one(users, {
+    fields: [dailyDevotionals.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const bibleReadingPlansRelations = relations(bibleReadingPlans, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [bibleReadingPlans.createdBy],
+    references: [users.id],
+  }),
+  progress: many(bibleReadingProgress),
+}));
+
+export const bibleReadingProgressRelations = relations(bibleReadingProgress, ({ one }) => ({
+  user: one(users, {
+    fields: [bibleReadingProgress.userId],
+    references: [users.id],
+  }),
+  plan: one(bibleReadingPlans, {
+    fields: [bibleReadingProgress.planId],
+    references: [bibleReadingPlans.id],
+  }),
 }));
 
 export const eventRsvpsRelations = relations(eventRsvps, ({ one }) => ({
@@ -169,6 +229,9 @@ export type PrayerRequest = typeof prayerRequests.$inferSelect;
 export type Donation = typeof donations.$inferSelect;
 export type EventRsvp = typeof eventRsvps.$inferSelect;
 export type FundraisingCampaign = typeof fundraisingCampaigns.$inferSelect;
+export type DailyDevotional = typeof dailyDevotionals.$inferSelect;
+export type BibleReadingPlan = typeof bibleReadingPlans.$inferSelect;
+export type BibleReadingProgress = typeof bibleReadingProgress.$inferSelect;
 
 export type InsertBranding = z.infer<typeof insertBrandingSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
@@ -177,6 +240,8 @@ export type InsertPrayerRequest = z.infer<typeof insertPrayerRequestSchema>;
 export type InsertDonation = z.infer<typeof insertDonationSchema>;
 export type InsertEventRsvp = z.infer<typeof insertEventRsvpSchema>;
 export type InsertFundraisingCampaign = z.infer<typeof insertFundraisingCampaignSchema>;
+export type InsertDailyDevotional = typeof dailyDevotionals.$inferInsert;
+export type InsertBibleReadingPlan = typeof bibleReadingPlans.$inferInsert;
 
 // Request types
 export type CreateEventRequest = InsertEvent;
