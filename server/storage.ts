@@ -1,7 +1,8 @@
 import { 
   users, branding, events, sermons, prayerRequests, donations, eventRsvps,
   attendance, attendanceLinks, attendanceSettings, memberMessages, fundraisingCampaigns,
-  type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign,
+  dailyDevotionals, bibleReadingPlans, bibleReadingProgress,
+  type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
   type Attendance, type AttendanceLink, type AttendanceSettings, type MemberMessage,
   type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings, type InsertMemberMessage
@@ -136,6 +137,21 @@ export interface IStorage {
   updateFundraisingCampaign(id: number, campaign: Partial<InsertFundraisingCampaign>): Promise<FundraisingCampaign>;
   deleteFundraisingCampaign(id: number): Promise<void>;
   getDonationHistory(userId: string): Promise<Donation[]>;
+
+  // Daily Devotionals
+  getDailyDevotionals(publishedOnly?: boolean): Promise<DailyDevotional[]>;
+  getDailyDevotional(id: number): Promise<DailyDevotional | undefined>;
+  getTodayDevotional(): Promise<DailyDevotional | undefined>;
+  createDailyDevotional(devotional: Partial<DailyDevotional>): Promise<DailyDevotional>;
+  updateDailyDevotional(id: number, devotional: Partial<DailyDevotional>): Promise<DailyDevotional>;
+  deleteDailyDevotional(id: number): Promise<void>;
+
+  // Bible Reading Plans
+  getBibleReadingPlans(activeOnly?: boolean): Promise<BibleReadingPlan[]>;
+  getBibleReadingPlan(id: number): Promise<BibleReadingPlan | undefined>;
+  createBibleReadingPlan(plan: Partial<BibleReadingPlan>): Promise<BibleReadingPlan>;
+  updateBibleReadingProgress(userId: string, planId: number, dayNumber: number): Promise<BibleReadingProgress>;
+  getUserReadingProgress(userId: string, planId: number): Promise<BibleReadingProgress[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -946,6 +962,126 @@ export class DatabaseStorage implements IStorage {
 
   async getDonationHistory(userId: string): Promise<Donation[]> {
     return db.select().from(donations).where(eq(donations.userId, userId)).orderBy(desc(donations.createdAt));
+  }
+
+  // Daily Devotionals
+  async getDailyDevotionals(publishedOnly: boolean = false): Promise<DailyDevotional[]> {
+    if (publishedOnly) {
+      return db.select().from(dailyDevotionals).where(eq(dailyDevotionals.isPublished, true)).orderBy(desc(dailyDevotionals.publishDate));
+    }
+    return db.select().from(dailyDevotionals).orderBy(desc(dailyDevotionals.publishDate));
+  }
+
+  async getDailyDevotional(id: number): Promise<DailyDevotional | undefined> {
+    const [devotional] = await db.select().from(dailyDevotionals).where(eq(dailyDevotionals.id, id));
+    return devotional;
+  }
+
+  async getTodayDevotional(): Promise<DailyDevotional | undefined> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const [devotional] = await db
+      .select()
+      .from(dailyDevotionals)
+      .where(and(
+        eq(dailyDevotionals.isPublished, true),
+        gte(dailyDevotionals.publishDate, today),
+        lt(dailyDevotionals.publishDate, tomorrow)
+      ))
+      .limit(1);
+    
+    if (!devotional) {
+      const [latest] = await db
+        .select()
+        .from(dailyDevotionals)
+        .where(eq(dailyDevotionals.isPublished, true))
+        .orderBy(desc(dailyDevotionals.publishDate))
+        .limit(1);
+      return latest;
+    }
+    return devotional;
+  }
+
+  async createDailyDevotional(devotional: Partial<DailyDevotional>): Promise<DailyDevotional> {
+    const [created] = await db.insert(dailyDevotionals).values(devotional as any).returning();
+    return created;
+  }
+
+  async updateDailyDevotional(id: number, devotional: Partial<DailyDevotional>): Promise<DailyDevotional> {
+    const [updated] = await db
+      .update(dailyDevotionals)
+      .set(devotional)
+      .where(eq(dailyDevotionals.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDailyDevotional(id: number): Promise<void> {
+    await db.delete(dailyDevotionals).where(eq(dailyDevotionals.id, id));
+  }
+
+  // Bible Reading Plans
+  async getBibleReadingPlans(activeOnly: boolean = false): Promise<BibleReadingPlan[]> {
+    if (activeOnly) {
+      return db.select().from(bibleReadingPlans).where(eq(bibleReadingPlans.isActive, true)).orderBy(desc(bibleReadingPlans.createdAt));
+    }
+    return db.select().from(bibleReadingPlans).orderBy(desc(bibleReadingPlans.createdAt));
+  }
+
+  async getBibleReadingPlan(id: number): Promise<BibleReadingPlan | undefined> {
+    const [plan] = await db.select().from(bibleReadingPlans).where(eq(bibleReadingPlans.id, id));
+    return plan;
+  }
+
+  async createBibleReadingPlan(plan: Partial<BibleReadingPlan>): Promise<BibleReadingPlan> {
+    const [created] = await db.insert(bibleReadingPlans).values(plan as any).returning();
+    return created;
+  }
+
+  async updateBibleReadingProgress(userId: string, planId: number, dayNumber: number): Promise<BibleReadingProgress> {
+    const existing = await db
+      .select()
+      .from(bibleReadingProgress)
+      .where(and(
+        eq(bibleReadingProgress.userId, userId),
+        eq(bibleReadingProgress.planId, planId),
+        eq(bibleReadingProgress.dayNumber, dayNumber)
+      ));
+
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(bibleReadingProgress)
+        .set({ completed: true, completedAt: new Date() })
+        .where(eq(bibleReadingProgress.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await db
+      .insert(bibleReadingProgress)
+      .values({
+        userId,
+        planId,
+        dayNumber,
+        completed: true,
+        completedAt: new Date(),
+      })
+      .returning();
+    return created;
+  }
+
+  async getUserReadingProgress(userId: string, planId: number): Promise<BibleReadingProgress[]> {
+    return db
+      .select()
+      .from(bibleReadingProgress)
+      .where(and(
+        eq(bibleReadingProgress.userId, userId),
+        eq(bibleReadingProgress.planId, planId)
+      ))
+      .orderBy(asc(bibleReadingProgress.dayNumber));
   }
 }
 

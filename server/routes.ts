@@ -1208,6 +1208,165 @@ export async function registerRoutes(
     }
   });
 
+  // === DAILY DEVOTIONAL ROUTES ===
+
+  // Get today's devotional (public)
+  app.get("/api/devotionals/today", async (req, res) => {
+    try {
+      const devotional = await storage.getTodayDevotional();
+      res.json(devotional);
+    } catch (err) {
+      console.error("Error fetching today's devotional:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get all devotionals (public)
+  app.get("/api/devotionals", async (req, res) => {
+    try {
+      const publishedOnly = req.query.published === "true";
+      const devotionals = await storage.getDailyDevotionals(publishedOnly);
+      res.json(devotionals);
+    } catch (err) {
+      console.error("Error fetching devotionals:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single devotional (public)
+  app.get("/api/devotionals/:id", async (req, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = Array.isArray(idParam) ? parseInt(idParam[0]) : parseInt(idParam);
+      const devotional = await storage.getDailyDevotional(id);
+      if (!devotional) {
+        return res.status(404).json({ message: "Devotional not found" });
+      }
+      res.json(devotional);
+    } catch (err) {
+      console.error("Error fetching devotional:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create devotional (admin only)
+  app.post("/api/devotionals", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const devotional = await storage.createDailyDevotional({
+        ...req.body,
+        createdBy: req.user!.id,
+      });
+      res.status(201).json(devotional);
+    } catch (err) {
+      console.error("Error creating devotional:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update devotional (admin only)
+  app.put("/api/devotionals/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = Array.isArray(idParam) ? parseInt(idParam[0]) : parseInt(idParam);
+      const devotional = await storage.updateDailyDevotional(id, req.body);
+      res.json(devotional);
+    } catch (err) {
+      console.error("Error updating devotional:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete devotional (admin only)
+  app.delete("/api/devotionals/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = Array.isArray(idParam) ? parseInt(idParam[0]) : parseInt(idParam);
+      await storage.deleteDailyDevotional(id);
+      res.json({ message: "Devotional deleted" });
+    } catch (err) {
+      console.error("Error deleting devotional:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === BIBLE READING PLANS ROUTES ===
+
+  // Get all reading plans (public)
+  app.get("/api/reading-plans", async (req, res) => {
+    try {
+      const activeOnly = req.query.active === "true";
+      const plans = await storage.getBibleReadingPlans(activeOnly);
+      res.json(plans);
+    } catch (err) {
+      console.error("Error fetching reading plans:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single reading plan (public)
+  app.get("/api/reading-plans/:id", async (req, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = Array.isArray(idParam) ? parseInt(idParam[0]) : parseInt(idParam);
+      const plan = await storage.getBibleReadingPlan(id);
+      if (!plan) {
+        return res.status(404).json({ message: "Reading plan not found" });
+      }
+      res.json(plan);
+    } catch (err) {
+      console.error("Error fetching reading plan:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create reading plan (admin only)
+  app.post("/api/reading-plans", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const plan = await storage.createBibleReadingPlan({
+        ...req.body,
+        createdBy: req.user!.id,
+      });
+      res.status(201).json(plan);
+    } catch (err) {
+      console.error("Error creating reading plan:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's reading progress
+  app.get("/api/reading-plans/:id/progress", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = Array.isArray(idParam) ? parseInt(idParam[0]) : parseInt(idParam);
+      const userId = req.user!.id;
+      const progress = await storage.getUserReadingProgress(userId, id);
+      res.json(progress);
+    } catch (err) {
+      console.error("Error fetching reading progress:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Mark day as complete
+  app.post("/api/reading-plans/:id/progress", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = Array.isArray(idParam) ? parseInt(idParam[0]) : parseInt(idParam);
+      const userId = req.user!.id;
+      const { dayNumber } = req.body;
+      
+      if (!dayNumber) {
+        return res.status(400).json({ message: "Day number is required" });
+      }
+      
+      const progress = await storage.updateBibleReadingProgress(userId, id, dayNumber);
+      res.json(progress);
+    } catch (err) {
+      console.error("Error updating reading progress:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // === ATTENDANCE ROUTES ===
 
   // Get user's attendance history
