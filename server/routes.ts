@@ -1112,6 +1112,102 @@ export async function registerRoutes(
     }
   });
 
+  // Get all fundraising campaigns
+  app.get("/api/fundraising", async (req, res) => {
+    try {
+      const activeOnly = req.query.active === "true";
+      const campaigns = await storage.getFundraisingCampaigns(activeOnly);
+      res.json(campaigns);
+    } catch (err) {
+      console.error("Error fetching campaigns:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single fundraising campaign
+  app.get("/api/fundraising/:id", async (req, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = Array.isArray(idParam) ? parseInt(idParam[0]) : parseInt(idParam);
+      const campaign = await storage.getFundraisingCampaign(id);
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      res.json(campaign);
+    } catch (err) {
+      console.error("Error fetching campaign:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create fundraising campaign (admin only)
+  app.post("/api/fundraising", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { title, description, goalAmount, imageUrl, startDate, endDate, isActive } = req.body;
+      const campaign = await storage.createFundraisingCampaign({
+        title,
+        description,
+        goalAmount: Math.round(goalAmount * 100),
+        imageUrl,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        isActive: isActive ?? true,
+        createdBy: req.user!.id,
+      });
+      res.status(201).json(campaign);
+    } catch (err) {
+      console.error("Error creating campaign:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update fundraising campaign (admin only)
+  app.put("/api/fundraising/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = Array.isArray(idParam) ? parseInt(idParam[0]) : parseInt(idParam);
+      const { title, description, goalAmount, imageUrl, startDate, endDate, isActive } = req.body;
+      const campaign = await storage.updateFundraisingCampaign(id, {
+        title,
+        description,
+        goalAmount: goalAmount ? Math.round(goalAmount * 100) : undefined,
+        imageUrl,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        isActive,
+      });
+      res.json(campaign);
+    } catch (err) {
+      console.error("Error updating campaign:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete fundraising campaign (admin only)
+  app.delete("/api/fundraising/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = Array.isArray(idParam) ? parseInt(idParam[0]) : parseInt(idParam);
+      await storage.deleteFundraisingCampaign(id);
+      res.json({ message: "Campaign deleted" });
+    } catch (err) {
+      console.error("Error deleting campaign:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's donation history
+  app.get("/api/donations/history", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const donations = await storage.getDonationHistory(userId);
+      res.json(donations);
+    } catch (err) {
+      console.error("Error fetching donation history:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // === ATTENDANCE ROUTES ===
 
   // Get user's attendance history

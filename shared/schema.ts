@@ -66,7 +66,22 @@ export const donations = pgTable("donations", {
   amount: integer("amount").notNull(), // In cents
   currency: text("currency").default("usd"),
   status: text("status").notNull(), // pending, succeeded, failed
+  campaignId: integer("campaign_id").references(() => fundraisingCampaigns.id),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const fundraisingCampaigns = pgTable("fundraising_campaigns", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  goalAmount: integer("goal_amount").notNull(), // In cents
+  currentAmount: integer("current_amount").default(0), // In cents
+  imageUrl: text("image_url"),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: uuid("created_by").references(() => users.id),
 });
 
 // === RELATIONS ===
@@ -82,6 +97,18 @@ export const donationsRelations = relations(donations, ({ one }) => ({
     fields: [donations.userId],
     references: [users.id],
   }),
+  campaign: one(fundraisingCampaigns, {
+    fields: [donations.campaignId],
+    references: [fundraisingCampaigns.id],
+  }),
+}));
+
+export const fundraisingCampaignsRelations = relations(fundraisingCampaigns, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [fundraisingCampaigns.createdBy],
+    references: [users.id],
+  }),
+  donations: many(donations),
 }));
 
 export const eventRsvpsRelations = relations(eventRsvps, ({ one }) => ({
@@ -132,6 +159,7 @@ export const insertSermonSchema = z.object({
 export const insertPrayerRequestSchema = createInsertSchema(prayerRequests).omit({ id: true, createdAt: true, prayCount: true });
 export const insertDonationSchema = createInsertSchema(donations).omit({ id: true, createdAt: true });
 export const insertEventRsvpSchema = createInsertSchema(eventRsvps).omit({ id: true, createdAt: true });
+export const insertFundraisingCampaignSchema = createInsertSchema(fundraisingCampaigns).omit({ id: true, createdAt: true, currentAmount: true });
 
 // === EXPLICIT API CONTRACT TYPES ===
 export type Branding = typeof branding.$inferSelect;
@@ -140,6 +168,7 @@ export type Sermon = typeof sermons.$inferSelect;
 export type PrayerRequest = typeof prayerRequests.$inferSelect;
 export type Donation = typeof donations.$inferSelect;
 export type EventRsvp = typeof eventRsvps.$inferSelect;
+export type FundraisingCampaign = typeof fundraisingCampaigns.$inferSelect;
 
 export type InsertBranding = z.infer<typeof insertBrandingSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
@@ -147,12 +176,14 @@ export type InsertSermon = z.infer<typeof insertSermonSchema>;
 export type InsertPrayerRequest = z.infer<typeof insertPrayerRequestSchema>;
 export type InsertDonation = z.infer<typeof insertDonationSchema>;
 export type InsertEventRsvp = z.infer<typeof insertEventRsvpSchema>;
+export type InsertFundraisingCampaign = z.infer<typeof insertFundraisingCampaignSchema>;
 
 // Request types
 export type CreateEventRequest = InsertEvent;
 export type CreateSermonRequest = InsertSermon;
 export type CreatePrayerRequestRequest = InsertPrayerRequest;
 export type CreateDonationRequest = InsertDonation;
+export type CreateFundraisingCampaignRequest = InsertFundraisingCampaign;
 
 // === ATTENDANCE TABLES ===
 

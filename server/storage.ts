@@ -1,8 +1,8 @@
 import { 
   users, branding, events, sermons, prayerRequests, donations, eventRsvps,
-  attendance, attendanceLinks, attendanceSettings, memberMessages,
-  type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp,
-  type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp,
+  attendance, attendanceLinks, attendanceSettings, memberMessages, fundraisingCampaigns,
+  type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign,
+  type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
   type Attendance, type AttendanceLink, type AttendanceSettings, type MemberMessage,
   type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings, type InsertMemberMessage
 } from "@shared/schema";
@@ -128,6 +128,14 @@ export interface IStorage {
     totalPrayers: number;
     byMonth: { month: string; count: number }[];
   }>;
+
+  // Fundraising Campaigns
+  getFundraisingCampaigns(activeOnly?: boolean): Promise<FundraisingCampaign[]>;
+  getFundraisingCampaign(id: number): Promise<FundraisingCampaign | undefined>;
+  createFundraisingCampaign(campaign: InsertFundraisingCampaign): Promise<FundraisingCampaign>;
+  updateFundraisingCampaign(id: number, campaign: Partial<InsertFundraisingCampaign>): Promise<FundraisingCampaign>;
+  deleteFundraisingCampaign(id: number): Promise<void>;
+  getDonationHistory(userId: string): Promise<Donation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -900,6 +908,44 @@ export class DatabaseStorage implements IStorage {
       totalPrayers,
       byMonth,
     };
+  }
+
+  // Fundraising Campaigns
+  async getFundraisingCampaigns(activeOnly: boolean = false): Promise<FundraisingCampaign[]> {
+    if (activeOnly) {
+      return db.select().from(fundraisingCampaigns).where(eq(fundraisingCampaigns.isActive, true)).orderBy(desc(fundraisingCampaigns.createdAt));
+    }
+    return db.select().from(fundraisingCampaigns).orderBy(desc(fundraisingCampaigns.createdAt));
+  }
+
+  async getFundraisingCampaign(id: number): Promise<FundraisingCampaign | undefined> {
+    const [campaign] = await db.select().from(fundraisingCampaigns).where(eq(fundraisingCampaigns.id, id));
+    return campaign;
+  }
+
+  async createFundraisingCampaign(campaign: InsertFundraisingCampaign): Promise<FundraisingCampaign> {
+    const [created] = await db.insert(fundraisingCampaigns).values({
+      ...campaign,
+      currentAmount: 0,
+    }).returning();
+    return created;
+  }
+
+  async updateFundraisingCampaign(id: number, campaign: Partial<InsertFundraisingCampaign>): Promise<FundraisingCampaign> {
+    const [updated] = await db
+      .update(fundraisingCampaigns)
+      .set(campaign)
+      .where(eq(fundraisingCampaigns.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteFundraisingCampaign(id: number): Promise<void> {
+    await db.delete(fundraisingCampaigns).where(eq(fundraisingCampaigns.id, id));
+  }
+
+  async getDonationHistory(userId: string): Promise<Donation[]> {
+    return db.select().from(donations).where(eq(donations.userId, userId)).orderBy(desc(donations.createdAt));
   }
 }
 
