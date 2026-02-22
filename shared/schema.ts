@@ -873,3 +873,93 @@ export type InsertVolunteerBadge = z.infer<typeof insertVolunteerBadgeSchema>;
 export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ id: true, earnedAt: true });
 export type UserBadge = typeof userBadges.$inferSelect;
 export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+
+// === Privacy & Moderation ===
+
+export const privacySettings = pgTable("privacy_settings", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  showProfile: boolean("show_profile").default(true),
+  showAttendance: boolean("show_attendance").default(true),
+  showDonations: boolean("show_donations").default(false),
+  showPrayerRequests: boolean("show_prayer_requests").default(true),
+  allowMessaging: boolean("allow_messaging").default(true),
+  showInDirectory: boolean("show_in_directory").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const contentFlags = pgTable("content_flags", {
+  id: serial("id").primaryKey(),
+  contentType: text("content_type").notNull(), // prayer_request, message, event, comment, etc.
+  contentId: integer("content_id").notNull(),
+  reporterId: uuid("reporter_id").references(() => users.id),
+  reason: text("reason").notNull(), // spam, inappropriate, abusive, harassment, other
+  status: text("status").default("pending"), // pending, reviewed, resolved, dismissed
+  reviewedBy: uuid("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const abuseReports = pgTable("abuse_reports", {
+  id: serial("id").primaryKey(),
+  reporterId: uuid("reporter_id").references(() => users.id).notNull(),
+  reportedUserId: uuid("reported_user_id").references(() => users.id),
+  reportedContentId: integer("reported_content_id"),
+  reportedContentType: text("reported_content_type"),
+  category: text("category").notNull(), // harassment, bullying, abuse, misconduct, other
+  description: text("description").notNull(),
+  evidence: jsonb("evidence").default("[]"),
+  status: text("status").default("pending"), // pending, investigating, resolved, dismissed
+  resolution: text("resolution"),
+  resolvedBy: uuid("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const privacySettingsRelations = relations(privacySettings, ({ one }) => ({
+  user: one(users, {
+    fields: [privacySettings.userId],
+    references: [users.id],
+  }),
+}));
+
+export const contentFlagRelations = relations(contentFlags, ({ one }) => ({
+  reporter: one(users, {
+    fields: [contentFlags.reporterId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [contentFlags.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+export const abuseReportRelations = relations(abuseReports, ({ one }) => ({
+  reporter: one(users, {
+    fields: [abuseReports.reporterId],
+    references: [users.id],
+  }),
+  reportedUser: one(users, {
+    fields: [abuseReports.reportedUserId],
+    references: [users.id],
+  }),
+  resolver: one(users, {
+    fields: [abuseReports.resolvedBy],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertPrivacySettingsSchema = createInsertSchema(privacySettings).omit({ id: true, createdAt: true, updatedAt: true });
+export type PrivacySettings = typeof privacySettings.$inferSelect;
+export type InsertPrivacySettings = z.infer<typeof insertPrivacySettingsSchema>;
+
+export const insertContentFlagSchema = createInsertSchema(contentFlags).omit({ id: true, createdAt: true });
+export type ContentFlag = typeof contentFlags.$inferSelect;
+export type InsertContentFlag = z.infer<typeof insertContentFlagSchema>;
+
+export const insertAbuseReportSchema = createInsertSchema(abuseReports).omit({ id: true, createdAt: true });
+export type AbuseReport = typeof abuseReports.$inferSelect;
+export type InsertAbuseReport = z.infer<typeof insertAbuseReportSchema>;
