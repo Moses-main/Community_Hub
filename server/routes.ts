@@ -1353,6 +1353,100 @@ export async function registerRoutes(
     }
   });
 
+  // AI-generated devotional (admin only)
+  app.post("/api/devotionals/ai-generate", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { theme, bibleVerse, date } = req.body;
+      
+      // Template-based generation (can be replaced with actual AI API)
+      const templates = [
+        {
+          title: `Walking in Faith: ${theme || "Daily Trust"}`,
+          content: `Dear beloved, today we are reminded of the importance of walking by faith and not by sight. ${theme || "This theme"} speaks to the very heart of our Christian journey. When we trust in the Lord's plan, even when we cannot see the outcome, we demonstrate true faith.
+
+Remember the words of Scripture: "For we walk by faith, not by sight." This means that our decisions, our actions, and our words should be guided by our belief in God's promises rather than our temporary circumstances.
+
+As you go about your day, consider how you can apply this truth. Trust in the Lord's timing. He knows what is best for you. His plans are greater than ours.
+
+Prayer: Lord, help me to walk in faith today. Give me the strength to trust You in all circumstances. In Jesus' name, amen.`,
+          author: "AI Assistant",
+          bibleVerse: bibleVerse || "2 Corinthians 5:7",
+          theme: theme || "Faith",
+        },
+        {
+          title: `The Power of God's Love: ${theme || "Experiencing Divine Love"}`,
+          content: `God's love is greater than anything we can imagine. It is everlasting, unconditional, and eternal. Today, reflect on the depth of His love for you.
+
+"He loved us and sent His Son to be the propitiation for our sins." This is the greatest demonstration of love the world has ever known.
+
+In your relationships, seek to reflect this same love. Be patient, be kind, do not envy, do not boast, do not be proud. Love bears all things, believes all things, hopes all things, endures all things.
+
+Prayer: Father, help me to understand and experience Your love more deeply each day. May I share this love with those around me. In Jesus' name, amen.`,
+          author: "AI Assistant",
+          bibleVerse: bibleVerse || "1 John 4:8",
+          theme: theme || "Love",
+        },
+        {
+          title: `Finding Peace in Troubled Times: ${theme || "God's Peace"}`,
+          content: `In the midst of life's storms, God offers us a peace that surpasses all understanding. This peace is not dependent on our circumstances but on our relationship with Him.
+
+"Be anxious for nothing, but in everything by prayer and supplication, with thanksgiving, let your requests be made known to God." When we bring our concerns to Him, He promises to guard our hearts and minds.
+
+Whatever trial you face today, remember that God is with you. He will never leave you nor forsake you. Trust in His presence and find peace.
+
+Prayer: Lord, grant me Your peace that surpasses all understanding. Help me to trust You in every circumstance. In Jesus' name, amen.`,
+          author: "AI Assistant",
+          bibleVerse: bibleVerse || "Philippians 4:6-7",
+          theme: theme || "Peace",
+        },
+        {
+          title: `Strength for Today: ${theme || "God's Sufficiency"}`,
+          content: `Are you feeling weak or overwhelmed? God promises to be your strength. "The Lord is my shepherd; I shall not want." He supplies all our needs according to His riches in glory.
+
+When you feel inadequate, remember that God's strength is made perfect in your weakness. His grace is sufficient for you. His power works best when yours runs out.
+
+Take courage! The God who created the universe lives in you. He will give you the strength to face whatever comes your way today.
+
+Prayer: Lord, be my strength and my shield. I trust in Your promises. Help me to lean on You in every situation. In Jesus' name, amen.`,
+          author: "AI Assistant",
+          bibleVerse: bibleVerse || "Philippians 4:13",
+          theme: theme || "Strength",
+        },
+        {
+          title: `Grace and Mercy: ${theme || "God's Unmerited Favor"}`,
+          content: `God's grace and mercy are the foundations of our salvation. Grace is unmerited favor—God's goodness toward us despite our unworthiness. Mercy is God's compassion in not giving us what we deserve.
+
+We all fall short of God's glory, but through Jesus Christ, we receive forgiveness and eternal life. This is the greatest gift anyone could ever receive.
+
+Today, extend the same grace and mercy to others that God has extended to you. Forgive as you have been forgiven.
+
+Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the same to others. In Jesus' name, amen.`,
+          author: "AI Assistant",
+          bibleVerse: bibleVerse || "Ephesians 2:8-9",
+          theme: theme || "Grace",
+        },
+      ];
+
+      const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
+      const publishDate = date ? new Date(date) : new Date();
+      
+      const devotional = await storage.createDailyDevotional({
+        ...randomTemplate,
+        publishDate,
+        isPublished: false,
+        createdBy: req.user!.id,
+      });
+
+      res.status(201).json({
+        devotional,
+        message: "AI-generated devotional created. Review and publish when ready."
+      });
+    } catch (err) {
+      console.error("Error generating devotional:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // === BIBLE READING PLANS ROUTES ===
 
   // Get all reading plans (public)
