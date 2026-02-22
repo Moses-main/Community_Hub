@@ -3325,6 +3325,251 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // === Volunteer Management Routes ===
+  
+  // Get volunteer skills
+  app.get("/api/volunteer/skills", async (req, res) => {
+    try {
+      const skills = await storage.getVolunteerSkills();
+      res.json(skills);
+    } catch (err) {
+      console.error("Error getting volunteer skills:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create volunteer skill (admin only)
+  app.post("/api/volunteer/skills", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, description, category } = req.body;
+      const skill = await storage.createVolunteerSkill({ name, description, category });
+      res.json(skill);
+    } catch (err) {
+      console.error("Error creating volunteer skill:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get volunteer profile
+  app.get("/api/volunteer/profile", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      let profile = await storage.getVolunteerProfile(req.user.id);
+      
+      // Create profile if doesn't exist
+      if (!profile) {
+        profile = await storage.createVolunteerProfile({
+          userId: req.user.id,
+          isActive: true,
+        });
+      }
+      
+      res.json(profile);
+    } catch (err) {
+      console.error("Error getting volunteer profile:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update volunteer profile
+  app.patch("/api/volunteer/profile", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { skills, availability, isActive } = req.body;
+      const updates: any = {};
+      if (skills) updates.skills = skills;
+      if (availability) updates.availability = availability;
+      if (typeof isActive === "boolean") updates.isActive = isActive;
+      
+      let profile = await storage.getVolunteerProfile(req.user.id);
+      if (!profile) {
+        profile = await storage.createVolunteerProfile({ userId: req.user.id, ...updates });
+      } else {
+        profile = await storage.updateVolunteerProfile(req.user.id, updates);
+      }
+      res.json(profile);
+    } catch (err) {
+      console.error("Error updating volunteer profile:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get volunteer opportunities
+  app.get("/api/volunteer/opportunities", async (req, res) => {
+    try {
+      const activeOnly = req.query.active !== "false";
+      const opportunities = await storage.getVolunteerOpportunities(activeOnly);
+      res.json(opportunities);
+    } catch (err) {
+      console.error("Error getting volunteer opportunities:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create volunteer opportunity (admin only)
+  app.post("/api/volunteer/opportunities", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { title, description, requiredSkills, date, duration, location, spotsAvailable } = req.body;
+      const opportunity = await storage.createVolunteerOpportunity({
+        title,
+        description,
+        requiredSkills: requiredSkills || [],
+        date: new Date(date),
+        duration,
+        location,
+        spotsAvailable,
+        createdBy: req.user.id,
+        isActive: true,
+      });
+      res.json(opportunity);
+    } catch (err) {
+      console.error("Error creating volunteer opportunity:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update volunteer opportunity (admin only)
+  app.patch("/api/volunteer/opportunities/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { title, description, requiredSkills, date, duration, location, spotsAvailable, isActive } = req.body;
+      const updates: any = {};
+      if (title) updates.title = title;
+      if (description) updates.description = description;
+      if (requiredSkills) updates.requiredSkills = requiredSkills;
+      if (date) updates.date = new Date(date);
+      if (duration) updates.duration = duration;
+      if (location) updates.location = location;
+      if (spotsAvailable) updates.spotsAvailable = spotsAvailable;
+      if (typeof isActive === "boolean") updates.isActive = isActive;
+      
+      const opportunity = await storage.updateVolunteerOpportunity(id, updates);
+      res.json(opportunity);
+    } catch (err) {
+      console.error("Error updating volunteer opportunity:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete volunteer opportunity (admin only)
+  app.delete("/api/volunteer/opportunities/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteVolunteerOpportunity(id);
+      res.json({ message: "Opportunity deleted" });
+    } catch (err) {
+      console.error("Error deleting volunteer opportunity:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get my volunteer assignments
+  app.get("/api/volunteer/assignments", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const assignments = await storage.getVolunteerAssignments(req.user.id);
+      res.json(assignments);
+    } catch (err) {
+      console.error("Error getting volunteer assignments:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Sign up for volunteer opportunity
+  app.post("/api/volunteer/assignments", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { opportunityId } = req.body;
+      
+      const opportunity = await storage.getVolunteerOpportunity(opportunityId);
+      if (!opportunity) {
+        return res.status(404).json({ message: "Opportunity not found" });
+      }
+      
+      if (opportunity.spotsAvailable && (opportunity.spotsFilled ?? 0) >= opportunity.spotsAvailable) {
+        return res.status(400).json({ message: "No spots available" });
+      }
+      
+      const assignment = await storage.createVolunteerAssignment({
+        volunteerId: req.user.id,
+        opportunityId,
+        status: "pending",
+      });
+      
+      res.json(assignment);
+    } catch (err) {
+      console.error("Error signing up for volunteer opportunity:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update assignment status (e.g., check-in)
+  app.patch("/api/volunteer/assignments/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { status, checkInAt, checkOutAt, notes } = req.body;
+      const updates: any = {};
+      if (status) updates.status = status;
+      if (checkInAt) updates.checkInAt = new Date(checkInAt);
+      if (checkOutAt) updates.checkOutAt = new Date(checkOutAt);
+      if (notes) updates.notes = notes;
+      
+      const assignment = await storage.updateVolunteerAssignment(id, updates);
+      res.json(assignment);
+    } catch (err) {
+      console.error("Error updating volunteer assignment:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get volunteer badges
+  app.get("/api/volunteer/badges", async (req, res) => {
+    try {
+      const badges = await storage.getVolunteerBadges();
+      res.json(badges);
+    } catch (err) {
+      console.error("Error getting volunteer badges:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create volunteer badge (admin only)
+  app.post("/api/volunteer/badges", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, description, icon, criteria } = req.body;
+      const badge = await storage.createVolunteerBadge({ name, description, icon, criteria });
+      res.json(badge);
+    } catch (err) {
+      console.error("Error creating volunteer badge:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's badges
+  app.get("/api/volunteer/my-badges", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const badges = await storage.getUserBadges(req.user.id);
+      res.json(badges);
+    } catch (err) {
+      console.error("Error getting user badges:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Award badge to user (admin only)
+  app.post("/api/volunteer/award-badge", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId, badgeId } = req.body;
+      const badge = await storage.awardBadge(userId, badgeId);
+      res.json(badge);
+    } catch (err) {
+      console.error("Error awarding badge:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
 
