@@ -695,3 +695,28 @@ export const liveStreamRelations = relations(liveStreams, ({ one }) => ({
 export const insertLiveStreamSchema = createInsertSchema(liveStreams).omit({ id: true, createdAt: true, viewerCount: true });
 export type LiveStream = typeof liveStreams.$inferSelect;
 export type InsertLiveStream = z.infer<typeof insertLiveStreamSchema>;
+
+// === RECURRING DONATIONS ===
+export const recurringDonations = pgTable("recurring_donations", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  amount: integer("amount").notNull(),
+  currency: text("currency").default("usd"),
+  frequency: text("frequency").notNull(), // weekly, monthly
+  nextPaymentDate: timestamp("next_payment_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  paymentMethod: text("payment_method"),
+  createdAt: timestamp("created_at").defaultNow(),
+  cancelledAt: timestamp("cancelled_at"),
+});
+
+export const recurringDonationsRelations = relations(recurringDonations, ({ one }) => ({
+  user: one(users, {
+    fields: [recurringDonations.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertRecurringDonationSchema = createInsertSchema(recurringDonations).omit({ id: true, createdAt: true });
+export type RecurringDonation = typeof recurringDonations.$inferSelect;
+export type InsertRecurringDonation = z.infer<typeof insertRecurringDonationSchema>;

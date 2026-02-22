@@ -6,7 +6,7 @@ import {
   houseCells, houseCellMessages,
   groups, groupMembers, groupMessages,
   auditLogs, permissions,
-  liveStreams,
+  liveStreams, recurringDonations,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -15,7 +15,8 @@ import {
   type InsertMusic, type InsertMusicPlaylist,
   type HouseCell, type HouseCellMessage, type InsertHouseCell, type InsertHouseCellMessage,
   type Group, type GroupMember, type GroupMessage, type InsertGroup, type InsertGroupMember, type InsertGroupMessage,
-  type LiveStream, type InsertLiveStream
+  type LiveStream, type InsertLiveStream,
+  type RecurringDonation, type InsertRecurringDonation
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -1526,6 +1527,46 @@ export class DatabaseStorage implements IStorage {
       .where(eq(liveStreams.id, id))
       .returning();
     return updated;
+  }
+
+  // Recurring Donations
+  async getRecurringDonations(userId?: string): Promise<RecurringDonation[]> {
+    if (userId) {
+      return db.select().from(recurringDonations).where(eq(recurringDonations.userId, userId));
+    }
+    return db.select().from(recurringDonations).orderBy(desc(recurringDonations.createdAt));
+  }
+
+  async getRecurringDonation(id: number): Promise<RecurringDonation | undefined> {
+    const [donation] = await db.select().from(recurringDonations).where(eq(recurringDonations.id, id));
+    return donation;
+  }
+
+  async createRecurringDonation(donation: InsertRecurringDonation): Promise<RecurringDonation> {
+    const [created] = await db.insert(recurringDonations).values(donation).returning();
+    return created;
+  }
+
+  async updateRecurringDonation(id: number, updates: Partial<InsertRecurringDonation>): Promise<RecurringDonation> {
+    const [updated] = await db
+      .update(recurringDonations)
+      .set(updates)
+      .where(eq(recurringDonations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async cancelRecurringDonation(id: number): Promise<RecurringDonation> {
+    const [updated] = await db
+      .update(recurringDonations)
+      .set({ isActive: false, cancelledAt: new Date() })
+      .where(eq(recurringDonations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getActiveRecurringDonations(): Promise<RecurringDonation[]> {
+    return db.select().from(recurringDonations).where(eq(recurringDonations.isActive, true));
   }
 }
 
