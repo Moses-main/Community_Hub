@@ -12,6 +12,16 @@ export const branding = pgTable("branding", {
   colors: jsonb("colors").$type<{ primary: string; secondary: string; accent: string }>().default({ primary: "#000000", secondary: "#ffffff", accent: "#3b82f6" }),
   logoUrl: text("logo_url"),
   fonts: jsonb("fonts").$type<{ heading: string; body: string }>().default({ heading: "Inter", body: "Inter" }),
+  churchName: text("church_name"),
+  churchAddress: text("church_address"),
+  churchCity: text("church_city"),
+  churchState: text("church_state"),
+  churchCountry: text("church_country"),
+  churchZipCode: text("church_zip_code"),
+  churchPhone: text("church_phone"),
+  churchEmail: text("church_email"),
+  churchLatitude: text("church_latitude"),
+  churchLongitude: text("church_longitude"),
 });
 
 export const events = pgTable("events", {

@@ -17,6 +17,16 @@ export interface Branding {
   colors: BrandingColors;
   logoUrl: string | null;
   fonts: BrandingFonts;
+  churchName: string | null;
+  churchAddress: string | null;
+  churchCity: string | null;
+  churchState: string | null;
+  churchCountry: string | null;
+  churchZipCode: string | null;
+  churchPhone: string | null;
+  churchEmail: string | null;
+  churchLatitude: string | null;
+  churchLongitude: string | null;
 }
 
 export function useBranding() {
