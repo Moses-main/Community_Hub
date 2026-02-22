@@ -3570,6 +3570,179 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // === Privacy & Moderation Routes ===
+
+  // Get user's privacy settings
+  app.get("/api/privacy", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      let settings = await storage.getPrivacySettings(req.user.id);
+      
+      if (!settings) {
+        settings = await storage.createOrUpdatePrivacySettings({
+          userId: req.user.id,
+          showProfile: true,
+          showAttendance: true,
+          showDonations: false,
+          showPrayerRequests: true,
+          allowMessaging: true,
+          showInDirectory: true,
+        });
+      }
+      
+      res.json(settings);
+    } catch (err) {
+      console.error("Error getting privacy settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update privacy settings
+  app.patch("/api/privacy", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { showProfile, showAttendance, showDonations, showPrayerRequests, allowMessaging, showInDirectory } = req.body;
+      const updates: any = {};
+      if (typeof showProfile === "boolean") updates.showProfile = showProfile;
+      if (typeof showAttendance === "boolean") updates.showAttendance = showAttendance;
+      if (typeof showDonations === "boolean") updates.showDonations = showDonations;
+      if (typeof showPrayerRequests === "boolean") updates.showPrayerRequests = showPrayerRequests;
+      if (typeof allowMessaging === "boolean") updates.allowMessaging = allowMessaging;
+      if (typeof showInDirectory === "boolean") updates.showInDirectory = showInDirectory;
+      
+      const settings = await storage.createOrUpdatePrivacySettings({
+        userId: req.user.id,
+        ...updates,
+      });
+      
+      res.json(settings);
+    } catch (err) {
+      console.error("Error updating privacy settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Flag content (for moderation)
+  app.post("/api/moderation/flag", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { contentType, contentId, reason } = req.body;
+      
+      if (!contentType || !contentId || !reason) {
+        return res.status(400).json({ message: "Content type, content ID, and reason are required" });
+      }
+      
+      const flag = await storage.createContentFlag({
+        contentType,
+        contentId,
+        reporterId: req.user.id,
+        reason,
+        status: "pending",
+      });
+      
+      res.json(flag);
+    } catch (err) {
+      console.error("Error flagging content:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get content flags (admin only)
+  app.get("/api/moderation/flags", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const contentType = req.query.contentType as string;
+      const status = req.query.status as string;
+      const flags = await storage.getContentFlags(contentType, status);
+      res.json(flags);
+    } catch (err) {
+      console.error("Error getting content flags:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update content flag (admin only)
+  app.patch("/api/moderation/flags/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const id = Number(req.params.id);
+      const { status, reviewNotes } = req.body;
+      const updates: any = {};
+      if (status) updates.status = status;
+      if (reviewNotes) {
+        updates.reviewNotes = reviewNotes;
+        updates.reviewedBy = req.user.id;
+      }
+      
+      const flag = await storage.updateContentFlag(id, updates);
+      res.json(flag);
+    } catch (err) {
+      console.error("Error updating content flag:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Report abuse
+  app.post("/api/moderation/report", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { reportedUserId, reportedContentId, reportedContentType, category, description, evidence } = req.body;
+      
+      if (!category || !description) {
+        return res.status(400).json({ message: "Category and description are required" });
+      }
+      
+      const report = await storage.createAbuseReport({
+        reporterId: req.user.id,
+        reportedUserId,
+        reportedContentId,
+        reportedContentType,
+        category,
+        description,
+        evidence: evidence || [],
+        status: "pending",
+      });
+      
+      res.json(report);
+    } catch (err) {
+      console.error("Error creating abuse report:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get abuse reports (admin only)
+  app.get("/api/moderation/reports", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const status = req.query.status as string;
+      const reports = await storage.getAbuseReports(status);
+      res.json(reports);
+    } catch (err) {
+      console.error("Error getting abuse reports:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Resolve abuse report (admin only)
+  app.patch("/api/moderation/reports/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const id = Number(req.params.id);
+      const { status, resolution } = req.body;
+      const updates: any = {};
+      if (status) updates.status = status;
+      if (resolution) {
+        updates.resolution = resolution;
+        updates.resolvedBy = req.user.id;
+        updates.resolvedAt = new Date();
+      }
+      
+      const report = await storage.updateAbuseReport(id, updates);
+      res.json(report);
+    } catch (err) {
+      console.error("Error updating abuse report:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
 

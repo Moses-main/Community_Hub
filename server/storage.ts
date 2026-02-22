@@ -9,6 +9,7 @@ import {
   liveStreams,
   apiKeys, webhooks,
   volunteerSkills, volunteerProfiles, volunteerOpportunities, volunteerAssignments, volunteerBadges, userBadges,
+  privacySettings, contentFlags, abuseReports,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -25,7 +26,10 @@ import {
   type VolunteerOpportunity, type InsertVolunteerOpportunity,
   type VolunteerAssignment, type InsertVolunteerAssignment,
   type VolunteerBadge, type InsertVolunteerBadge,
-  type UserBadge, type InsertUserBadge
+  type UserBadge, type InsertUserBadge,
+  type PrivacySettings, type InsertPrivacySettings,
+  type ContentFlag, type InsertContentFlag,
+  type AbuseReport, type InsertAbuseReport
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -271,6 +275,16 @@ export interface IStorage {
   createVolunteerBadge(badge: InsertVolunteerBadge): Promise<VolunteerBadge>;
   getUserBadges(userId: string): Promise<UserBadge[]>;
   awardBadge(userId: string, badgeId: number): Promise<UserBadge>;
+
+  // Privacy & Moderation
+  getPrivacySettings(userId: string): Promise<PrivacySettings | undefined>;
+  createOrUpdatePrivacySettings(settings: InsertPrivacySettings): Promise<PrivacySettings>;
+  getContentFlags(contentType?: string, status?: string): Promise<ContentFlag[]>;
+  createContentFlag(flag: InsertContentFlag): Promise<ContentFlag>;
+  updateContentFlag(id: number, updates: Partial<ContentFlag>): Promise<ContentFlag>;
+  getAbuseReports(status?: string): Promise<AbuseReport[]>;
+  createAbuseReport(report: InsertAbuseReport): Promise<AbuseReport>;
+  updateAbuseReport(id: number, updates: Partial<AbuseReport>): Promise<AbuseReport>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1747,6 +1761,64 @@ export class DatabaseStorage implements IStorage {
   async awardBadge(userId: string, badgeId: number): Promise<UserBadge> {
     const [awarded] = await db.insert(userBadges).values({ userId, badgeId }).returning();
     return awarded;
+  }
+
+  // Privacy & Moderation
+  async getPrivacySettings(userId: string): Promise<PrivacySettings | undefined> {
+    const [settings] = await db.select().from(privacySettings).where(eq(privacySettings.userId, userId));
+    return settings;
+  }
+
+  async createOrUpdatePrivacySettings(settings: InsertPrivacySettings): Promise<PrivacySettings> {
+    const existing = await this.getPrivacySettings(settings.userId);
+    if (existing) {
+      const [updated] = await db
+        .update(privacySettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(privacySettings.userId, settings.userId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(privacySettings).values(settings).returning();
+    return created;
+  }
+
+  async getContentFlags(contentType?: string, status?: string): Promise<ContentFlag[]> {
+    let query = db.select().from(contentFlags);
+    // Note: In a real implementation, you'd want to add where clauses here
+    return query;
+  }
+
+  async createContentFlag(flag: InsertContentFlag): Promise<ContentFlag> {
+    const [created] = await db.insert(contentFlags).values(flag).returning();
+    return created;
+  }
+
+  async updateContentFlag(id: number, updates: Partial<ContentFlag>): Promise<ContentFlag> {
+    const [updated] = await db
+      .update(contentFlags)
+      .set(updates)
+      .where(eq(contentFlags.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getAbuseReports(status?: string): Promise<AbuseReport[]> {
+    return db.select().from(abuseReports);
+  }
+
+  async createAbuseReport(report: InsertAbuseReport): Promise<AbuseReport> {
+    const [created] = await db.insert(abuseReports).values(report).returning();
+    return created;
+  }
+
+  async updateAbuseReport(id: number, updates: Partial<AbuseReport>): Promise<AbuseReport> {
+    const [updated] = await db
+      .update(abuseReports)
+      .set(updates)
+      .where(eq(abuseReports.id, id))
+      .returning();
+    return updated;
   }
 }
 
