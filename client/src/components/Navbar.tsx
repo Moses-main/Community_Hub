@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck, QrCode, Shield, Bell, Music, Mic, Users, Heart, BookOpen } from "lucide-react";
+import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck, QrCode, Shield, Bell, Music, Mic, Users, Heart, BookOpen, Video } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
@@ -167,12 +167,20 @@ export function Navbar() {
                   </div>
                   <div className="py-1">
                     {user.isAdmin ? (
-                      <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
-                        <Link href="/admin" className="flex items-center gap-3 text-gray-700">
-                          <LayoutDashboard className="w-5 h-5 text-primary" />
-                          <span className="font-medium">Admin Dashboard</span>
-                        </Link>
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
+                          <Link href="/admin" className="flex items-center gap-3 text-gray-700">
+                            <LayoutDashboard className="w-5 h-5 text-primary" />
+                            <span className="font-medium">Admin Dashboard</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
+                          <Link href="/admin/sermon-clips" className="flex items-center gap-3 text-gray-700">
+                            <Video className="w-5 h-5 text-primary" />
+                            <span className="font-medium">Sermon Clips</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
                     ) : (
                       <DropdownMenuItem asChild className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-lg mx-1">
                         <Link href="/dashboard" className="flex items-center gap-3 text-gray-700">
