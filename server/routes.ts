@@ -148,6 +148,13 @@ export async function registerRoutes(
       houseFellowship: user.houseFellowship,
       houseCellLocation: user.houseCellLocation,
       parish: user.parish,
+      career: user.career,
+      stateOfOrigin: user.stateOfOrigin,
+      birthday: user.birthday,
+      twitterHandle: user.twitterHandle,
+      instagramHandle: user.instagramHandle,
+      facebookHandle: user.facebookHandle,
+      linkedinHandle: user.linkedinHandle,
       role: user.role,
       isAdmin: user.email === 'admin@wccrm.com',
       createdAt: user.createdAt,
@@ -180,6 +187,13 @@ export async function registerRoutes(
           houseFellowship: user.houseFellowship,
           houseCellLocation: user.houseCellLocation,
           parish: user.parish,
+          career: user.career,
+          stateOfOrigin: user.stateOfOrigin,
+          birthday: user.birthday,
+          twitterHandle: user.twitterHandle,
+          instagramHandle: user.instagramHandle,
+          facebookHandle: user.facebookHandle,
+          linkedinHandle: user.linkedinHandle,
           role: user.role,
           createdAt: user.createdAt,
         },
@@ -315,6 +329,13 @@ export async function registerRoutes(
         houseFellowship: user.houseFellowship,
         houseCellLocation: user.houseCellLocation,
         parish: user.parish,
+        career: user.career,
+        stateOfOrigin: user.stateOfOrigin,
+        birthday: user.birthday,
+        twitterHandle: user.twitterHandle,
+        instagramHandle: user.instagramHandle,
+        facebookHandle: user.facebookHandle,
+        linkedinHandle: user.linkedinHandle,
         isAdmin: user.email === 'admin@wccrm.com'
       });
     } catch (err) {
@@ -436,7 +457,15 @@ export async function registerRoutes(
       phone: user.phone,
       address: user.address,
       houseFellowship: user.houseFellowship,
+      houseCellLocation: user.houseCellLocation,
       parish: user.parish,
+      career: user.career,
+      stateOfOrigin: user.stateOfOrigin,
+      birthday: user.birthday,
+      twitterHandle: user.twitterHandle,
+      instagramHandle: user.instagramHandle,
+      facebookHandle: user.facebookHandle,
+      linkedinHandle: user.linkedinHandle,
       role: user.role,
       isVerified: user.isVerified,
       createdAt: user.createdAt,
@@ -477,7 +506,7 @@ export async function registerRoutes(
   // Update user profile (admin only)
   app.put("/api/admin/users/:id", isAuthenticated, isAdmin, async (req, res) => {
     const userId = req.params.id as string;
-    const { firstName, lastName, phone, address, houseFellowship } = req.body;
+    const { firstName, lastName, phone, address, houseFellowship, career, stateOfOrigin, birthday, twitterHandle, instagramHandle, facebookHandle, linkedinHandle } = req.body;
     
     const user = await storage.getUserById(userId);
     if (!user) {
@@ -490,6 +519,13 @@ export async function registerRoutes(
       phone: phone ?? user.phone,
       address: address ?? user.address,
       houseFellowship: houseFellowship ?? user.houseFellowship,
+      career: career ?? user.career,
+      stateOfOrigin: stateOfOrigin ?? user.stateOfOrigin,
+      birthday: birthday ? new Date(birthday) : user.birthday,
+      twitterHandle: twitterHandle ?? user.twitterHandle,
+      instagramHandle: instagramHandle ?? user.instagramHandle,
+      facebookHandle: facebookHandle ?? user.facebookHandle,
+      linkedinHandle: linkedinHandle ?? user.linkedinHandle,
     });
 
     const updatedUser = await storage.getUserById(userId);
@@ -523,7 +559,7 @@ export async function registerRoutes(
   // Update current user's profile
   app.put("/api/members/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     const userId = req.user!.id;
-    const { firstName, lastName, phone, address, houseFellowship, parish, houseCellLocation } = req.body;
+    const { firstName, lastName, phone, address, houseFellowship, parish, houseCellLocation, career, stateOfOrigin, birthday, twitterHandle, instagramHandle, facebookHandle, linkedinHandle } = req.body;
     
     const user = await storage.getUserById(userId);
     if (!user) {
@@ -538,6 +574,13 @@ export async function registerRoutes(
       houseFellowship: houseFellowship ?? user.houseFellowship,
       parish: parish ?? user.parish,
       houseCellLocation: houseCellLocation ?? user.houseCellLocation,
+      career: career ?? user.career,
+      stateOfOrigin: stateOfOrigin ?? user.stateOfOrigin,
+      birthday: birthday ? new Date(birthday) : user.birthday,
+      twitterHandle: twitterHandle ?? user.twitterHandle,
+      instagramHandle: instagramHandle ?? user.instagramHandle,
+      facebookHandle: facebookHandle ?? user.facebookHandle,
+      linkedinHandle: linkedinHandle ?? user.linkedinHandle,
     });
 
     res.json({
@@ -550,6 +593,13 @@ export async function registerRoutes(
       houseFellowship: updatedUser.houseFellowship,
       houseCellLocation: updatedUser.houseCellLocation,
       parish: updatedUser.parish,
+      career: updatedUser.career,
+      stateOfOrigin: updatedUser.stateOfOrigin,
+      birthday: updatedUser.birthday,
+      twitterHandle: updatedUser.twitterHandle,
+      instagramHandle: updatedUser.instagramHandle,
+      facebookHandle: updatedUser.facebookHandle,
+      linkedinHandle: updatedUser.linkedinHandle,
       role: updatedUser.role,
       createdAt: updatedUser.createdAt,
       updatedAt: updatedUser.updatedAt,
@@ -574,6 +624,13 @@ export async function registerRoutes(
       houseFellowship: user.houseFellowship,
       houseCellLocation: user.houseCellLocation,
       parish: user.parish,
+      career: user.career,
+      stateOfOrigin: user.stateOfOrigin,
+      birthday: user.birthday,
+      twitterHandle: user.twitterHandle,
+      instagramHandle: user.instagramHandle,
+      facebookHandle: user.facebookHandle,
+      linkedinHandle: user.linkedinHandle,
       role: user.role,
       createdAt: user.createdAt,
     })));
@@ -627,6 +684,13 @@ export async function registerRoutes(
           houseFellowship: user.houseFellowship,
           houseCellLocation: user.houseCellLocation,
           parish: user.parish,
+          career: user.career,
+          stateOfOrigin: user.stateOfOrigin,
+          birthday: user.birthday,
+          twitterHandle: user.twitterHandle,
+          instagramHandle: user.instagramHandle,
+          facebookHandle: user.facebookHandle,
+          linkedinHandle: user.linkedinHandle,
           role: user.role,
           isAdmin: user.isAdmin,
           createdAt: user.createdAt,
