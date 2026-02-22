@@ -989,6 +989,84 @@ export async function registerRoutes(
     }
   });
 
+  // Send event reminder to RSVPs (admin only)
+  app.post("/api/events/:id/remind", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const event = await storage.getEvent(id);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const rsvps = await storage.getEventRsvps(id);
+      if (rsvps.length === 0) {
+        return res.json({ message: "No RSVPs to send reminders to" });
+      }
+
+      // Get user details for each RSVP
+      const userIds = rsvps.map(r => r.userId);
+      const users = await Promise.all(userIds.map(uid => storage.getUserById(uid)));
+      
+      // In production, integrate with FCM or email service
+      // For now, we'll just return success with the list
+      const reminderResult = users
+        .filter(u => u && u.email)
+        .map(u => ({
+          userId: u!.id,
+          email: u!.email,
+          message: `Reminder: ${event.title} is coming up on ${new Date(event.date).toLocaleDateString()}`
+        }));
+
+      res.json({ 
+        message: `Reminder prepared for ${reminderResult.length} attendees`,
+        recipients: reminderResult,
+        event: {
+          id: event.id,
+          title: event.title,
+          date: event.date,
+          location: event.location
+        }
+      });
+    } catch (err) {
+      console.error("Error sending reminder:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get event analytics
+  app.get("/api/events/:id/analytics", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const event = await storage.getEvent(id);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const rsvps = await storage.getEventRsvps(id);
+      
+      const eventDate = event.date || new Date();
+      
+      // Calculate analytics
+      const analytics = {
+        totalRsvps: rsvps.length,
+        addedToCalendar: rsvps.filter(r => r.addedToCalendar).length,
+        recentRsvps: rsvps.filter(r => {
+          const rsvpDate = r.createdAt ? new Date(r.createdAt) : new Date();
+          const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          return rsvpDate > dayAgo;
+        }).length,
+        eventDate: event.date,
+        isPast: eventDate < new Date(),
+        daysUntil: Math.ceil((eventDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      };
+
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error fetching analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Sermons
   app.get(api.sermons.list.path, async (req, res) => {
     const { speaker, series, status, search } = req.query;
