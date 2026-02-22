@@ -3710,6 +3710,273 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // === Discipleship Pathways Routes ===
+
+  // Get all tracks (public)
+  app.get("/api/discipleship/tracks", async (req, res) => {
+    try {
+      const tracks = await storage.getDiscipleshipTracks();
+      res.json(tracks);
+    } catch (err) {
+      console.error("Error getting tracks:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single track (public)
+  app.get("/api/discipleship/tracks/:id", async (req, res) => {
+    try {
+      const track = await storage.getDiscipleshipTrack(Number(req.params.id));
+      if (!track) return res.status(404).json({ message: "Track not found" });
+      res.json(track);
+    } catch (err) {
+      console.error("Error getting track:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create track (admin only)
+  app.post("/api/discipleship/tracks", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const { title, description, category, imageUrl, estimatedWeeks, order } = req.body;
+      const track = await storage.createDiscipleshipTrack({
+        title,
+        description,
+        category,
+        imageUrl,
+        estimatedWeeks,
+        order: order || 0,
+      });
+      res.json(track);
+    } catch (err) {
+      console.error("Error creating track:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update track (admin only)
+  app.patch("/api/discipleship/tracks/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const track = await storage.updateDiscipleshipTrack(Number(req.params.id), req.body);
+      res.json(track);
+    } catch (err) {
+      console.error("Error updating track:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete track (admin only)
+  app.delete("/api/discipleship/tracks/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      await storage.deleteDiscipleshipTrack(Number(req.params.id));
+      res.json({ message: "Track deleted" });
+    } catch (err) {
+      console.error("Error deleting track:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get lessons by track (public)
+  app.get("/api/discipleship/tracks/:trackId/lessons", async (req, res) => {
+    try {
+      const lessons = await storage.getLessonsByTrack(Number(req.params.trackId));
+      res.json(lessons);
+    } catch (err) {
+      console.error("Error getting lessons:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single lesson (public)
+  app.get("/api/discipleship/lessons/:id", async (req, res) => {
+    try {
+      const lesson = await storage.getLesson(Number(req.params.id));
+      if (!lesson) return res.status(404).json({ message: "Lesson not found" });
+      res.json(lesson);
+    } catch (err) {
+      console.error("Error getting lesson:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create lesson (admin only)
+  app.post("/api/discipleship/lessons", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const { trackId, title, description, content, videoUrl, order } = req.body;
+      const lesson = await storage.createLesson({
+        trackId,
+        title,
+        description,
+        content,
+        videoUrl,
+        order: order || 0,
+      });
+      res.json(lesson);
+    } catch (err) {
+      console.error("Error creating lesson:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update lesson (admin only)
+  app.patch("/api/discipleship/lessons/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const lesson = await storage.updateLesson(Number(req.params.id), req.body);
+      res.json(lesson);
+    } catch (err) {
+      console.error("Error updating lesson:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete lesson (admin only)
+  app.delete("/api/discipleship/lessons/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      await storage.deleteLesson(Number(req.params.id));
+      res.json({ message: "Lesson deleted" });
+    } catch (err) {
+      console.error("Error deleting lesson:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get quizzes by lesson (public)
+  app.get("/api/discipleship/lessons/:lessonId/quizzes", async (req, res) => {
+    try {
+      const quizzes = await storage.getQuizzesByLesson(Number(req.params.lessonId));
+      res.json(quizzes);
+    } catch (err) {
+      console.error("Error getting quizzes:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create quiz (admin only)
+  app.post("/api/discipleship/quizzes", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const { lessonId, question, options, correctAnswer, explanation, order } = req.body;
+      const quiz = await storage.createQuiz({
+        lessonId,
+        question,
+        options,
+        correctAnswer,
+        explanation,
+        order: order || 0,
+      });
+      res.json(quiz);
+    } catch (err) {
+      console.error("Error creating quiz:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete quiz (admin only)
+  app.delete("/api/discipleship/quizzes/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      await storage.deleteQuiz(Number(req.params.id));
+      res.json({ message: "Quiz deleted" });
+    } catch (err) {
+      console.error("Error deleting quiz:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's progress (authenticated)
+  app.get("/api/discipleship/progress", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const progress = await storage.getUserProgress(req.user.id);
+      res.json(progress);
+    } catch (err) {
+      console.error("Error getting progress:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's progress for a specific track (authenticated)
+  app.get("/api/discipleship/tracks/:trackId/progress", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const progress = await storage.getUserTrackProgress(req.user.id, Number(req.params.trackId));
+      res.json(progress);
+    } catch (err) {
+      console.error("Error getting track progress:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update lesson progress (authenticated)
+  app.post("/api/discipleship/progress", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { trackId, lessonId, completed, quizScore, quizAttempts, notes } = req.body;
+      const progress = await storage.upsertUserProgress({
+        userId: req.user.id,
+        trackId,
+        lessonId,
+        completed,
+        completedAt: completed ? new Date() : null,
+        quizScore,
+        quizAttempts,
+        notes,
+      });
+      res.json(progress);
+    } catch (err) {
+      console.error("Error updating progress:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get reflections (authenticated)
+  app.get("/api/discipleship/reflections", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { lessonId } = req.query;
+      const reflections = await storage.getReflections(req.user.id, lessonId ? Number(lessonId) : undefined);
+      res.json(reflections);
+    } catch (err) {
+      console.error("Error getting reflections:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create reflection (authenticated)
+  app.post("/api/discipleship/reflections", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { lessonId, content, isPrivate } = req.body;
+      const reflection = await storage.createReflection({
+        userId: req.user.id,
+        lessonId,
+        content,
+        isPrivate: isPrivate !== false,
+      });
+      res.json(reflection);
+    } catch (err) {
+      console.error("Error creating reflection:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete reflection (authenticated)
+  app.delete("/api/discipleship/reflections/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      await storage.deleteReflection(Number(req.params.id));
+      res.json({ message: "Reflection deleted" });
+    } catch (err) {
+      console.error("Error deleting reflection:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
 
