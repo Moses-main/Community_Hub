@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck, QrCode, Shield, Bell, Music, Mic, Users, Heart, BookOpen } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import { motion, AnimatePresence } from "framer-motion";
@@ -241,6 +241,7 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent>
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <div className="flex flex-col gap-2 mt-8">
                 {navLinks.map((link) => (
                   <Link

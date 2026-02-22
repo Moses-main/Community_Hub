@@ -110,15 +110,19 @@ export default function LiveStreamPage() {
           <Card className="overflow-hidden rounded-none border-0">
             {/* YouTube Embed - Full viewport height */}
             {currentStream.youtubeVideoId ? (
-              <div className="relative w-full" style={{ height: "calc(100vh - 57px)" }}>
+              <div className="relative w-full bg-black" style={{ height: "calc(100vh - 57px)" }}>
                 <iframe
-                  src={`https://www.youtube.com/embed/${currentStream.youtubeVideoId}?autoplay=1&live=1&rel=0`}
-                  className="absolute top-0 left-0 w-full"
-                  style={{ height: "100%" }}
+                  src={`https://www.youtube.com/embed/${currentStream.youtubeVideoId}?autoplay=1&live=1&rel=0&modestbranding=1`}
+                  className="absolute top-0 left-0 w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                   title={currentStream.title}
                 />
+                <noscript>
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white">
+                    <p>Please enable JavaScript to watch the live stream</p>
+                  </div>
+                </noscript>
               </div>
             ) : currentStream.embedUrl ? (
               <div className="relative w-full" style={{ height: "calc(100vh - 57px)" }}>
