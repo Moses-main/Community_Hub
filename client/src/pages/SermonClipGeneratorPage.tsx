@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Video, Film, Download, Trash2, Play, Square, Instagram, Smartphone, Monitor, Scissors, Plus, Clock, Type } from "lucide-react";
+import { Video, Film, Download, Trash2, Play, Square, Instagram, Smartphone, Monitor, Scissors, Plus, Clock, Type, Loader2 } from "lucide-react";
 
 interface SermonClip {
   id: number;
@@ -90,11 +90,11 @@ export default function SermonClipGeneratorPage() {
 
   const isAdmin = user?.isAdmin;
 
-  useState(() => {
+  useEffect(() => {
     if (isAdmin) {
       loadClips();
     }
-  });
+  }, [isAdmin]);
 
   async function loadClips() {
     try {
@@ -104,6 +104,25 @@ export default function SermonClipGeneratorPage() {
       console.error("Error loading clips:", err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleProcessClip(id: number) {
+    try {
+      const res = await fetch(`/api/sermon-clips/${id}/process-now`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Processing complete!", description: "Your clip is ready for download" });
+      } else {
+        toast({ title: "Processing failed", description: data.message, variant: "destructive" });
+      }
+      loadClips();
+    } catch (err) {
+      console.error("Error processing clip:", err);
+      toast({ title: "Error", description: "Failed to process clip", variant: "destructive" });
     }
   }
 
@@ -376,18 +395,35 @@ export default function SermonClipGeneratorPage() {
                   </div>
                   
                   <div className="flex gap-2 pt-2">
+                    {(clip.status === "pending" || clip.status === "failed") && (
+                      <Button
+                        size="sm"
+                        className="flex-1 gap-1"
+                        onClick={() => handleProcessClip(clip.id)}
+                      >
+                        <Play className="w-4 h-4" />
+                        Process
+                      </Button>
+                    )}
+                    {clip.status === "processing" && (
+                      <Button size="sm" className="flex-1 gap-1" disabled>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processing...
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
                       onClick={() => handleDeleteClip(clip.id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
-                    {clip.outputUrl && (
-                      <Button size="sm" className="flex-1 gap-1">
-                        <Download className="w-4 h-4" />
-                        Download
+                    {clip.outputUrl && clip.status === "completed" && (
+                      <Button size="sm" className="flex-1 gap-1" asChild>
+                        <a href={clip.outputUrl} download target="_blank" rel="noopener noreferrer">
+                          <Download className="w-4 h-4" />
+                          Download
+                        </a>
                       </Button>
                     )}
                   </div>

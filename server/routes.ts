@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { sendNewMessageNotification } from "./websocket";
+import { processVideoClip } from "./video-processing";
 
 // Extend Express Request type to include user
 interface AuthenticatedRequest extends Request {
@@ -4029,8 +4030,38 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       
       const clip = await storage.getSermonClip(Number(req.params.id));
       if (!clip) return res.status(404).json({ message: "Clip not found" });
+      if (!clip.sourceVideoUrl) return res.status(400).json({ message: "No source video URL" });
       
       await storage.updateSermonClip(Number(req.params.id), { status: "processing" });
+      
+      processVideoClip({
+        sourceUrl: clip.sourceVideoUrl,
+        startTime: clip.clipStartTime,
+        endTime: clip.clipEndTime,
+        format: clip.format as "square" | "vertical" | "landscape",
+        overlayText: clip.overlayText || undefined,
+        verseReference: clip.verseReference || undefined,
+        title: clip.title,
+      }).then(async (result) => {
+        if (result.success && result.outputPath && result.outputUrl) {
+          await storage.updateSermonClip(Number(req.params.id), {
+            status: "completed",
+            outputPath: result.outputPath,
+            outputUrl: result.outputUrl,
+          });
+          console.log(`Clip ${clip.id} processed successfully`);
+        } else {
+          await storage.updateSermonClip(Number(req.params.id), {
+            status: "failed",
+          });
+          console.error(`Clip ${clip.id} failed:`, result.error);
+        }
+      }).catch(async (err) => {
+        await storage.updateSermonClip(Number(req.params.id), {
+          status: "failed",
+        });
+        console.error(`Clip ${clip.id} error:`, err);
+      });
       
       res.json({ message: "Clip processing started", clipId: clip.id });
     } catch (err) {
@@ -4046,6 +4077,44 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       res.json({ message: "Clip deleted" });
     } catch (err) {
       console.error("Error deleting sermon clip:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/sermon-clips/:id/process-now", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      
+      const clip = await storage.getSermonClip(Number(req.params.id));
+      if (!clip) return res.status(404).json({ message: "Clip not found" });
+      if (!clip.sourceVideoUrl) return res.status(400).json({ message: "No source video URL" });
+      
+      await storage.updateSermonClip(Number(req.params.id), { status: "processing" });
+      
+      const result = await processVideoClip({
+        sourceUrl: clip.sourceVideoUrl,
+        startTime: clip.clipStartTime,
+        endTime: clip.clipEndTime,
+        format: clip.format as "square" | "vertical" | "landscape",
+        overlayText: clip.overlayText || undefined,
+        verseReference: clip.verseReference || undefined,
+        title: clip.title,
+      });
+      
+      if (result.success && result.outputPath && result.outputUrl) {
+        await storage.updateSermonClip(Number(req.params.id), {
+          status: "completed",
+          outputPath: result.outputPath,
+          outputUrl: result.outputUrl,
+        });
+        res.json({ success: true, message: "Clip processed successfully", outputUrl: result.outputUrl });
+      } else {
+        await storage.updateSermonClip(Number(req.params.id), { status: "failed" });
+        res.status(500).json({ success: false, message: result.error || "Processing failed" });
+      }
+    } catch (err) {
+      console.error("Error processing sermon clip:", err);
+      await storage.updateSermonClip(Number(req.params.id), { status: "failed" });
       res.status(500).json({ message: "Internal server error" });
     }
   });
