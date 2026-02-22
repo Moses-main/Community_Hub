@@ -1131,3 +1131,29 @@ export type InsertUserProgress = z.infer<typeof insertUserProgressSchema>;
 export const insertReflectionSchema = createInsertSchema(reflections).omit({ id: true, createdAt: true });
 export type Reflection = typeof reflections.$inferSelect;
 export type InsertReflection = z.infer<typeof insertReflectionSchema>;
+
+// === Sermon Clips ===
+
+export const clipFormats = ["square", "vertical", "landscape"] as const;
+export type ClipFormat = typeof clipFormats[number];
+
+export const sermonClips = pgTable("sermon_clips", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  sourceVideoUrl: text("source_video_url"),
+  sourceVideoPath: text("source_video_path"),
+  clipStartTime: integer("clip_start_time").notNull(),
+  clipEndTime: integer("clip_end_time").notNull(),
+  format: text("format").notNull().default("landscape"),
+  overlayText: text("overlay_text"),
+  verseReference: text("verse_reference"),
+  outputUrl: text("output_url"),
+  outputPath: text("output_path"),
+  status: text("status").notNull().default("pending"),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSermonClipSchema = createInsertSchema(sermonClips).omit({ id: true, createdAt: true });
+export type SermonClip = typeof sermonClips.$inferSelect;
+export type InsertSermonClip = z.infer<typeof insertSermonClipSchema>;

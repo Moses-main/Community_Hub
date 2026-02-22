@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart, Search, MapPin, Clock, User, Mail, Phone, BarChart3, Link, QrCode, TrendingUp } from "lucide-react";
+import { Loader2, Users, Shield, Calendar, FileText, Plus, Trash2, Edit, Palette, Heart, Search, MapPin, Clock, User, Mail, Phone, BarChart3, Link, QrCode, TrendingUp, Video } from "lucide-react";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import type { Event, Sermon, InsertEvent, InsertSermon, UserRole } from "@/types/api";
@@ -800,6 +800,12 @@ export default function AdminDashboardPage() {
                   <div className="p-4 rounded-lg border bg-gray-50">
                     <h3 className="font-semibold mb-3">Quick Actions</h3>
                     <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href="/admin/sermon-clips" target="_blank">
+                          <Video className="w-4 h-4 mr-2" />
+                          Sermon Clips
+                        </a>
+                      </Button>
                       <Button variant="outline" size="sm" asChild>
                         <a href="/members" target="_blank">Member Directory</a>
                       </Button>
