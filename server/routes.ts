@@ -1240,6 +1240,76 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  // Mark prayer request as answered (owner or admin)
+  app.post("/api/prayer-requests/:id/answer", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const prayerRequest = await storage.getPrayerRequestById(id);
+      if (!prayerRequest) {
+        return res.status(404).json({ message: "Prayer request not found" });
+      }
+      
+      // Check if user is owner or admin
+      if (prayerRequest.userId !== req.user!.id && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      const updated = await storage.updatePrayerRequest(id, { isAnswered: true });
+      res.json(updated);
+    } catch (err) {
+      console.error("Error marking prayer request as answered:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete prayer request (owner or admin)
+  app.delete("/api/prayer-requests/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const prayerRequest = await storage.getPrayerRequestById(id);
+      if (!prayerRequest) {
+        return res.status(404).json({ message: "Prayer request not found" });
+      }
+      
+      // Check if user is owner or admin
+      if (prayerRequest.userId !== req.user!.id && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      await storage.deletePrayerRequest(id);
+      res.json({ message: "Prayer request deleted" });
+    } catch (err) {
+      console.error("Error deleting prayer request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get prayer wall stats
+  app.get("/api/prayer-requests/stats", async (req, res) => {
+    try {
+      const requests = await storage.getPrayerRequests();
+      const totalPrayers = requests.reduce((sum, r) => sum + (r.prayCount || 0), 0);
+      const answered = requests.filter(r => r.isAnswered).length;
+      const active = requests.filter(r => !r.isAnswered).length;
+      
+      res.json({
+        totalRequests: requests.length,
+        totalPrayers,
+        answered,
+        active,
+        recentlyAnswered: requests.filter(r => {
+          if (!r.isAnswered || !r.answeredAt) return false;
+          const answeredDate = new Date(r.answeredAt);
+          const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          return answeredDate > weekAgo;
+        }).length
+      });
+    } catch (err) {
+      console.error("Error fetching prayer stats:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Donations
   app.post(api.donations.create.path, async (req, res) => {
     try {
