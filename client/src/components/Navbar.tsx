@@ -29,6 +29,7 @@ export function Navbar() {
     { href: "/sermons", label: "Sermons" },
     { href: "/events", label: "Events" },
     { href: "/prayer", label: "Prayer" },
+    { href: "/volunteer", label: "Volunteer" },
     { href: "/devotionals", label: "Devotionals" },
     { href: "/give", label: "Give" },
   ];
