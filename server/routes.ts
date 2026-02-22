@@ -5,7 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { randomBytes } from "crypto";
+import crypto from "crypto";
 import { sendNewMessageNotification } from "./websocket";
 
 // Extend Express Request type to include user
@@ -1824,7 +1824,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      const token = randomBytes(32).toString("hex");
+      const token = crypto.randomBytes(32).toString("hex");
       const baseUrl = process.env.BASE_URL || `https://${req.get("host")}`;
       const checkinUrl = `${baseUrl}/attendance/checkin/${token}`;
 
@@ -3093,6 +3093,234 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       res.json({ message: "Live stream deleted" });
     } catch (err) {
       console.error("Error deleting live stream:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === API Keys Routes (for External Integrations) ===
+  
+  // Get user's API keys
+  app.get("/api/keys", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const keys = await storage.getApiKeys(req.user.id);
+      res.json(keys.map(k => ({ ...k, key: k.key ? `${k.prefix}_${k.key.substring(0, 8)}...` : null })));
+    } catch (err) {
+      console.error("Error getting API keys:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create API key
+  app.post("/api/keys", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { name, permissions = ["read"], rateLimit = 100, expiresAt } = req.body;
+      
+      // Generate random API key
+      const key = crypto.randomBytes(32).toString("hex");
+      const prefix = "wccrm";
+      
+      const apiKey = await storage.createApiKey({
+        userId: req.user.id,
+        name,
+        key,
+        prefix,
+        permissions,
+        rateLimit,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        isActive: true,
+      });
+      
+      res.json({ ...apiKey, key: `${prefix}_${key}` });
+    } catch (err) {
+      console.error("Error creating API key:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete API key
+  app.delete("/api/keys/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteApiKey(id);
+      res.json({ message: "API key deleted" });
+    } catch (err) {
+      console.error("Error deleting API key:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Toggle API key
+  app.patch("/api/keys/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { isActive } = req.body;
+      const updated = await storage.updateApiKey(id, { isActive });
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating API key:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Webhooks Routes ===
+  
+  // Get user's webhooks
+  app.get("/api/webhooks", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const webhooks = await storage.getWebhooks(req.user.id);
+      res.json(webhooks);
+    } catch (err) {
+      console.error("Error getting webhooks:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create webhook
+  app.post("/api/webhooks", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { url, events, secret } = req.body;
+      
+      if (!url || !events || !Array.isArray(events)) {
+        return res.status(400).json({ message: "URL and events array are required" });
+      }
+      
+      const webhook = await storage.createWebhook({
+        userId: req.user!.id,
+        url,
+        events,
+        secret: secret || crypto.randomBytes(32).toString("hex"),
+        isActive: true,
+      });
+      
+      res.json(webhook);
+    } catch (err) {
+      console.error("Error creating webhook:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update webhook
+  app.patch("/api/webhooks/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { url, events, isActive } = req.body;
+      const updates: any = {};
+      if (url) updates.url = url;
+      if (events) updates.events = events;
+      if (typeof isActive === "boolean") updates.isActive = isActive;
+      
+      const updated = await storage.updateWebhook(id, updates);
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating webhook:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete webhook
+  app.delete("/api/webhooks/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteWebhook(id);
+      res.json({ message: "Webhook deleted" });
+    } catch (err) {
+      console.error("Error deleting webhook:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Public API (for external integrations with API key) ===
+  
+  // Rate limiting map
+  const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+  // Middleware to check API key
+  const requireApiKey = async (req: any, res: any, next: any) => {
+    const apiKeyHeader = req.headers["x-api-key"];
+    
+    if (!apiKeyHeader) {
+      return res.status(401).json({ message: "API key required" });
+    }
+    
+    // Parse key prefix and key
+    const [prefix, key] = apiKeyHeader.split("_");
+    
+    if (!prefix || !key) {
+      return res.status(401).json({ message: "Invalid API key format" });
+    }
+    
+    // Find API key in database
+    const storedKey = await storage.getApiKeyByKey(key);
+    
+    if (!storedKey) {
+      return res.status(401).json({ message: "Invalid API key" });
+    }
+    
+    if (!storedKey.isActive) {
+      return res.status(403).json({ message: "API key is inactive" });
+    }
+    
+    if (storedKey.expiresAt && new Date(storedKey.expiresAt) < new Date()) {
+      return res.status(403).json({ message: "API key has expired" });
+    }
+    
+    // Check rate limit
+    const now = Date.now();
+    const rateLimitKey = `${storedKey.id}`;
+    const rateLimitData = rateLimitMap.get(rateLimitKey);
+    
+    if (rateLimitData && rateLimitData.resetTime > now) {
+      const limit = storedKey.rateLimit ?? 100;
+      if (rateLimitData.count >= limit) {
+        return res.status(429).json({ message: "Rate limit exceeded" });
+      }
+      rateLimitData.count++;
+    } else {
+      // Reset rate limit (1 hour)
+      rateLimitMap.set(rateLimitKey, { count: 1, resetTime: now + 3600000 });
+    }
+    
+    // Update last used
+    await storage.updateApiKey(storedKey.id, { lastUsedAt: new Date() });
+    
+    // Attach API key to request
+    req.apiKey = storedKey;
+    next();
+  };
+
+  // Public API: Get events
+  app.get("/api/public/events", requireApiKey, async (req, res) => {
+    try {
+      const events = await storage.getEvents();
+      res.json(events);
+    } catch (err) {
+      console.error("Error fetching events:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Public API: Get sermons
+  app.get("/api/public/sermons", requireApiKey, async (req, res) => {
+    try {
+      const sermons = await storage.getSermons();
+      res.json(sermons);
+    } catch (err) {
+      console.error("Error fetching sermons:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Public API: Get prayer requests
+  app.get("/api/public/prayers", requireApiKey, async (req, res) => {
+    try {
+      const prayers = await storage.getPrayerRequests();
+      res.json(prayers);
+    } catch (err) {
+      console.error("Error fetching prayers:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });

@@ -7,6 +7,7 @@ import {
   groups, groupMembers, groupMessages,
   auditLogs, permissions,
   liveStreams,
+  apiKeys, webhooks,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -15,7 +16,9 @@ import {
   type InsertMusic, type InsertMusicPlaylist,
   type HouseCell, type HouseCellMessage, type InsertHouseCell, type InsertHouseCellMessage,
   type Group, type GroupMember, type GroupMessage, type InsertGroup, type InsertGroupMember, type InsertGroupMessage,
-  type LiveStream, type InsertLiveStream
+  type LiveStream, type InsertLiveStream,
+  type ApiKey, type InsertApiKey,
+  type Webhook, type InsertWebhook
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -227,6 +230,21 @@ export interface IStorage {
   updateLiveStream(id: number, updates: Partial<InsertLiveStream>): Promise<LiveStream>;
   deleteLiveStream(id: number): Promise<void>;
   updateViewerCount(id: number, count: number): Promise<LiveStream>;
+
+  // API Keys
+  getApiKeys(userId: string): Promise<ApiKey[]>;
+  getApiKey(id: number): Promise<ApiKey | undefined>;
+  getApiKeyByKey(key: string): Promise<ApiKey | undefined>;
+  createApiKey(apiKey: InsertApiKey & { key: string; prefix: string }): Promise<ApiKey>;
+  updateApiKey(id: number, updates: Partial<ApiKey>): Promise<ApiKey>;
+  deleteApiKey(id: number): Promise<void>;
+
+  // Webhooks
+  getWebhooks(userId: string): Promise<Webhook[]>;
+  getWebhook(id: number): Promise<Webhook | undefined>;
+  createWebhook(webhook: InsertWebhook): Promise<Webhook>;
+  updateWebhook(id: number, updates: Partial<Webhook>): Promise<Webhook>;
+  deleteWebhook(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1526,6 +1544,76 @@ export class DatabaseStorage implements IStorage {
       .where(eq(liveStreams.id, id))
       .returning();
     return updated;
+  }
+
+  // API Keys
+  async getApiKeys(userId: string): Promise<ApiKey[]> {
+    return db.select().from(apiKeys).where(eq(apiKeys.userId, userId));
+  }
+
+  async getApiKey(id: number): Promise<ApiKey | undefined> {
+    const [key] = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
+    return key;
+  }
+
+  async getApiKeyByKey(key: string): Promise<ApiKey | undefined> {
+    const [apiKey] = await db.select().from(apiKeys).where(eq(apiKeys.key, key));
+    return apiKey;
+  }
+
+  async createApiKey(apiKeyData: InsertApiKey & { key: string; prefix: string }): Promise<ApiKey> {
+    const [created] = await db.insert(apiKeys).values({
+      name: apiKeyData.name,
+      userId: apiKeyData.userId,
+      key: apiKeyData.key,
+      prefix: apiKeyData.prefix,
+      permissions: apiKeyData.permissions,
+      rateLimit: apiKeyData.rateLimit,
+      expiresAt: apiKeyData.expiresAt,
+      isActive: apiKeyData.isActive,
+    }).returning();
+    return created;
+  }
+
+  async updateApiKey(id: number, updates: Partial<ApiKey>): Promise<ApiKey> {
+    const [updated] = await db
+      .update(apiKeys)
+      .set(updates)
+      .where(eq(apiKeys.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteApiKey(id: number): Promise<void> {
+    await db.delete(apiKeys).where(eq(apiKeys.id, id));
+  }
+
+  // Webhooks
+  async getWebhooks(userId: string): Promise<Webhook[]> {
+    return db.select().from(webhooks).where(eq(webhooks.userId, userId));
+  }
+
+  async getWebhook(id: number): Promise<Webhook | undefined> {
+    const [webhook] = await db.select().from(webhooks).where(eq(webhooks.id, id));
+    return webhook;
+  }
+
+  async createWebhook(webhookData: InsertWebhook): Promise<Webhook> {
+    const [created] = await db.insert(webhooks).values(webhookData).returning();
+    return created;
+  }
+
+  async updateWebhook(id: number, updates: Partial<Webhook>): Promise<Webhook> {
+    const [updated] = await db
+      .update(webhooks)
+      .set(updates)
+      .where(eq(webhooks.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteWebhook(id: number): Promise<void> {
+    await db.delete(webhooks).where(eq(webhooks.id, id));
   }
 }
 
