@@ -2711,6 +2711,204 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // === GROUP SPACE ROUTES ===
+
+  // Get all groups (public - shows public groups)
+  app.get("/api/groups", async (req, res) => {
+    try {
+      const allGroups = await storage.getGroups();
+      const publicGroups = allGroups.filter(g => !g.isPrivate);
+      res.json(publicGroups);
+    } catch (err) {
+      console.error("Error fetching groups:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's groups
+  app.get("/api/groups/my", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userGroups = await storage.getUserGroups(req.user!.id);
+      res.json(userGroups);
+    } catch (err) {
+      console.error("Error fetching user groups:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single group
+  app.get("/api/groups/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const group = await storage.getGroupById(id);
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+      res.json(group);
+    } catch (err) {
+      console.error("Error fetching group:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create group
+  app.post("/api/groups", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, description, coverImageUrl, isPrivate, allowMemberInvite } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Group name is required" });
+      }
+      const group = await storage.createGroup({
+        name,
+        description: description || null,
+        coverImageUrl: coverImageUrl || null,
+        createdBy: req.user!.id,
+        isPrivate: isPrivate ?? false,
+        allowMemberInvite: allowMemberInvite ?? true,
+      });
+      
+      // Add creator as admin member
+      await storage.addGroupMember({
+        groupId: group.id,
+        userId: req.user!.id,
+        role: "ADMIN",
+      });
+      
+      res.status(201).json(group);
+    } catch (err) {
+      console.error("Error creating group:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update group
+  app.put("/api/groups/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const group = await storage.getGroupById(id);
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+      if (group.createdBy !== req.user!.id && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      const { name, description, coverImageUrl, isPrivate, allowMemberInvite } = req.body;
+      const updated = await storage.updateGroup(id, {
+        name: name || group.name,
+        description: description !== undefined ? description : group.description,
+        coverImageUrl: coverImageUrl !== undefined ? coverImageUrl : group.coverImageUrl,
+        isPrivate: isPrivate !== undefined ? isPrivate : group.isPrivate,
+        allowMemberInvite: allowMemberInvite !== undefined ? allowMemberInvite : group.allowMemberInvite,
+      });
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating group:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete group
+  app.delete("/api/groups/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const group = await storage.getGroupById(id);
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+      if (group.createdBy !== req.user!.id && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      await storage.deleteGroup(id);
+      res.json({ message: "Group deleted" });
+    } catch (err) {
+      console.error("Error deleting group:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get group members
+  app.get("/api/groups/:id/members", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const members = await storage.getGroupMembers(id);
+      res.json(members);
+    } catch (err) {
+      console.error("Error fetching members:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Join group
+  app.post("/api/groups/:id/join", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const group = await storage.getGroupById(id);
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+      if (group.isPrivate) {
+        return res.status(403).json({ message: "This group is private" });
+      }
+      await storage.addGroupMember({
+        groupId: id,
+        userId: req.user!.id,
+        role: "MEMBER",
+      });
+      res.json({ message: "Joined group successfully" });
+    } catch (err) {
+      console.error("Error joining group:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Leave group
+  app.post("/api/groups/:id/leave", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.removeGroupMember(id, req.user!.id);
+      res.json({ message: "Left group successfully" });
+    } catch (err) {
+      console.error("Error leaving group:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get group messages
+  app.get("/api/groups/:id/messages", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const messages = await storage.getGroupMessages(id);
+      res.json(messages);
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Send group message
+  app.post("/api/groups/:id/messages", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { content } = req.body;
+      if (!content) {
+        return res.status(400).json({ message: "Message content is required" });
+      }
+      const group = await storage.getGroupById(id);
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
+      }
+      const message = await storage.createGroupMessage({
+        groupId: id,
+        userId: req.user!.id,
+        content,
+      });
+      res.status(201).json(message);
+    } catch (err) {
+      console.error("Error sending message:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
 

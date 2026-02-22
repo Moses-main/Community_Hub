@@ -4,13 +4,15 @@ import {
   dailyDevotionals, bibleReadingPlans, bibleReadingProgress,
   music, musicGenres, musicPlaylists, playlistMusic,
   houseCells, houseCellMessages,
+  groups, groupMembers, groupMessages,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
   type Attendance, type AttendanceLink, type AttendanceSettings, type MemberMessage,
   type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings, type InsertMemberMessage,
   type InsertMusic, type InsertMusicPlaylist,
-  type HouseCell, type HouseCellMessage, type InsertHouseCell, type InsertHouseCellMessage
+  type HouseCell, type HouseCellMessage, type InsertHouseCell, type InsertHouseCellMessage,
+  type Group, type GroupMember, type GroupMessage, type InsertGroup, type InsertGroupMember, type InsertGroupMessage
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -196,6 +198,19 @@ export interface IStorage {
   // House Cell Messages
   getHouseCellMessages(houseCellId: number): Promise<HouseCellMessage[]>;
   createHouseCellMessage(message: InsertHouseCellMessage): Promise<HouseCellMessage>;
+
+  // Groups
+  getGroups(): Promise<Group[]>;
+  getGroupById(id: number): Promise<Group | undefined>;
+  createGroup(group: InsertGroup): Promise<Group>;
+  updateGroup(id: number, updates: Partial<Group>): Promise<Group>;
+  deleteGroup(id: number): Promise<void>;
+  getGroupMembers(groupId: number): Promise<GroupMember[]>;
+  addGroupMember(member: InsertGroupMember): Promise<GroupMember>;
+  removeGroupMember(groupId: number, userId: string): Promise<void>;
+  getGroupMessages(groupId: number): Promise<GroupMessage[]>;
+  createGroupMessage(message: InsertGroupMessage): Promise<GroupMessage>;
+  getUserGroups(userId: string): Promise<Group[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1342,6 +1357,77 @@ export class DatabaseStorage implements IStorage {
   async createHouseCellMessage(message: InsertHouseCellMessage): Promise<HouseCellMessage> {
     const [created] = await db.insert(houseCellMessages).values(message as any).returning();
     return created;
+  }
+
+  // Groups
+  async getGroups(): Promise<Group[]> {
+    return db.select().from(groups).orderBy(desc(groups.createdAt));
+  }
+
+  async getGroupById(id: number): Promise<Group | undefined> {
+    const [group] = await db.select().from(groups).where(eq(groups.id, id));
+    return group;
+  }
+
+  async createGroup(groupData: InsertGroup): Promise<Group> {
+    const [created] = await db.insert(groups).values(groupData as any).returning();
+    return created;
+  }
+
+  async updateGroup(id: number, updates: Partial<Group>): Promise<Group> {
+    const [updated] = await db
+      .update(groups)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(groups.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteGroup(id: number): Promise<void> {
+    await db.delete(groups).where(eq(groups.id, id));
+  }
+
+  async getGroupMembers(groupId: number): Promise<GroupMember[]> {
+    return db.select().from(groupMembers).where(eq(groupMembers.groupId, groupId));
+  }
+
+  async addGroupMember(member: InsertGroupMember): Promise<GroupMember> {
+    const [created] = await db.insert(groupMembers).values(member as any).returning();
+    return created;
+  }
+
+  async removeGroupMember(groupId: number, userId: string): Promise<void> {
+    await db.delete(groupMembers).where(and(
+      eq(groupMembers.groupId, groupId),
+      eq(groupMembers.userId, userId)
+    ));
+  }
+
+  async getGroupMessages(groupId: number): Promise<GroupMessage[]> {
+    return db
+      .select()
+      .from(groupMessages)
+      .where(eq(groupMessages.groupId, groupId))
+      .orderBy(groupMessages.createdAt);
+  }
+
+  async createGroupMessage(message: InsertGroupMessage): Promise<GroupMessage> {
+    const [created] = await db.insert(groupMessages).values(message as any).returning();
+    return created;
+  }
+
+  async getUserGroups(userId: string): Promise<Group[]> {
+    const memberships = await db
+      .select()
+      .from(groupMembers)
+      .where(eq(groupMembers.userId, userId));
+    
+    const groupIds = memberships.map(m => m.groupId);
+    if (groupIds.length === 0) return [];
+    
+    return db.select().from(groups).where(
+      or(...groupIds.map(id => eq(groups.id, id)))
+    );
   }
 }
 

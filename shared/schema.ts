@@ -551,3 +551,78 @@ export type HouseCell = typeof houseCells.$inferSelect;
 export type HouseCellMessage = typeof houseCellMessages.$inferSelect;
 export type InsertHouseCell = z.infer<typeof insertHouseCellSchema>;
 export type InsertHouseCellMessage = z.infer<typeof insertHouseCellMessageSchema>;
+
+// === GROUP SPACE ===
+
+export const groups = pgTable("groups", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  coverImageUrl: text("cover_image_url"),
+  createdBy: uuid("created_by").references(() => users.id),
+  isPrivate: boolean("is_private").default(false),
+  allowMemberInvite: boolean("allow_member_invite").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const groupMembers = pgTable("group_members", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull().references(() => groups.id),
+  userId: uuid("user_id").references(() => users.id),
+  role: text("role").default("MEMBER"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const groupMessages = pgTable("group_messages", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull().references(() => groups.id),
+  userId: uuid("user_id").references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// === GROUP RELATIONS ===
+export const groupsRelations = relations(groups, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [groups.createdBy],
+    references: [users.id],
+  }),
+  members: many(groupMembers),
+  messages: many(groupMessages),
+}));
+
+export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupMembers.groupId],
+    references: [groups.id],
+  }),
+  user: one(users, {
+    fields: [groupMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const groupMessagesRelations = relations(groupMessages, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupMessages.groupId],
+    references: [groups.id],
+  }),
+  user: one(users, {
+    fields: [groupMessages.userId],
+    references: [users.id],
+  }),
+}));
+
+// === GROUP SCHEMAS ===
+export const insertGroupSchema = createInsertSchema(groups).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertGroupMemberSchema = createInsertSchema(groupMembers).omit({ id: true, joinedAt: true });
+export const insertGroupMessageSchema = createInsertSchema(groupMessages).omit({ id: true, createdAt: true });
+
+// === GROUP TYPES ===
+export type Group = typeof groups.$inferSelect;
+export type GroupMember = typeof groupMembers.$inferSelect;
+export type GroupMessage = typeof groupMessages.$inferSelect;
+export type InsertGroup = z.infer<typeof insertGroupSchema>;
+export type InsertGroupMember = z.infer<typeof insertGroupMemberSchema>;
+export type InsertGroupMessage = z.infer<typeof insertGroupMessageSchema>;
