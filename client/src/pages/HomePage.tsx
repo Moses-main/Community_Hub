@@ -3,6 +3,7 @@ import { ArrowRight, Play, Calendar, Heart, Clock, MapPin, Sparkles, Users, Book
 import { useSermons } from "@/hooks/use-sermons";
 import { useEvents } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +17,7 @@ export default function HomePage() {
   const { data: sermons, isLoading: loadingSermons } = useSermons();
   const { data: events, isLoading: loadingEvents } = useEvents();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const upcomingEvents = events
     ?.filter(e => new Date(e.date) >= new Date())
