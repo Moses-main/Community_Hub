@@ -487,3 +487,65 @@ export type MusicGenre = typeof musicGenres.$inferSelect;
 export type InsertMusic = z.infer<typeof insertMusicSchema>;
 export type InsertMusicPlaylist = z.infer<typeof insertMusicPlaylistSchema>;
 export type InsertPlaylistMusic = z.infer<typeof insertPlaylistMusicSchema>;
+
+// === HOUSE CELL COMMUNITY ===
+
+export const houseCells = pgTable("house_cells", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  leaderId: uuid("leader_id").references(() => users.id),
+  leaderName: text("leader_name"),
+  leaderPhone: text("leader_phone"),
+  address: text("address").notNull(),
+  city: text("city"),
+  state: text("state"),
+  country: text("country"),
+  meetingDay: text("meeting_day"),
+  meetingTime: text("meeting_time"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: uuid("created_by").references(() => users.id),
+});
+
+export const houseCellMessages = pgTable("house_cell_messages", {
+  id: serial("id").primaryKey(),
+  houseCellId: integer("house_cell_id").notNull().references(() => houseCells.id),
+  userId: uuid("user_id").references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// === HOUSE CELL RELATIONS ===
+export const houseCellsRelations = relations(houseCells, ({ one, many }) => ({
+  leader: one(users, {
+    fields: [houseCells.leaderId],
+    references: [users.id],
+  }),
+  creator: one(users, {
+    fields: [houseCells.createdBy],
+    references: [users.id],
+  }),
+  messages: many(houseCellMessages),
+}));
+
+export const houseCellMessagesRelations = relations(houseCellMessages, ({ one }) => ({
+  houseCell: one(houseCells, {
+    fields: [houseCellMessages.houseCellId],
+    references: [houseCells.id],
+  }),
+  user: one(users, {
+    fields: [houseCellMessages.userId],
+    references: [users.id],
+  }),
+}));
+
+// === HOUSE CELL SCHEMAS ===
+export const insertHouseCellSchema = createInsertSchema(houseCells).omit({ id: true, createdAt: true });
+export const insertHouseCellMessageSchema = createInsertSchema(houseCellMessages).omit({ id: true, createdAt: true });
+
+// === HOUSE CELL TYPES ===
+export type HouseCell = typeof houseCells.$inferSelect;
+export type HouseCellMessage = typeof houseCellMessages.$inferSelect;
+export type InsertHouseCell = z.infer<typeof insertHouseCellSchema>;
+export type InsertHouseCellMessage = z.infer<typeof insertHouseCellMessageSchema>;

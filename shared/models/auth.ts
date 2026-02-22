@@ -1,4 +1,5 @@
-import { pgTable, text, boolean, timestamp, uuid, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, timestamp, uuid, pgEnum, integer, foreignKey } from 'drizzle-orm/pg-core';
+import { relations } from "drizzle-orm";
 
 export const userRoleEnum = pgEnum('user_role', [
   'MEMBER', 
@@ -32,6 +33,7 @@ export const users = pgTable('users', {
   address: text('address'),
   houseFellowship: text('house_fellowship'),
   houseCellLocation: text('house_cell_location'),
+  houseCellId: integer('house_cell_id'),
   parish: text('parish'),
   career: text('career'),
   stateOfOrigin: text('state_of_origin'),
