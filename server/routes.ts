@@ -3014,7 +3014,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Start a live stream (admin only)
   app.post("/api/live-streams", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
     try {
-      const { title, description, streamUrl, embedUrl } = req.body;
+      const { title, description, streamUrl, embedUrl, youtubeVideoId, youtubeChannelId, youtubeChannelName } = req.body;
       
       // End any currently live streams first
       const currentStream = await storage.getCurrentLiveStream();
@@ -3027,6 +3027,9 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
         description,
         streamUrl,
         embedUrl,
+        youtubeVideoId,
+        youtubeChannelId,
+        youtubeChannelName,
         isLive: true,
         createdBy: req.user!.id,
       });
