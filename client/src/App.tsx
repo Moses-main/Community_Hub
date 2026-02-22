@@ -32,6 +32,7 @@ import MessagesPage from "@/pages/MessagesPage";
 import MembersPage from "@/pages/MembersPage";
 import DevotionalsPage from "@/pages/DevotionalsPage";
 import LiveStreamPage from "@/pages/LiveStreamPage";
+import AdminLiveStreamPage from "@/pages/AdminLiveStreamPage";
 import { useWebSocket } from "@/hooks/use-websocket";
 
 import { useLocation } from "wouter";
@@ -71,6 +72,7 @@ function Router() {
           <Route path="/members" component={MembersPage} />
           <Route path="/devotionals" component={DevotionalsPage} />
           <Route path="/live" component={LiveStreamPage} />
+          <Route path="/admin/live-stream/new" component={AdminLiveStreamPage} />
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/messages" component={MessagesPage} />
           {/* Detail pages could be added here later e.g. /sermons/:id */}
