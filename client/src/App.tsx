@@ -34,6 +34,9 @@ import DevotionalsPage from "@/pages/DevotionalsPage";
 import LiveStreamPage from "@/pages/LiveStreamPage";
 import AdminLiveStreamPage from "@/pages/AdminLiveStreamPage";
 import VolunteerPage from "@/pages/VolunteerPage";
+import HouseCellsPage from "@/pages/HouseCellsPage";
+import MusicPage from "@/pages/MusicPage";
+import GroupsPage from "@/pages/GroupsPage";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { LanguageProvider } from "@/hooks/use-language";
 
@@ -76,6 +79,9 @@ function Router() {
           <Route path="/live" component={LiveStreamPage} />
           <Route path="/admin/live-stream/new" component={AdminLiveStreamPage} />
           <Route path="/volunteer" component={VolunteerPage} />
+          <Route path="/house-cells" component={HouseCellsPage} />
+          <Route path="/music" component={MusicPage} />
+          <Route path="/groups" component={GroupsPage} />
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/messages" component={MessagesPage} />
           {/* Detail pages could be added here later e.g. /sermons/:id */}

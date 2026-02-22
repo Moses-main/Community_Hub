@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck, QrCode, Shield, Bell } from "lucide-react";
+import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarCheck, QrCode, Shield, Bell, Music, Mic, Users, Heart, BookOpen } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
@@ -26,12 +26,21 @@ export function Navbar() {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/live", label: "Live" },
-    { href: "/sermons", label: "Sermons" },
     { href: "/events", label: "Events" },
     { href: "/prayer", label: "Prayer" },
     { href: "/volunteer", label: "Volunteer" },
     { href: "/devotionals", label: "Devotionals" },
     { href: "/give", label: "Give" },
+  ];
+
+  const mediaLinks = [
+    { href: "/sermons", label: "Sermons", icon: Mic },
+    { href: "/music", label: "Music", icon: Music },
+  ];
+
+  const communityLinks = [
+    { href: "/groups", label: "Groups", icon: Users },
+    { href: "/house-cells", label: "House Cells", icon: Heart },
   ];
 
   const isActive = (path: string) => location === path;
@@ -80,6 +89,44 @@ export function Navbar() {
               </Link>
             </motion.div>
           ))}
+          
+          {/* Media Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50">
+                Media <ChevronDown className="w-4 h-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              {mediaLinks.map((link) => (
+                <DropdownMenuItem key={link.href} asChild>
+                  <Link href={link.href} className="flex items-center gap-2 cursor-pointer">
+                    <link.icon className="w-4 h-4" />
+                    {link.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Community Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50">
+                Community <ChevronDown className="w-4 h-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              {communityLinks.map((link) => (
+                <DropdownMenuItem key={link.href} asChild>
+                  <Link href={link.href} className="flex items-center gap-2 cursor-pointer">
+                    <link.icon className="w-4 h-4" />
+                    {link.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* User / Mobile Actions */}
@@ -196,7 +243,7 @@ export function Navbar() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`text-lg font-medium p-3 rounded-xl transition-colors ${
+                    className={`text-lg3 rounded-xl transition font-medium p--colors ${
                       isActive(link.href)
                         ? "bg-primary/10 text-primary"
                         : "text-gray-600 hover:bg-gray-50"
@@ -205,6 +252,46 @@ export function Navbar() {
                     {link.label}
                   </Link>
                 ))}
+                
+                {/* Media Section */}
+                <div className="pt-4 mt-2 border-t">
+                  <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Media</p>
+                  {mediaLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`text-lg font-medium p-3 rounded-xl transition-colors flex items-center gap-2 ${
+                        isActive(link.href)
+                          ? "bg-primary/10 text-primary"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <link.icon className="w-5 h-5" />
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Community Section */}
+                <div className="pt-4 mt-2 border-t">
+                  <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Community</p>
+                  {communityLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`text-lg font-medium p-3 rounded-xl transition-colors flex items-center gap-2 ${
+                        isActive(link.href)
+                          ? "bg-primary/10 text-primary"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <link.icon className="w-5 h-5" />
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
                 {user && (
                   <>
                     <Link
