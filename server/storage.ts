@@ -8,6 +8,7 @@ import {
   auditLogs, permissions,
   liveStreams,
   apiKeys, webhooks,
+  volunteerSkills, volunteerProfiles, volunteerOpportunities, volunteerAssignments, volunteerBadges, userBadges,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -18,7 +19,13 @@ import {
   type Group, type GroupMember, type GroupMessage, type InsertGroup, type InsertGroupMember, type InsertGroupMessage,
   type LiveStream, type InsertLiveStream,
   type ApiKey, type InsertApiKey,
-  type Webhook, type InsertWebhook
+  type Webhook, type InsertWebhook,
+  type VolunteerSkill, type InsertVolunteerSkill,
+  type VolunteerProfile, type InsertVolunteerProfile,
+  type VolunteerOpportunity, type InsertVolunteerOpportunity,
+  type VolunteerAssignment, type InsertVolunteerAssignment,
+  type VolunteerBadge, type InsertVolunteerBadge,
+  type UserBadge, type InsertUserBadge
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -245,6 +252,25 @@ export interface IStorage {
   createWebhook(webhook: InsertWebhook): Promise<Webhook>;
   updateWebhook(id: number, updates: Partial<Webhook>): Promise<Webhook>;
   deleteWebhook(id: number): Promise<void>;
+
+  // Volunteer Management
+  getVolunteerSkills(): Promise<VolunteerSkill[]>;
+  createVolunteerSkill(skill: InsertVolunteerSkill): Promise<VolunteerSkill>;
+  getVolunteerProfile(userId: string): Promise<VolunteerProfile | undefined>;
+  createVolunteerProfile(profile: InsertVolunteerProfile): Promise<VolunteerProfile>;
+  updateVolunteerProfile(userId: string, updates: Partial<VolunteerProfile>): Promise<VolunteerProfile>;
+  getVolunteerOpportunities(activeOnly?: boolean): Promise<VolunteerOpportunity[]>;
+  getVolunteerOpportunity(id: number): Promise<VolunteerOpportunity | undefined>;
+  createVolunteerOpportunity(opportunity: InsertVolunteerOpportunity): Promise<VolunteerOpportunity>;
+  updateVolunteerOpportunity(id: number, updates: Partial<VolunteerOpportunity>): Promise<VolunteerOpportunity>;
+  deleteVolunteerOpportunity(id: number): Promise<void>;
+  getVolunteerAssignments(userId?: string, opportunityId?: number): Promise<VolunteerAssignment[]>;
+  createVolunteerAssignment(assignment: InsertVolunteerAssignment): Promise<VolunteerAssignment>;
+  updateVolunteerAssignment(id: number, updates: Partial<VolunteerAssignment>): Promise<VolunteerAssignment>;
+  getVolunteerBadges(): Promise<VolunteerBadge[]>;
+  createVolunteerBadge(badge: InsertVolunteerBadge): Promise<VolunteerBadge>;
+  getUserBadges(userId: string): Promise<UserBadge[]>;
+  awardBadge(userId: string, badgeId: number): Promise<UserBadge>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1614,6 +1640,113 @@ export class DatabaseStorage implements IStorage {
 
   async deleteWebhook(id: number): Promise<void> {
     await db.delete(webhooks).where(eq(webhooks.id, id));
+  }
+
+  // Volunteer Management
+  async getVolunteerSkills(): Promise<VolunteerSkill[]> {
+    return db.select().from(volunteerSkills);
+  }
+
+  async createVolunteerSkill(skill: InsertVolunteerSkill): Promise<VolunteerSkill> {
+    const [created] = await db.insert(volunteerSkills).values(skill).returning();
+    return created;
+  }
+
+  async getVolunteerProfile(userId: string): Promise<VolunteerProfile | undefined> {
+    const [profile] = await db.select().from(volunteerProfiles).where(eq(volunteerProfiles.userId, userId));
+    return profile;
+  }
+
+  async createVolunteerProfile(profile: InsertVolunteerProfile): Promise<VolunteerProfile> {
+    const [created] = await db.insert(volunteerProfiles).values(profile).returning();
+    return created;
+  }
+
+  async updateVolunteerProfile(userId: string, updates: Partial<VolunteerProfile>): Promise<VolunteerProfile> {
+    const [updated] = await db
+      .update(volunteerProfiles)
+      .set(updates)
+      .where(eq(volunteerProfiles.userId, userId))
+      .returning();
+    return updated;
+  }
+
+  async getVolunteerOpportunities(activeOnly = true): Promise<VolunteerOpportunity[]> {
+    if (activeOnly) {
+      return db.select().from(volunteerOpportunities)
+        .where(eq(volunteerOpportunities.isActive, true))
+        .orderBy(asc(volunteerOpportunities.date));
+    }
+    return db.select().from(volunteerOpportunities).orderBy(asc(volunteerOpportunities.date));
+  }
+
+  async getVolunteerOpportunity(id: number): Promise<VolunteerOpportunity | undefined> {
+    const [opportunity] = await db.select().from(volunteerOpportunities).where(eq(volunteerOpportunities.id, id));
+    return opportunity;
+  }
+
+  async createVolunteerOpportunity(opportunity: InsertVolunteerOpportunity): Promise<VolunteerOpportunity> {
+    const [created] = await db.insert(volunteerOpportunities).values(opportunity).returning();
+    return created;
+  }
+
+  async updateVolunteerOpportunity(id: number, updates: Partial<VolunteerOpportunity>): Promise<VolunteerOpportunity> {
+    const [updated] = await db
+      .update(volunteerOpportunities)
+      .set(updates)
+      .where(eq(volunteerOpportunities.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteVolunteerOpportunity(id: number): Promise<void> {
+    await db.delete(volunteerOpportunities).where(eq(volunteerOpportunities.id, id));
+  }
+
+  async getVolunteerAssignments(userId?: string, opportunityId?: number): Promise<VolunteerAssignment[]> {
+    if (userId) {
+      return db.select().from(volunteerAssignments).where(eq(volunteerAssignments.volunteerId, userId));
+    }
+    if (opportunityId) {
+      return db.select().from(volunteerAssignments).where(eq(volunteerAssignments.opportunityId, opportunityId));
+    }
+    return db.select().from(volunteerAssignments);
+  }
+
+  async createVolunteerAssignment(assignment: InsertVolunteerAssignment): Promise<VolunteerAssignment> {
+    const [created] = await db.insert(volunteerAssignments).values(assignment).returning();
+    // Update spots filled
+    await db.update(volunteerOpportunities)
+      .set({ spotsFilled: sql`${volunteerOpportunities.spotsFilled} + 1` })
+      .where(eq(volunteerOpportunities.id, assignment.opportunityId));
+    return created;
+  }
+
+  async updateVolunteerAssignment(id: number, updates: Partial<VolunteerAssignment>): Promise<VolunteerAssignment> {
+    const [updated] = await db
+      .update(volunteerAssignments)
+      .set(updates)
+      .where(eq(volunteerAssignments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getVolunteerBadges(): Promise<VolunteerBadge[]> {
+    return db.select().from(volunteerBadges);
+  }
+
+  async createVolunteerBadge(badge: InsertVolunteerBadge): Promise<VolunteerBadge> {
+    const [created] = await db.insert(volunteerBadges).values(badge).returning();
+    return created;
+  }
+
+  async getUserBadges(userId: string): Promise<UserBadge[]> {
+    return db.select().from(userBadges).where(eq(userBadges.userId, userId));
+  }
+
+  async awardBadge(userId: string, badgeId: number): Promise<UserBadge> {
+    const [awarded] = await db.insert(userBadges).values({ userId, badgeId }).returning();
+    return awarded;
   }
 }
 

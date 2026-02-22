@@ -749,3 +749,127 @@ export const webhookRelations = relations(webhooks, ({ one }) => ({
 export const insertWebhookSchema = createInsertSchema(webhooks).omit({ id: true, createdAt: true });
 export type Webhook = typeof webhooks.$inferSelect;
 export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+
+// === Volunteer Management ===
+
+export const volunteerSkills = pgTable("volunteer_skills", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category"),
+});
+
+export const volunteerProfiles = pgTable("volunteer_profiles", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  skills: jsonb("skills").default("[]"),
+  availability: jsonb("availability").default("{}"),
+  totalHours: integer("total_hours").default(0),
+  isActive: boolean("is_active").default(true),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const volunteerOpportunities = pgTable("volunteer_opportunities", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  requiredSkills: jsonb("required_skills").default("[]"),
+  date: timestamp("date").notNull(),
+  duration: integer("duration"), // in minutes
+  location: text("location"),
+  spotsAvailable: integer("spots_available"),
+  spotsFilled: integer("spots_filled").default(0),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  isActive: boolean("is_active").default(true),
+});
+
+export const volunteerAssignments = pgTable("volunteer_assignments", {
+  id: serial("id").primaryKey(),
+  volunteerId: uuid("volunteer_id").references(() => users.id).notNull(),
+  opportunityId: integer("opportunity_id").references(() => volunteerOpportunities.id).notNull(),
+  status: text("status").default("pending"), // pending, confirmed, completed, cancelled
+  checkInAt: timestamp("check_in_at"),
+  checkOutAt: timestamp("check_out_at"),
+  hoursWorked: integer("hours_worked").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const volunteerBadges = pgTable("volunteer_badges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  icon: text("icon"),
+  criteria: text("criteria"), // JSON criteria for earning badge
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userBadges = pgTable("user_badges", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  badgeId: integer("badge_id").references(() => volunteerBadges.id).notNull(),
+  earnedAt: timestamp("earned_at").defaultNow(),
+});
+
+// Relations
+export const volunteerProfileRelations = relations(volunteerProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [volunteerProfiles.userId],
+    references: [users.id],
+  }),
+}));
+
+export const volunteerOpportunityRelations = relations(volunteerOpportunities, ({ one }) => ({
+  creator: one(users, {
+    fields: [volunteerOpportunities.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const volunteerAssignmentRelations = relations(volunteerAssignments, ({ one }) => ({
+  volunteer: one(users, {
+    fields: [volunteerAssignments.volunteerId],
+    references: [users.id],
+  }),
+  opportunity: one(volunteerOpportunities, {
+    fields: [volunteerAssignments.opportunityId],
+    references: [volunteerOpportunities.id],
+  }),
+}));
+
+export const userBadgeRelations = relations(userBadges, ({ one }) => ({
+  user: one(users, {
+    fields: [userBadges.userId],
+    references: [users.id],
+  }),
+  badge: one(volunteerBadges, {
+    fields: [userBadges.badgeId],
+    references: [volunteerBadges.id],
+  }),
+}));
+
+// Insert schemas
+export const insertVolunteerSkillSchema = createInsertSchema(volunteerSkills).omit({ id: true });
+export type VolunteerSkill = typeof volunteerSkills.$inferSelect;
+export type InsertVolunteerSkill = z.infer<typeof insertVolunteerSkillSchema>;
+
+export const insertVolunteerProfileSchema = createInsertSchema(volunteerProfiles).omit({ id: true });
+export type VolunteerProfile = typeof volunteerProfiles.$inferSelect;
+export type InsertVolunteerProfile = z.infer<typeof insertVolunteerProfileSchema>;
+
+export const insertVolunteerOpportunitySchema = createInsertSchema(volunteerOpportunities).omit({ id: true, createdAt: true, spotsFilled: true });
+export type VolunteerOpportunity = typeof volunteerOpportunities.$inferSelect;
+export type InsertVolunteerOpportunity = z.infer<typeof insertVolunteerOpportunitySchema>;
+
+export const insertVolunteerAssignmentSchema = createInsertSchema(volunteerAssignments).omit({ id: true, createdAt: true });
+export type VolunteerAssignment = typeof volunteerAssignments.$inferSelect;
+export type InsertVolunteerAssignment = z.infer<typeof insertVolunteerAssignmentSchema>;
+
+export const insertVolunteerBadgeSchema = createInsertSchema(volunteerBadges).omit({ id: true, createdAt: true });
+export type VolunteerBadge = typeof volunteerBadges.$inferSelect;
+export type InsertVolunteerBadge = z.infer<typeof insertVolunteerBadgeSchema>;
+
+export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ id: true, earnedAt: true });
+export type UserBadge = typeof userBadges.$inferSelect;
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
