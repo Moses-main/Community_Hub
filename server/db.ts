@@ -6,14 +6,16 @@ import config from "./config";
 const { Pool } = pg;
 
 // Use DATABASE_URL if provided, otherwise fall back to the default from config.
-const connectionString = process.env.DATABASE_URL || config.database.url;
+// Force sslmode=no-verify in the connection string for Aiven PostgreSQL
+const connectionString = (process.env.DATABASE_URL || config.database.url)
+  .replace('sslmode=require', 'sslmode=no-verify');
 
-// For Render PostgreSQL, SSL is required
+// Always use SSL with rejectUnauthorized for Aiven PostgreSQL
 export const pool = new Pool({
   connectionString,
-  ssl: process.env.NODE_ENV === "production" 
-    ? { rejectUnauthorized: false }
-    : false,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 export const db = drizzle(pool, { schema });
