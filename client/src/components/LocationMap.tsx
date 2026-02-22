@@ -1,5 +1,6 @@
 import { IoMdClock } from "react-icons/io";
 import { BiSolidCarGarage } from "react-icons/bi";
+import { useBranding } from "@/hooks/use-branding";
 
 
 interface LocationMapProps {
@@ -7,9 +8,15 @@ interface LocationMapProps {
 }
 
 export function LocationMap({ className = "" }: LocationMapProps) {
-  // Google Maps embed URL for Watchman Catholic Charismatic Renewal Movement, Lagos address (using search mode - no API key required)
-  const address =
-    "7 Silverbird Road, Jakande First Gate, Lekki, Lagos State, Nigeria";
+  const { data: branding } = useBranding();
+  
+  const churchName = branding?.churchName || "Watchman Catholic Charismatic Renewal Movement, Lagos";
+  const address = branding?.churchAddress || "7 Silverbird Road, Jakande First Gate, Lekki, Lagos State, Nigeria";
+  const city = branding?.churchCity || "Lekki";
+  const state = branding?.churchState || "Lagos State";
+  const country = branding?.churchCountry || "Nigeria";
+  const phone = branding?.churchPhone || "+2348000000000";
+  
   const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`;
 
   return (
@@ -44,16 +51,16 @@ export function LocationMap({ className = "" }: LocationMapProps) {
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="text-center md:text-left">
                 <h3 className="text-xl font-semibold mb-2">
-                  Watchman Catholic Charismatic Renewal Movement, Lagos
+                  {churchName}
                 </h3>
                 <p className="opacity-90">
-                  📍 7 Silverbird Road, Jakande First Gate, Lekki, Lagos State
+                  📍 {address}
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <a
-                  href="https://maps.google.com/search/7+Silverbird+Road+Jakande+First+Gate+Lekki+Lagos"
+                  href={`https://maps.google.com/search/${encodeURIComponent(address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-white text-primary px-6 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors text-center"
@@ -61,7 +68,7 @@ export function LocationMap({ className = "" }: LocationMapProps) {
                   Get Directions
                 </a>
                 <a
-                  href="tel:+2348000000000"
+                  href={`tel:${phone}`}
                   className="bg-white/20 text-white px-6 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors text-center"
                 >
                   Call Church

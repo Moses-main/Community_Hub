@@ -45,6 +45,14 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
     headingFont: branding?.fonts?.heading || "Inter",
     bodyFont: branding?.fonts?.body || "Inter",
     logoUrl: branding?.logoUrl || "",
+    churchName: branding?.churchName || "",
+    churchAddress: branding?.churchAddress || "",
+    churchCity: branding?.churchCity || "",
+    churchState: branding?.churchState || "",
+    churchCountry: branding?.churchCountry || "",
+    churchZipCode: branding?.churchZipCode || "",
+    churchPhone: branding?.churchPhone || "",
+    churchEmail: branding?.churchEmail || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -60,6 +68,14 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
         body: formData.bodyFont,
       },
       logoUrl: formData.logoUrl || null,
+      churchName: formData.churchName || null,
+      churchAddress: formData.churchAddress || null,
+      churchCity: formData.churchCity || null,
+      churchState: formData.churchState || null,
+      churchCountry: formData.churchCountry || null,
+      churchZipCode: formData.churchZipCode || null,
+      churchPhone: formData.churchPhone || null,
+      churchEmail: formData.churchEmail || null,
     });
   };
 
@@ -103,6 +119,44 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
       <div>
         <Label htmlFor="logoUrl">Logo URL</Label>
         <Input id="logoUrl" value={formData.logoUrl} onChange={e => setFormData({...formData, logoUrl: e.target.value})} placeholder="https://..." />
+      </div>
+
+      <div className="border-t pt-4 mt-4">
+        <h3 className="text-lg font-semibold mb-4">Church Location</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="churchName">Church Name</Label>
+            <Input id="churchName" value={formData.churchName} onChange={e => setFormData({...formData, churchName: e.target.value})} placeholder="Church name" />
+          </div>
+          <div>
+            <Label htmlFor="churchPhone">Phone</Label>
+            <Input id="churchPhone" value={formData.churchPhone} onChange={e => setFormData({...formData, churchPhone: e.target.value})} placeholder="+234..." />
+          </div>
+          <div className="md:col-span-2">
+            <Label htmlFor="churchAddress">Address</Label>
+            <Input id="churchAddress" value={formData.churchAddress} onChange={e => setFormData({...formData, churchAddress: e.target.value})} placeholder="Street address" />
+          </div>
+          <div>
+            <Label htmlFor="churchCity">City</Label>
+            <Input id="churchCity" value={formData.churchCity} onChange={e => setFormData({...formData, churchCity: e.target.value})} placeholder="City" />
+          </div>
+          <div>
+            <Label htmlFor="churchState">State</Label>
+            <Input id="churchState" value={formData.churchState} onChange={e => setFormData({...formData, churchState: e.target.value})} placeholder="State" />
+          </div>
+          <div>
+            <Label htmlFor="churchCountry">Country</Label>
+            <Input id="churchCountry" value={formData.churchCountry} onChange={e => setFormData({...formData, churchCountry: e.target.value})} placeholder="Country" />
+          </div>
+          <div>
+            <Label htmlFor="churchZipCode">Zip Code</Label>
+            <Input id="churchZipCode" value={formData.churchZipCode} onChange={e => setFormData({...formData, churchZipCode: e.target.value})} placeholder="Zip code" />
+          </div>
+          <div>
+            <Label htmlFor="churchEmail">Email</Label>
+            <Input id="churchEmail" type="email" value={formData.churchEmail} onChange={e => setFormData({...formData, churchEmail: e.target.value})} placeholder="church@example.com" />
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
