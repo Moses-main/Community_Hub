@@ -5,6 +5,7 @@ import {
   music, musicGenres, musicPlaylists, playlistMusic,
   houseCells, houseCellMessages,
   groups, groupMembers, groupMessages,
+  auditLogs, permissions,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -211,6 +212,10 @@ export interface IStorage {
   getGroupMessages(groupId: number): Promise<GroupMessage[]>;
   createGroupMessage(message: InsertGroupMessage): Promise<GroupMessage>;
   getUserGroups(userId: string): Promise<Group[]>;
+
+  // Audit Logs
+  createAuditLog(log: { userId?: string; action: string; entityType?: string; entityId?: string; details?: any; ipAddress?: string }): Promise<void>;
+  getAuditLogs(limit?: number): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1428,6 +1433,43 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(groups).where(
       or(...groupIds.map(id => eq(groups.id, id)))
     );
+  }
+
+  // Audit Logs
+  async createAuditLog(log: { userId?: string; action: string; entityType?: string; entityId?: string; details?: any; ipAddress?: string }): Promise<void> {
+    await db.insert(auditLogs).values({
+      userId: log.userId || null,
+      action: log.action,
+      entityType: log.entityType || null,
+      entityId: log.entityId || null,
+      details: log.details || null,
+      ipAddress: log.ipAddress || null,
+    });
+  }
+
+  async getAuditLogs(limit: number = 100): Promise<any[]> {
+    const logs = await db
+      .select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(limit);
+    
+    const userIds = Array.from(new Set(logs.filter(l => l.userId).map(l => l.userId)));
+    const usersData = await Promise.all(
+      userIds.map(uid => this.getUserById(uid!))
+    );
+    
+    const userMap = new Map(usersData.filter(u => u).map(u => [u!.id, u!]));
+    
+    return logs.map(log => ({
+      ...log,
+      user: log.userId ? {
+        id: log.userId,
+        firstName: userMap.get(log.userId)?.firstName,
+        lastName: userMap.get(log.userId)?.lastName,
+        email: userMap.get(log.userId)?.email,
+      } : null,
+    }));
   }
 }
 
