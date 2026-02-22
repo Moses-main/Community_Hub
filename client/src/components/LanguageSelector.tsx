@@ -23,7 +23,7 @@ export function LanguageSelector({ variant = "default" }: { variant?: "default" 
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-md border-gray-200 shadow-xl">
         {languages.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
