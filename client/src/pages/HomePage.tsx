@@ -151,15 +151,15 @@ export default function HomePage() {
           >
             <div>
               <h2 className="text-xl md:text-3xl lg:text-4xl font-display font-bold mb-1 md:mb-3">
-                Upcoming Events
+                {t("upcomingEvents")}
               </h2>
               <p className="text-gray-500 text-sm md:text-lg">
-                Join us for fellowship and growth
+                {t("joinUsForFellowship") || "Join us for fellowship and growth"}
               </p>
             </div>
             <Button variant="ghost" asChild className="gap-2 self-start md:self-auto text-sm">
               <Link href="/events">
-                View All Events <ArrowRight size={14} />
+                {t("viewAll")} <ArrowRight size={14} />
               </Link>
             </Button>
           </motion.div>
@@ -183,7 +183,7 @@ export default function HomePage() {
           ) : (
             <div className="text-center py-8 md:py-16 border border-gray-100 rounded-xl md:rounded-2xl">
               <Calendar className="h-8 w-8 md:h-16 md:w-16 mx-auto text-gray-200 mb-2 md:mb-4" />
-              <p className="text-gray-500 text-sm md:text-lg">No upcoming events at this time.</p>
+              <p className="text-gray-500 text-sm md:text-lg">{t("noEvents")}</p>
               <Button variant="ghost" asChild className="mt-2 md:mt-4 text-sm">
                 <Link href="/events"><span>View Past Events</span></Link>
               </Button>
@@ -236,7 +236,7 @@ export default function HomePage() {
           ) : (
             <div className="text-center py-8 md:py-16 bg-gray-50 rounded-xl md:rounded-2xl">
               <Play className="h-8 w-8 md:h-16 md:w-16 mx-auto text-gray-300 mb-2 md:mb-4" />
-              <p className="text-gray-500 text-sm md:text-lg">No sermons available yet.</p>
+              <p className="text-gray-500 text-sm md:text-lg">{t("noSermons")}</p>
             </div>
           )}
         </div>
