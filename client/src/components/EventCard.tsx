@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 interface EventCardProps {
   event: Event & { rsvpCount?: number };
@@ -164,8 +165,12 @@ export function EventCard({ event }: EventCardProps) {
   };
 
   return (
-    <Card className="flex flex-col md:flex-row overflow-hidden border-border/50 hover:border-primary/20 transition-all duration-300">
-      <div className="md:w-1/3 bg-muted relative min-h-[160px] md:min-h-full">
+    <motion.div
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.2 }}
+    >
+      <Card className="flex flex-col md:flex-row overflow-hidden border-border/50 hover:border-primary/20 transition-all duration-300">
+        <div className="md:w-1/3 bg-muted relative min-h-[160px] md:min-h-full">
         {event.imageUrl ? (
           <img 
             src={event.imageUrl} 
@@ -275,7 +280,8 @@ export function EventCard({ event }: EventCardProps) {
             <Link href={`/events/${event.id}`}>Details</Link>
           </Button>
         </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

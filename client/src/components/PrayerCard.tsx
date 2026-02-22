@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { usePrayForRequest } from "@/hooks/use-prayer";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 interface PrayerCardProps {
   request: PrayerRequest;
@@ -23,7 +24,11 @@ export function PrayerCard({ request }: PrayerCardProps) {
   };
 
   return (
-    <Card className="h-full flex flex-col border-border/50 hover:shadow-md transition-shadow">
+    <motion.div
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.2 }}
+    >
+      <Card className="h-full flex flex-col border-border/50 hover:shadow-md transition-shadow">
       <CardContent className="p-6 flex-1">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -61,5 +66,6 @@ export function PrayerCard({ request }: PrayerCardProps) {
         </Button>
       </CardFooter>
     </Card>
+    </motion.div>
   );
 }

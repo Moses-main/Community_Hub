@@ -4,6 +4,7 @@ import { Play, Calendar, User } from "lucide-react";
 import type { Sermon } from "@/types/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
 
 interface SermonCardProps {
   sermon: Sermon;
@@ -12,7 +13,12 @@ interface SermonCardProps {
 export function SermonCard({ sermon }: SermonCardProps) {
   return (
     <Link href={`/sermons/${sermon.id}`}>
-      <Card className="group h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 cursor-pointer">
+      <motion.div
+        whileHover={{ y: -6 }}
+        transition={{ duration: 0.2 }}
+        className="cursor-pointer"
+      >
+        <Card className="group h-full overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50">
         <div className="relative aspect-video overflow-hidden bg-muted">
           {sermon.thumbnailUrl ? (
             <img 
@@ -51,6 +57,7 @@ export function SermonCard({ sermon }: SermonCardProps) {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
     </Link>
   );
 }

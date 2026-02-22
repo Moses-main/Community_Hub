@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
 import NotFound from "@/pages/not-found";
 import { HelmetProvider } from "react-helmet-async";
+import { AnimatePresence, motion } from "framer-motion";
 
 // Pages
 import HomePage from "@/pages/HomePage";
@@ -32,35 +33,49 @@ import MembersPage from "@/pages/MembersPage";
 import DevotionalsPage from "@/pages/DevotionalsPage";
 import { useWebSocket } from "@/hooks/use-websocket";
 
+import { useLocation } from "wouter";
+
 function Router() {
+  const [location] = useLocation();
+  
   return (
-    <Switch>
-      <Route path="/" component={HomePage} />
-      <Route path="/sermons" component={SermonsPage} />
-      <Route path="/sermons/:id" component={SermonDetailPage} />
-      <Route path="/events" component={EventsPage} />
-      <Route path="/events/:id" component={EventDetailPage} />
-      <Route path="/prayer" component={PrayerPage} />
-      <Route path="/give" component={GivePage} />
-      {/* Auth routes */}
-      <Route path="/login" component={AuthPage} />
-      <Route path="/logout" component={LogoutPage} />
-      <Route path="/auth/callback" component={AuthCallbackPage} />
-      <Route path="/dashboard" component={DashboardPage} />
-      <Route path="/admin" component={AdminDashboardPage} />
-      <Route path="/attendance" component={AttendanceHistoryPage} />
-      <Route path="/attendance/analytics" component={AttendanceAnalyticsPage} />
-      <Route path="/analytics" component={AnalyticsPage} />
-      <Route path="/attendance/checkin" component={CheckinPage} />
-      <Route path="/attendance/scan" component={QRScannerPage} />
-      <Route path="/attendance/absent" component={AbsentMembersPage} />
-      <Route path="/members" component={MembersPage} />
-      <Route path="/devotionals" component={DevotionalsPage} />
-      <Route path="/privacy" component={PrivacyPage} />
-      <Route path="/messages" component={MessagesPage} />
-      {/* Detail pages could be added here later e.g. /sermons/:id */}
-      <Route component={NotFound} />
-    </Switch>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+      >
+        <Switch>
+          <Route path="/" component={HomePage} />
+          <Route path="/sermons" component={SermonsPage} />
+          <Route path="/sermons/:id" component={SermonDetailPage} />
+          <Route path="/events" component={EventsPage} />
+          <Route path="/events/:id" component={EventDetailPage} />
+          <Route path="/prayer" component={PrayerPage} />
+          <Route path="/give" component={GivePage} />
+          {/* Auth routes */}
+          <Route path="/login" component={AuthPage} />
+          <Route path="/logout" component={LogoutPage} />
+          <Route path="/auth/callback" component={AuthCallbackPage} />
+          <Route path="/dashboard" component={DashboardPage} />
+          <Route path="/admin" component={AdminDashboardPage} />
+          <Route path="/attendance" component={AttendanceHistoryPage} />
+          <Route path="/attendance/analytics" component={AttendanceAnalyticsPage} />
+          <Route path="/analytics" component={AnalyticsPage} />
+          <Route path="/attendance/checkin" component={CheckinPage} />
+          <Route path="/attendance/scan" component={QRScannerPage} />
+          <Route path="/attendance/absent" component={AbsentMembersPage} />
+          <Route path="/members" component={MembersPage} />
+          <Route path="/devotionals" component={DevotionalsPage} />
+          <Route path="/privacy" component={PrivacyPage} />
+          <Route path="/messages" component={MessagesPage} />
+          {/* Detail pages could be added here later e.g. /sermons/:id */}
+          <Route component={NotFound} />
+        </Switch>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 

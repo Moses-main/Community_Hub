@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FaPray } from "react-icons/fa";
 import { FaHandHoldingHeart } from "react-icons/fa";
 import { format } from "date-fns";
+import { motion } from "framer-motion";
 
 export default function HomePage() {
   const { data: sermons, isLoading: loadingSermons } = useSermons();
@@ -37,23 +38,48 @@ export default function HomePage() {
         {/* Content */}
         <div className="container relative z-10 px-3 md:px-8">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-sm text-white text-xs font-medium mb-3 md:mb-6 border border-white/20">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-sm text-white text-xs font-medium mb-3 md:mb-6 border border-white/20"
+            >
               <Sparkles className="w-3 h-3" />
               Welcome to WCCRM Lagos
-            </div>
+            </motion.div>
             
-            <h1 className="font-display font-bold text-2xl sm:text-3xl md:text-5xl lg:text-7xl text-white mb-3 md:mb-6 leading-tight">
+            <motion.h1 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="font-display font-bold text-2xl sm:text-3xl md:text-5xl lg:text-7xl text-white mb-3 md:mb-6 leading-tight"
+            >
               Experience the
-              <span className="block text-lg md:text-xl lg:text-4xl text-white font-stylish italic">
+              <motion.span 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="block text-lg md:text-xl lg:text-4xl text-white font-stylish italic"
+              >
                 Power of Faith
-              </span>
-            </h1>
+              </motion.span>
+            </motion.h1>
             
-            <p className="text-sm md:text-xl lg:text-2xl text-white/90 max-w-2xl mx-auto mb-5 md:mb-10 font-light leading-relaxed">
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="text-sm md:text-xl lg:text-2xl text-white/90 max-w-2xl mx-auto mb-5 md:mb-10 font-light leading-relaxed"
+            >
               Join a vibrant community dedicated to loving God, loving people, and making a difference in our city and beyond.
-            </p>
+            </motion.p>
             
-            <div className="flex flex-col sm:flex-row gap-2 md:gap-4 justify-center">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="flex flex-col sm:flex-row gap-2 md:gap-4 justify-center"
+            >
               <Button
                 asChild
                 size="sm"
@@ -83,7 +109,7 @@ export default function HomePage() {
                   </Link>
                 </Button>
               )}
-            </div>
+            </motion.div>
           </div>
 
           {/* Stats */}
@@ -105,9 +131,21 @@ export default function HomePage() {
       </section>
 
       {/* Upcoming Events Section */}
-      <section className="py-6 md:py-16 bg-white">
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="py-6 md:py-16 bg-white"
+      >
         <div className="container px-3 md:px-8">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6 md:mb-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6 md:mb-12"
+          >
             <div>
               <h2 className="text-xl md:text-3xl lg:text-4xl font-display font-bold mb-1 md:mb-3">
                 Upcoming Events
@@ -121,7 +159,7 @@ export default function HomePage() {
                 View All Events <ArrowRight size={14} />
               </Link>
             </Button>
-          </div>
+          </motion.div>
 
           {loadingEvents ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
@@ -149,10 +187,16 @@ export default function HomePage() {
             </div>
           )}
         </div>
-      </section>
+      </motion.section>
 
       {/* Latest Sermons Section */}
-      <section className="py-6 md:py-16 bg-gray-50/50">
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="py-6 md:py-16 bg-gray-50/50"
+      >
         <div className="container px-3 md:px-8">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6 md:mb-12">
             <div>
@@ -193,7 +237,7 @@ export default function HomePage() {
             </div>
           )}
         </div>
-      </section>
+      </motion.section>
 
       {/* Call to Action - Prayer & Giving */}
       {/* <section className="section-py bg-white">

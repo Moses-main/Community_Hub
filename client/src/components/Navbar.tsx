@@ -14,6 +14,7 @@ import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Settings, CalendarChe
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -33,7 +34,12 @@ export function Navbar() {
   const isActive = (path: string) => location === path;
 
   return (
-    <nav className="sticky top-0 z-50 w-full md:bg-white/80 md:backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
+    <motion.nav 
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      className="sticky top-0 z-50 w-full md:bg-white/80 md:backdrop-blur-xl border-b border-gray-200/50 shadow-sm"
+    >
       <div className="container mx-auto px-3 md:px-8 h-14 md:h-20 flex items-center justify-between">
         {/* Logo */}
         <Link
@@ -52,18 +58,24 @@ export function Navbar() {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-1">
-          {navLinks.map((link) => (
-            <Link
+          {navLinks.map((link, index) => (
+            <motion.div
               key={link.href}
-              href={link.href}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActive(link.href)
-                  ? "text-primary bg-primary/5"
-                  : "text-gray-600 hover:text-primary hover:bg-gray-50"
-              }`}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
             >
-              {link.label}
-            </Link>
+              <Link
+                href={link.href}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                  isActive(link.href)
+                    ? "text-primary bg-primary/5"
+                    : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                }`}
+              >
+                {link.label}
+              </Link>
+            </motion.div>
           ))}
         </div>
 
@@ -270,6 +282,6 @@ export function Navbar() {
           </Sheet>
         </div>
       </div>
-    </nav>
+    </motion.nav>
   );
 }
