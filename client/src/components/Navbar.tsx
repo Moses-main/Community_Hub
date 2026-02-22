@@ -90,43 +90,47 @@ export function Navbar() {
             </motion.div>
           ))}
           
-          {/* Media Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50">
-                Media <ChevronDown className="w-4 h-4 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              {mediaLinks.map((link) => (
-                <DropdownMenuItem key={link.href} asChild>
-                  <Link href={link.href} className="flex items-center gap-2 cursor-pointer">
+          {/* Media Dropdown - Hover */}
+          <div className="relative group">
+            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-lg flex items-center gap-1">
+              Media <ChevronDown className="w-4 h-4" />
+            </button>
+            <div className="absolute left-0 top-full pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-xl rounded-xl py-2 w-48 overflow-hidden">
+                {mediaLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/5 hover:text-primary transition-colors"
+                  >
                     <link.icon className="w-4 h-4" />
                     {link.label}
                   </Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                ))}
+              </div>
+            </div>
+          </div>
 
-          {/* Community Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50">
-                Community <ChevronDown className="w-4 h-4 ml-1" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              {communityLinks.map((link) => (
-                <DropdownMenuItem key={link.href} asChild>
-                  <Link href={link.href} className="flex items-center gap-2 cursor-pointer">
+          {/* Community Dropdown - Hover */}
+          <div className="relative group">
+            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-lg flex items-center gap-1">
+              Community <ChevronDown className="w-4 h-4" />
+            </button>
+            <div className="absolute left-0 top-full pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-xl rounded-xl py-2 w-48 overflow-hidden">
+                {communityLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-primary/5 hover:text-primary transition-colors"
+                  >
                     <link.icon className="w-4 h-4" />
                     {link.label}
                   </Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* User / Mobile Actions */}
