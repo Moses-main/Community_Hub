@@ -11,6 +11,7 @@ import {
   volunteerSkills, volunteerProfiles, volunteerOpportunities, volunteerAssignments, volunteerBadges, userBadges,
   privacySettings, contentFlags, abuseReports,
   userHighlights, userNotes, verseDiscussions, groupAnnotations,
+  discipleshipTracks, lessons, quizzes, userProgress, reflections,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -34,7 +35,12 @@ import {
   type UserHighlight, type InsertUserHighlight,
   type UserNote, type InsertUserNote,
   type VerseDiscussion, type InsertVerseDiscussion,
-  type GroupAnnotation, type InsertGroupAnnotation
+  type GroupAnnotation, type InsertGroupAnnotation,
+  type DiscipleshipTrack, type InsertDiscipleshipTrack,
+  type Lesson, type InsertLesson,
+  type Quiz, type InsertQuiz,
+  type UserProgress, type InsertUserProgress,
+  type Reflection, type InsertReflection
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -301,6 +307,27 @@ export interface IStorage {
   deleteUserNote(id: number): Promise<void>;
   getVerseDiscussions(book: string, chapter: number, verse: number): Promise<VerseDiscussion[]>;
   createVerseDiscussion(discussion: InsertVerseDiscussion): Promise<VerseDiscussion>;
+
+  // Discipleship Pathways
+  getDiscipleshipTracks(): Promise<DiscipleshipTrack[]>;
+  getDiscipleshipTrack(id: number): Promise<DiscipleshipTrack | undefined>;
+  createDiscipleshipTrack(track: InsertDiscipleshipTrack): Promise<DiscipleshipTrack>;
+  updateDiscipleshipTrack(id: number, updates: Partial<DiscipleshipTrack>): Promise<DiscipleshipTrack>;
+  deleteDiscipleshipTrack(id: number): Promise<void>;
+  getLessonsByTrack(trackId: number): Promise<Lesson[]>;
+  getLesson(id: number): Promise<Lesson | undefined>;
+  createLesson(lesson: InsertLesson): Promise<Lesson>;
+  updateLesson(id: number, updates: Partial<Lesson>): Promise<Lesson>;
+  deleteLesson(id: number): Promise<void>;
+  getQuizzesByLesson(lessonId: number): Promise<Quiz[]>;
+  createQuiz(quiz: InsertQuiz): Promise<Quiz>;
+  deleteQuiz(id: number): Promise<void>;
+  getUserProgress(userId: string): Promise<UserProgress[]>;
+  getUserTrackProgress(userId: string, trackId: number): Promise<UserProgress[]>;
+  upsertUserProgress(progress: InsertUserProgress): Promise<UserProgress>;
+  getReflections(userId: string, lessonId?: number): Promise<Reflection[]>;
+  createReflection(reflection: InsertReflection): Promise<Reflection>;
+  deleteReflection(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1885,6 +1912,124 @@ export class DatabaseStorage implements IStorage {
   async createVerseDiscussion(discussion: InsertVerseDiscussion): Promise<VerseDiscussion> {
     const [created] = await db.insert(verseDiscussions).values(discussion).returning();
     return created;
+  }
+
+  // Discipleship Pathways
+  async getDiscipleshipTracks(): Promise<DiscipleshipTrack[]> {
+    return db.select().from(discipleshipTracks).where(eq(discipleshipTracks.isActive, true)).orderBy(asc(discipleshipTracks.order));
+  }
+
+  async getDiscipleshipTrack(id: number): Promise<DiscipleshipTrack | undefined> {
+    const [track] = await db.select().from(discipleshipTracks).where(eq(discipleshipTracks.id, id));
+    return track;
+  }
+
+  async createDiscipleshipTrack(track: InsertDiscipleshipTrack): Promise<DiscipleshipTrack> {
+    const [created] = await db.insert(discipleshipTracks).values(track).returning();
+    return created;
+  }
+
+  async updateDiscipleshipTrack(id: number, updates: Partial<DiscipleshipTrack>): Promise<DiscipleshipTrack> {
+    const [updated] = await db
+      .update(discipleshipTracks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(discipleshipTracks.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDiscipleshipTrack(id: number): Promise<void> {
+    await db.delete(discipleshipTracks).where(eq(discipleshipTracks.id, id));
+  }
+
+  async getLessonsByTrack(trackId: number): Promise<Lesson[]> {
+    return db.select().from(lessons).where(eq(lessons.trackId, trackId)).orderBy(asc(lessons.order));
+  }
+
+  async getLesson(id: number): Promise<Lesson | undefined> {
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, id));
+    return lesson;
+  }
+
+  async createLesson(lesson: InsertLesson): Promise<Lesson> {
+    const [created] = await db.insert(lessons).values(lesson).returning();
+    return created;
+  }
+
+  async updateLesson(id: number, updates: Partial<Lesson>): Promise<Lesson> {
+    const [updated] = await db
+      .update(lessons)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(lessons.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteLesson(id: number): Promise<void> {
+    await db.delete(lessons).where(eq(lessons.id, id));
+  }
+
+  async getQuizzesByLesson(lessonId: number): Promise<Quiz[]> {
+    return db.select().from(quizzes).where(eq(quizzes.lessonId, lessonId)).orderBy(asc(quizzes.order));
+  }
+
+  async createQuiz(quiz: InsertQuiz): Promise<Quiz> {
+    const [created] = await db.insert(quizzes).values({ ...quiz, options: quiz.options as any }).returning();
+    return created;
+  }
+
+  async deleteQuiz(id: number): Promise<void> {
+    await db.delete(quizzes).where(eq(quizzes.id, id));
+  }
+
+  async getUserProgress(userId: string): Promise<UserProgress[]> {
+    return db.select().from(userProgress).where(eq(userProgress.userId, userId));
+  }
+
+  async getUserTrackProgress(userId: string, trackId: number): Promise<UserProgress[]> {
+    return db.select().from(userProgress).where(and(
+      eq(userProgress.userId, userId),
+      eq(userProgress.trackId, trackId)
+    ));
+  }
+
+  async upsertUserProgress(progress: InsertUserProgress): Promise<UserProgress> {
+    const existing = await db.select().from(userProgress).where(and(
+      eq(userProgress.userId, progress.userId),
+      eq(userProgress.trackId, progress.trackId),
+      eq(userProgress.lessonId, progress.lessonId)
+    ));
+
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(userProgress)
+        .set({ ...progress, updatedAt: new Date() })
+        .where(eq(userProgress.id, existing[0].id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(userProgress).values(progress).returning();
+      return created;
+    }
+  }
+
+  async getReflections(userId: string, lessonId?: number): Promise<Reflection[]> {
+    if (lessonId) {
+      return db.select().from(reflections).where(and(
+        eq(reflections.userId, userId),
+        eq(reflections.lessonId, lessonId)
+      ));
+    }
+    return db.select().from(reflections).where(eq(reflections.userId, userId));
+  }
+
+  async createReflection(reflection: InsertReflection): Promise<Reflection> {
+    const [created] = await db.insert(reflections).values(reflection).returning();
+    return created;
+  }
+
+  async deleteReflection(id: number): Promise<void> {
+    await db.delete(reflections).where(eq(reflections.id, id));
   }
 }
 

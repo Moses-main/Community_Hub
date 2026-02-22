@@ -1047,3 +1047,87 @@ export type InsertVerseDiscussion = z.infer<typeof insertVerseDiscussionSchema>;
 export const insertGroupAnnotationSchema = createInsertSchema(groupAnnotations).omit({ id: true, createdAt: true });
 export type GroupAnnotation = typeof groupAnnotations.$inferSelect;
 export type InsertGroupAnnotation = z.infer<typeof insertGroupAnnotationSchema>;
+
+// === DISCIPLESHIP PATHWAYS ===
+
+export const trackCategoryEnum = pgEnum("track_category", ["new_believer", "leadership", "discipleship", "ministry", "theology", "practical", "other"]);
+
+export const discipleshipTracks = pgTable("discipleship_tracks", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: trackCategoryEnum("category").default("other"),
+  imageUrl: text("image_url"),
+  estimatedWeeks: integer("estimated_weeks"),
+  isActive: boolean("is_active").default(true),
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const lessons = pgTable("lessons", {
+  id: serial("id").primaryKey(),
+  trackId: integer("track_id").references(() => discipleshipTracks.id).notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  content: text("content"),
+  videoUrl: text("video_url"),
+  order: integer("order").default(0),
+  isPublished: boolean("is_published").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const quizzes = pgTable("quizzes", {
+  id: serial("id").primaryKey(),
+  lessonId: integer("lesson_id").references(() => lessons.id).notNull(),
+  question: text("question").notNull(),
+  options: jsonb("options").$type<string[]>().notNull(),
+  correctAnswer: integer("correct_answer").notNull(),
+  explanation: text("explanation"),
+  order: integer("order").default(0),
+});
+
+export const userProgress = pgTable("user_progress", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  trackId: integer("track_id").references(() => discipleshipTracks.id).notNull(),
+  lessonId: integer("lesson_id").references(() => lessons.id).notNull(),
+  completed: boolean("completed").default(false),
+  completedAt: timestamp("completed_at"),
+  quizScore: integer("quiz_score"),
+  quizAttempts: integer("quiz_attempts").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const reflections = pgTable("reflections", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  lessonId: integer("lesson_id").references(() => lessons.id).notNull(),
+  content: text("content").notNull(),
+  isPrivate: boolean("is_private").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for Discipleship
+export const insertDiscipleshipTrackSchema = createInsertSchema(discipleshipTracks).omit({ id: true, createdAt: true, updatedAt: true });
+export type DiscipleshipTrack = typeof discipleshipTracks.$inferSelect;
+export type InsertDiscipleshipTrack = z.infer<typeof insertDiscipleshipTrackSchema>;
+
+export const insertLessonSchema = createInsertSchema(lessons).omit({ id: true, createdAt: true, updatedAt: true });
+export type Lesson = typeof lessons.$inferSelect;
+export type InsertLesson = z.infer<typeof insertLessonSchema>;
+
+export const insertQuizSchema = createInsertSchema(quizzes).omit({ id: true });
+export type Quiz = typeof quizzes.$inferSelect;
+export type InsertQuiz = z.infer<typeof insertQuizSchema>;
+
+export const insertUserProgressSchema = createInsertSchema(userProgress).omit({ id: true, createdAt: true, updatedAt: true });
+export type UserProgress = typeof userProgress.$inferSelect;
+export type InsertUserProgress = z.infer<typeof insertUserProgressSchema>;
+
+export const insertReflectionSchema = createInsertSchema(reflections).omit({ id: true, createdAt: true });
+export type Reflection = typeof reflections.$inferSelect;
+export type InsertReflection = z.infer<typeof insertReflectionSchema>;
