@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
-import { Video, Film, Download, Trash2, Play, Square, Instagram, Smartphone, Monitor, Scissors, Plus, Clock, Loader2, Upload, Link as LinkIcon, X } from "lucide-react";
+import { Video, Film, Download, Trash2, Play, Square, Instagram, Smartphone, Monitor, Scissors, Plus, Clock, Loader2, Upload, Link as LinkIcon, X, AlertCircle } from "lucide-react";
 
 interface SermonClip {
   id: number;
@@ -25,15 +25,19 @@ interface SermonClip {
   createdAt: string;
 }
 
-interface VideoPreview {
-  duration: number;
-  currentTime: number;
-}
-
 async function fetchClips(): Promise<SermonClip[]> {
-  const res = await fetch("/api/sermon-clips", { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch clips");
-  return res.json();
+  try {
+    const res = await fetch("/api/sermon-clips", { credentials: "include" });
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("Fetch clips error:", res.status, errorText);
+      throw new Error(`Failed to fetch clips: ${res.status}`);
+    }
+    return res.json();
+  } catch (err) {
+    console.error("Error fetching clips:", err);
+    throw err;
+  }
 }
 
 async function createClip(data: {
@@ -52,7 +56,11 @@ async function createClip(data: {
     credentials: "include",
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error("Failed to create clip");
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("Create clip error:", res.status, errorText);
+    throw new Error(`Failed to create clip: ${res.status}`);
+  }
   return res.json();
 }
 
@@ -66,7 +74,11 @@ async function uploadVideo(file: File): Promise<{ path: string; url: string }> {
     body: formData,
   });
   
-  if (!res.ok) throw new Error("Failed to upload video");
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("Upload error:", res.status, errorText);
+    throw new Error(`Failed to upload video: ${res.status}`);
+  }
   return res.json();
 }
 
@@ -94,6 +106,22 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
+function isYouTubeUrl(url: string): boolean {
+  return url.includes("youtube.com") || url.includes("youtu.be");
+}
+
+function getYouTubeThumbnail(url: string): string | null {
+  let videoId = "";
+  if (url.includes("youtube.com/watch")) {
+    const match = url.match(/[?&]v=([^&]+)/);
+    videoId = match?.[1] || "";
+  } else if (url.includes("youtu.be/")) {
+    const match = url.match(/youtu\.be\/([^?]+)/);
+    videoId = match?.[1] || "";
+  }
+  return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
+}
+
 export default function SermonClipGeneratorPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -102,7 +130,8 @@ export default function SermonClipGeneratorPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [videoSourceType, setVideoSourceType] = useState<"url" | "upload">("url");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [videoPreview, setVideoPreview] = useState<VideoPreview | null>(null);
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string>("");
+  const [videoDuration, setVideoDuration] = useState<number>(60);
   const [isUploading, setIsUploading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   
@@ -112,7 +141,6 @@ export default function SermonClipGeneratorPage() {
     sourceVideoPath: "",
     startTime: 0,
     endTime: 60,
-    duration: 60,
     format: "landscape",
     overlayText: "",
     verseReference: "",
@@ -132,6 +160,11 @@ export default function SermonClipGeneratorPage() {
       setClips(data);
     } catch (err) {
       console.error("Error loading clips:", err);
+      toast({ 
+        title: "Error loading clips", 
+        description: "Make sure you're logged in as admin", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
@@ -140,31 +173,13 @@ export default function SermonClipGeneratorPage() {
   function handleVideoLoaded() {
     if (videoRef.current) {
       const duration = Math.floor(videoRef.current.duration);
-      setFormData(prev => ({
-        ...prev,
-        duration,
-        endTime: Math.min(60, duration),
-        startTime: 0
-      }));
-      setVideoPreview({
-        duration,
-        currentTime: 0
-      });
-    }
-  }
-
-  function handleTimeUpdate() {
-    if (videoRef.current) {
-      setVideoPreview(prev => prev ? {
-        ...prev,
-        currentTime: videoRef.current!.currentTime
-      } : null);
-    }
-  }
-
-  function handleSeek(time: number) {
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
+      if (duration && duration > 0) {
+        setVideoDuration(duration);
+        setFormData(prev => ({
+          ...prev,
+          endTime: Math.min(60, duration)
+        }));
+      }
     }
   }
 
@@ -174,7 +189,7 @@ export default function SermonClipGeneratorPage() {
     setFormData(prev => ({
       ...prev,
       startTime: newStart,
-      endTime: Math.min(newEnd, prev.duration)
+      endTime: Math.min(newEnd, videoDuration)
     }));
   }
 
@@ -199,9 +214,7 @@ export default function SermonClipGeneratorPage() {
       setFormData(prev => ({ ...prev, title: file.name.replace(/\.[^/.]+$/, "") }));
       
       const objectUrl = URL.createObjectURL(file);
-      if (videoRef.current) {
-        videoRef.current.src = objectUrl;
-      }
+      setUploadedVideoUrl(objectUrl);
     }
   }
 
@@ -246,9 +259,16 @@ export default function SermonClipGeneratorPage() {
 
       if (videoSourceType === "upload" && uploadedFile) {
         setIsUploading(true);
-        const uploadResult = await uploadVideo(uploadedFile);
-        sourcePath = uploadResult.path;
-        sourceUrl = uploadResult.url;
+        try {
+          const uploadResult = await uploadVideo(uploadedFile);
+          sourcePath = uploadResult.path;
+          sourceUrl = uploadResult.url;
+        } catch (uploadErr) {
+          console.error("Upload failed:", uploadErr);
+          toast({ title: "Upload failed", description: "Could not upload video file", variant: "destructive" });
+          setIsUploading(false);
+          return;
+        }
         setIsUploading(false);
       }
 
@@ -269,7 +289,7 @@ export default function SermonClipGeneratorPage() {
       loadClips();
     } catch (err) {
       console.error("Error creating clip:", err);
-      toast({ title: "Error", description: "Failed to create clip", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to create clip. Make sure you're logged in as admin.", variant: "destructive" });
     }
   }
 
@@ -280,16 +300,13 @@ export default function SermonClipGeneratorPage() {
       sourceVideoPath: "",
       startTime: 0,
       endTime: 60,
-      duration: 60,
       format: "landscape",
       overlayText: "",
       verseReference: "",
     });
     setUploadedFile(null);
-    setVideoPreview(null);
-    if (videoRef.current) {
-      videoRef.current.src = "";
-    }
+    setUploadedVideoUrl("");
+    setVideoDuration(60);
   }
 
   async function handleDeleteClip(id: number) {
@@ -302,6 +319,9 @@ export default function SermonClipGeneratorPage() {
       toast({ title: "Error", description: "Failed to delete clip", variant: "destructive" });
     }
   }
+
+  const youtubeThumbnail = videoSourceType === "url" && formData.sourceVideoUrl ? getYouTubeThumbnail(formData.sourceVideoUrl) : null;
+  const isYouTube = videoSourceType === "url" && formData.sourceVideoUrl ? isYouTubeUrl(formData.sourceVideoUrl) : false;
 
   if (!isAdmin) {
     return (
@@ -371,7 +391,7 @@ export default function SermonClipGeneratorPage() {
                     onClick={() => {
                       setVideoSourceType("url");
                       setUploadedFile(null);
-                      if (videoRef.current) videoRef.current.src = "";
+                      setUploadedVideoUrl("");
                     }}
                     className={`flex-1 p-4 rounded-lg border-2 transition-all flex items-center justify-center gap-2 ${
                       videoSourceType === "url" ? "border-primary bg-primary/5" : "border-gray-200"
@@ -406,6 +426,23 @@ export default function SermonClipGeneratorPage() {
                     placeholder="https://youtube.com/watch?v=..."
                   />
                   <p className="text-sm text-gray-500">Paste a YouTube or direct video URL</p>
+                  
+                  {youtubeThumbnail && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-500 mb-2">Video Preview (YouTube)</p>
+                      <div className="relative aspect-video max-w-md rounded-lg overflow-hidden bg-gray-100">
+                        <img src={youtubeThumbnail} alt="Video thumbnail" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center">
+                            <Play className="w-8 h-8 text-white ml-1" />
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Note: Full preview requires uploading the video file
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -417,7 +454,7 @@ export default function SermonClipGeneratorPage() {
                         <span className="font-medium">{uploadedFile.name}</span>
                         <Button variant="ghost" size="sm" onClick={() => {
                           setUploadedFile(null);
-                          if (videoRef.current) videoRef.current.src = "";
+                          setUploadedVideoUrl("");
                         }}>
                           <X className="w-4 h-4" />
                         </Button>
@@ -438,7 +475,7 @@ export default function SermonClipGeneratorPage() {
                 </div>
               )}
 
-              {(formData.sourceVideoUrl || uploadedFile) && (
+              {(uploadedVideoUrl || formData.sourceVideoUrl) && (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -448,15 +485,31 @@ export default function SermonClipGeneratorPage() {
                       </span>
                     </div>
                     
-                    <video
-                      ref={videoRef}
-                      className="w-full max-h-64 rounded-lg bg-black"
-                      controls
-                      onLoadedMetadata={handleVideoLoaded}
-                      onTimeUpdate={handleTimeUpdate}
-                    >
-                      Your browser does not support video playback.
-                    </video>
+                    {uploadedVideoUrl && (
+                      <video
+                        ref={videoRef}
+                        src={uploadedVideoUrl}
+                        className="w-full max-h-64 rounded-lg bg-black"
+                        onLoadedMetadata={handleVideoLoaded}
+                      >
+                        Your browser does not support video playback.
+                      </video>
+                    )}
+
+                    {isYouTube && (
+                      <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-yellow-800">YouTube URL detected</p>
+                            <p className="text-sm text-yellow-700">
+                              For precise timeline selection, please download the video and upload it instead.
+                              You can estimate the timestamps based on the video.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
@@ -472,7 +525,7 @@ export default function SermonClipGeneratorPage() {
                           <Slider
                             value={[formData.startTime]}
                             onValueChange={handleStartTimeChange}
-                            max={formData.duration}
+                            max={videoDuration}
                             step={1}
                             className="cursor-pointer"
                           />
@@ -483,18 +536,12 @@ export default function SermonClipGeneratorPage() {
                           <Slider
                             value={[formData.endTime]}
                             onValueChange={handleEndTimeChange}
-                            max={formData.duration}
+                            max={videoDuration}
                             step={1}
                             className="cursor-pointer"
                           />
                         </div>
                       </div>
-                    </div>
-
-                    <div className="flex gap-2 justify-center">
-                      <Button variant="outline" size="sm" onClick={() => handleSeek(formData.startTime)}>
-                        <Play className="w-4 h-4 mr-1" /> Preview Start
-                      </Button>
                     </div>
                   </div>
                 </div>
