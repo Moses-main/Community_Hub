@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
 import { motion, AnimatePresence } from "framer-motion";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -82,6 +83,7 @@ export function Navbar() {
 
         {/* User / Mobile Actions */}
         <div className="flex items-center gap-3">
+          <LanguageSelector variant="navbar" />
           {user ? (
             <div className="hidden md:block">
               <DropdownMenu>

@@ -34,6 +34,7 @@ import DevotionalsPage from "@/pages/DevotionalsPage";
 import LiveStreamPage from "@/pages/LiveStreamPage";
 import AdminLiveStreamPage from "@/pages/AdminLiveStreamPage";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { LanguageProvider } from "@/hooks/use-language";
 
 import { useLocation } from "wouter";
 
@@ -87,12 +88,14 @@ function AppContent() {
   useWebSocket();
 
   return (
-    <TooltipProvider>
-      <Layout>
-        <Router />
-      </Layout>
-      <Toaster />
-    </TooltipProvider>
+    <LanguageProvider>
+      <TooltipProvider>
+        <Layout>
+          <Router />
+        </Layout>
+        <Toaster />
+      </TooltipProvider>
+    </LanguageProvider>
   );
 }
 
