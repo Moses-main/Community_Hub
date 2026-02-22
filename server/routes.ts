@@ -2269,6 +2269,206 @@ export async function registerRoutes(
     }
   });
 
+  // === HOUSE CELL COMMUNITY ROUTES ===
+
+  // Get all house cells (public)
+  app.get("/api/house-cells", async (req, res) => {
+    try {
+      const activeOnly = req.query.active === "true";
+      const cells = await storage.getHouseCells(activeOnly);
+      res.json(cells);
+    } catch (err) {
+      console.error("Error fetching house cells:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single house cell
+  app.get("/api/house-cells/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const cell = await storage.getHouseCellById(id);
+      if (!cell) {
+        return res.status(404).json({ message: "House cell not found" });
+      }
+      res.json(cell);
+    } catch (err) {
+      console.error("Error fetching house cell:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create house cell (admin only)
+  app.post("/api/house-cells", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, description, leaderId, leaderName, leaderPhone, address, city, state, country, meetingDay, meetingTime, isActive } = req.body;
+      if (!name || !address) {
+        return res.status(400).json({ message: "Name and address are required" });
+      }
+      const cell = await storage.createHouseCell({
+        name,
+        description: description || null,
+        leaderId: leaderId || null,
+        leaderName: leaderName || null,
+        leaderPhone: leaderPhone || null,
+        address,
+        city: city || null,
+        state: state || null,
+        country: country || null,
+        meetingDay: meetingDay || null,
+        meetingTime: meetingTime || null,
+        isActive: isActive ?? true,
+        createdBy: req.user!.id,
+      });
+      res.status(201).json(cell);
+    } catch (err) {
+      console.error("Error creating house cell:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update house cell (admin only)
+  app.put("/api/house-cells/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { name, description, leaderId, leaderName, leaderPhone, address, city, state, country, meetingDay, meetingTime, isActive } = req.body;
+      const cell = await storage.updateHouseCell(id, {
+        name,
+        description,
+        leaderId,
+        leaderName,
+        leaderPhone,
+        address,
+        city,
+        state,
+        country,
+        meetingDay,
+        meetingTime,
+        isActive,
+      });
+      res.json(cell);
+    } catch (err) {
+      console.error("Error updating house cell:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete house cell (admin only)
+  app.delete("/api/house-cells/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteHouseCell(id);
+      res.json({ message: "House cell deleted" });
+    } catch (err) {
+      console.error("Error deleting house cell:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get house cell members
+  app.get("/api/house-cells/:id/members", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const cell = await storage.getHouseCellById(id);
+      if (!cell) {
+        return res.status(404).json({ message: "House cell not found" });
+      }
+      const members = await storage.getHouseCellMembers(id);
+      res.json(members);
+    } catch (err) {
+      console.error("Error fetching house cell members:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Assign user to house cell (admin only)
+  app.post("/api/house-cells/:id/members", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const houseCellId = Number(req.params.id);
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const cell = await storage.getHouseCellById(houseCellId);
+      if (!cell) {
+        return res.status(404).json({ message: "House cell not found" });
+      }
+      const user = await storage.assignUserToHouseCell(userId, houseCellId);
+      res.json(user);
+    } catch (err) {
+      console.error("Error assigning user to house cell:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Remove user from house cell (admin only)
+  app.delete("/api/house-cells/:id/members/:userId", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userIdParam = req.params.userId;
+      const userId = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
+      const user = await storage.removeUserFromHouseCell(userId);
+      res.json(user);
+    } catch (err) {
+      console.error("Error removing user from house cell:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get house cell messages
+  app.get("/api/house-cells/:id/messages", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const cell = await storage.getHouseCellById(id);
+      if (!cell) {
+        return res.status(404).json({ message: "House cell not found" });
+      }
+      const messages = await storage.getHouseCellMessages(id);
+      res.json(messages);
+    } catch (err) {
+      console.error("Error fetching house cell messages:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Send message to house cell
+  app.post("/api/house-cells/:id/messages", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const houseCellId = Number(req.params.id);
+      const { content } = req.body;
+      if (!content) {
+        return res.status(400).json({ message: "Message content is required" });
+      }
+      const cell = await storage.getHouseCellById(houseCellId);
+      if (!cell) {
+        return res.status(404).json({ message: "House cell not found" });
+      }
+      const message = await storage.createHouseCellMessage({
+        houseCellId,
+        userId: req.user!.id,
+        content,
+      });
+      res.status(201).json(message);
+    } catch (err) {
+      console.error("Error creating house cell message:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's house cell
+  app.get("/api/house-cells/my", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const user = await storage.getUserById(req.user!.id);
+      if (!user || !user.houseCellId) {
+        return res.status(404).json({ message: "You are not assigned to a house cell" });
+      }
+      const cell = await storage.getHouseCellById(user.houseCellId);
+      res.json(cell);
+    } catch (err) {
+      console.error("Error fetching user's house cell:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
 

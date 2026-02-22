@@ -3,12 +3,14 @@ import {
   attendance, attendanceLinks, attendanceSettings, memberMessages, fundraisingCampaigns,
   dailyDevotionals, bibleReadingPlans, bibleReadingProgress,
   music, musicGenres, musicPlaylists, playlistMusic,
+  houseCells, houseCellMessages,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
   type Attendance, type AttendanceLink, type AttendanceSettings, type MemberMessage,
   type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings, type InsertMemberMessage,
-  type InsertMusic, type InsertMusicPlaylist
+  type InsertMusic, type InsertMusicPlaylist,
+  type HouseCell, type HouseCellMessage, type InsertHouseCell, type InsertHouseCellMessage
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -178,6 +180,20 @@ export interface IStorage {
   addMusicToPlaylist(playlistId: number, musicId: number): Promise<void>;
   removeMusicFromPlaylist(playlistId: number, musicId: number): Promise<void>;
   getPlaylistTracks(playlistId: number): Promise<Music[]>;
+
+  // House Cells
+  getHouseCells(activeOnly?: boolean): Promise<HouseCell[]>;
+  getHouseCellById(id: number): Promise<HouseCell | undefined>;
+  createHouseCell(houseCell: InsertHouseCell): Promise<HouseCell>;
+  updateHouseCell(id: number, houseCell: Partial<HouseCell>): Promise<HouseCell>;
+  deleteHouseCell(id: number): Promise<void>;
+  getHouseCellMembers(houseCellId: number): Promise<User[]>;
+  assignUserToHouseCell(userId: string, houseCellId: number): Promise<User>;
+  removeUserFromHouseCell(userId: string): Promise<User>;
+
+  // House Cell Messages
+  getHouseCellMessages(houseCellId: number): Promise<HouseCellMessage[]>;
+  createHouseCellMessage(message: InsertHouseCellMessage): Promise<HouseCellMessage>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1243,6 +1259,73 @@ export class DatabaseStorage implements IStorage {
       if (musicTrack) musicTracks.push(musicTrack);
     }
     return musicTracks;
+  }
+
+  // House Cells
+  async getHouseCells(activeOnly: boolean = false): Promise<HouseCell[]> {
+    if (activeOnly) {
+      return db.select().from(houseCells).where(eq(houseCells.isActive, true)).orderBy(houseCells.name);
+    }
+    return db.select().from(houseCells).orderBy(houseCells.name);
+  }
+
+  async getHouseCellById(id: number): Promise<HouseCell | undefined> {
+    const [cell] = await db.select().from(houseCells).where(eq(houseCells.id, id));
+    return cell;
+  }
+
+  async createHouseCell(houseCell: InsertHouseCell): Promise<HouseCell> {
+    const [created] = await db.insert(houseCells).values(houseCell as any).returning();
+    return created;
+  }
+
+  async updateHouseCell(id: number, updates: Partial<HouseCell>): Promise<HouseCell> {
+    const [updated] = await db
+      .update(houseCells)
+      .set(updates)
+      .where(eq(houseCells.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteHouseCell(id: number): Promise<void> {
+    await db.delete(houseCells).where(eq(houseCells.id, id));
+  }
+
+  async getHouseCellMembers(houseCellId: number): Promise<User[]> {
+    return db.select().from(users).where(eq(users.houseCellId, houseCellId));
+  }
+
+  async assignUserToHouseCell(userId: string, houseCellId: number): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ houseCellId, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  async removeUserFromHouseCell(userId: string): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ houseCellId: null, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  // House Cell Messages
+  async getHouseCellMessages(houseCellId: number): Promise<HouseCellMessage[]> {
+    return db
+      .select()
+      .from(houseCellMessages)
+      .where(eq(houseCellMessages.houseCellId, houseCellId))
+      .orderBy(houseCellMessages.createdAt);
+  }
+
+  async createHouseCellMessage(message: InsertHouseCellMessage): Promise<HouseCellMessage> {
+    const [created] = await db.insert(houseCellMessages).values(message as any).returning();
+    return created;
   }
 }
 
