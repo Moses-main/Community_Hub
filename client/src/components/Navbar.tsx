@@ -24,6 +24,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: "/", label: "Home" },
+    { href: "/live", label: "Live" },
     { href: "/sermons", label: "Sermons" },
     { href: "/events", label: "Events" },
     { href: "/prayer", label: "Prayer" },
