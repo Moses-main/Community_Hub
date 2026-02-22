@@ -669,3 +669,29 @@ export type AuditLog = typeof auditLogs.$inferSelect;
 export type Permission = typeof permissions.$inferSelect;
 export type RolePermission = typeof rolePermissions.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+// === LIVE STREAMING ===
+export const liveStreams = pgTable("live_streams", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  streamUrl: text("stream_url"),
+  embedUrl: text("embed_url"),
+  isLive: boolean("is_live").default(false),
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  viewerCount: integer("viewer_count").default(0),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const liveStreamRelations = relations(liveStreams, ({ one }) => ({
+  creator: one(users, {
+    fields: [liveStreams.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertLiveStreamSchema = createInsertSchema(liveStreams).omit({ id: true, createdAt: true, viewerCount: true });
+export type LiveStream = typeof liveStreams.$inferSelect;
+export type InsertLiveStream = z.infer<typeof insertLiveStreamSchema>;

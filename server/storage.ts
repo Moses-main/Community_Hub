@@ -6,6 +6,7 @@ import {
   houseCells, houseCellMessages,
   groups, groupMembers, groupMessages,
   auditLogs, permissions,
+  liveStreams,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -13,7 +14,8 @@ import {
   type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings, type InsertMemberMessage,
   type InsertMusic, type InsertMusicPlaylist,
   type HouseCell, type HouseCellMessage, type InsertHouseCell, type InsertHouseCellMessage,
-  type Group, type GroupMember, type GroupMessage, type InsertGroup, type InsertGroupMember, type InsertGroupMessage
+  type Group, type GroupMember, type GroupMessage, type InsertGroup, type InsertGroupMember, type InsertGroupMessage,
+  type LiveStream, type InsertLiveStream
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -216,6 +218,15 @@ export interface IStorage {
   // Audit Logs
   createAuditLog(log: { userId?: string; action: string; entityType?: string; entityId?: string; details?: any; ipAddress?: string }): Promise<void>;
   getAuditLogs(limit?: number): Promise<any[]>;
+
+  // Live Streaming
+  getLiveStreams(): Promise<LiveStream[]>;
+  getLiveStream(id: number): Promise<LiveStream | undefined>;
+  getCurrentLiveStream(): Promise<LiveStream | undefined>;
+  createLiveStream(stream: InsertLiveStream): Promise<LiveStream>;
+  updateLiveStream(id: number, updates: Partial<InsertLiveStream>): Promise<LiveStream>;
+  deleteLiveStream(id: number): Promise<void>;
+  updateViewerCount(id: number, count: number): Promise<LiveStream>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1470,6 +1481,51 @@ export class DatabaseStorage implements IStorage {
         email: userMap.get(log.userId)?.email,
       } : null,
     }));
+  }
+
+  // Live Streams
+  async getLiveStreams(): Promise<LiveStream[]> {
+    return db.select().from(liveStreams).orderBy(desc(liveStreams.createdAt));
+  }
+
+  async getLiveStream(id: number): Promise<LiveStream | undefined> {
+    const [stream] = await db.select().from(liveStreams).where(eq(liveStreams.id, id));
+    return stream;
+  }
+
+  async getCurrentLiveStream(): Promise<LiveStream | undefined> {
+    const [stream] = await db.select().from(liveStreams).where(eq(liveStreams.isLive, true));
+    return stream;
+  }
+
+  async createLiveStream(stream: InsertLiveStream): Promise<LiveStream> {
+    const [created] = await db.insert(liveStreams).values({
+      ...stream,
+      startedAt: stream.isLive ? new Date() : null,
+    }).returning();
+    return created;
+  }
+
+  async updateLiveStream(id: number, updates: Partial<InsertLiveStream>): Promise<LiveStream> {
+    const [updated] = await db
+      .update(liveStreams)
+      .set({ ...updates, endedAt: updates.isLive === false ? new Date() : undefined })
+      .where(eq(liveStreams.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteLiveStream(id: number): Promise<void> {
+    await db.delete(liveStreams).where(eq(liveStreams.id, id));
+  }
+
+  async updateViewerCount(id: number, count: number): Promise<LiveStream> {
+    const [updated] = await db
+      .update(liveStreams)
+      .set({ viewerCount: count })
+      .where(eq(liveStreams.id, id))
+      .returning();
+    return updated;
   }
 }
 

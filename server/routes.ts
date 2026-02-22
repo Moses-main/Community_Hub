@@ -2972,6 +2972,128 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // === LIVE STREAMING ROUTES ===
+
+  // Get all live streams (public)
+  app.get("/api/live-streams", async (req, res) => {
+    try {
+      const streams = await storage.getLiveStreams();
+      res.json(streams);
+    } catch (err) {
+      console.error("Error fetching live streams:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get current live stream (public)
+  app.get("/api/live-streams/current", async (req, res) => {
+    try {
+      const stream = await storage.getCurrentLiveStream();
+      res.json(stream || null);
+    } catch (err) {
+      console.error("Error fetching current live stream:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single live stream (public)
+  app.get("/api/live-streams/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const stream = await storage.getLiveStream(id);
+      if (!stream) {
+        return res.status(404).json({ message: "Live stream not found" });
+      }
+      res.json(stream);
+    } catch (err) {
+      console.error("Error fetching live stream:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Start a live stream (admin only)
+  app.post("/api/live-streams", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { title, description, streamUrl, embedUrl } = req.body;
+      
+      // End any currently live streams first
+      const currentStream = await storage.getCurrentLiveStream();
+      if (currentStream) {
+        await storage.updateLiveStream(currentStream.id, { isLive: false });
+      }
+
+      const stream = await storage.createLiveStream({
+        title,
+        description,
+        streamUrl,
+        embedUrl,
+        isLive: true,
+        createdBy: req.user!.id,
+      });
+
+      res.status(201).json(stream);
+    } catch (err) {
+      console.error("Error creating live stream:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update a live stream (admin only)
+  app.put("/api/live-streams/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { title, description, streamUrl, embedUrl, isLive } = req.body;
+      
+      const stream = await storage.getLiveStream(id);
+      if (!stream) {
+        return res.status(404).json({ message: "Live stream not found" });
+      }
+
+      const updated = await storage.updateLiveStream(id, {
+        title: title ?? stream.title,
+        description: description ?? stream.description,
+        streamUrl: streamUrl ?? stream.streamUrl,
+        embedUrl: embedUrl ?? stream.embedUrl,
+        isLive: isLive ?? stream.isLive,
+      });
+
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating live stream:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // End a live stream (admin only)
+  app.post("/api/live-streams/:id/end", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      
+      const stream = await storage.getLiveStream(id);
+      if (!stream) {
+        return res.status(404).json({ message: "Live stream not found" });
+      }
+
+      const updated = await storage.updateLiveStream(id, { isLive: false });
+      res.json(updated);
+    } catch (err) {
+      console.error("Error ending live stream:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete a live stream (admin only)
+  app.delete("/api/live-streams/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteLiveStream(id);
+      res.json({ message: "Live stream deleted" });
+    } catch (err) {
+      console.error("Error deleting live stream:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
 
