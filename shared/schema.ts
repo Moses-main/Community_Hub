@@ -963,3 +963,87 @@ export type InsertContentFlag = z.infer<typeof insertContentFlagSchema>;
 export const insertAbuseReportSchema = createInsertSchema(abuseReports).omit({ id: true, createdAt: true });
 export type AbuseReport = typeof abuseReports.$inferSelect;
 export type InsertAbuseReport = z.infer<typeof insertAbuseReportSchema>;
+
+// === Bible Study Tools ===
+
+export const userHighlights = pgTable("user_highlights", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  book: text("book").notNull(),
+  chapter: integer("chapter").notNull(),
+  verse: integer("verse").notNull(),
+  color: text("color").default("#FFEB3B"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userNotes = pgTable("user_notes", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  book: text("book").notNull(),
+  chapter: integer("chapter").notNull(),
+  verse: integer("verse").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const verseDiscussions = pgTable("verse_discussions", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  book: text("book").notNull(),
+  chapter: integer("chapter").notNull(),
+  verse: integer("verse").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const groupAnnotations = pgTable("group_annotations", {
+  id: serial("id").primaryKey(),
+  groupId: integer("groups").references(() => groups.id).notNull(),
+  book: text("book").notNull(),
+  chapter: integer("chapter").notNull(),
+  verse: integer("verse").notNull(),
+  content: text("content").notNull(),
+  createdBy: uuid("user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const userHighlightRelations = relations(userHighlights, ({ one }) => ({
+  user: one(users, {
+    fields: [userHighlights.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userNoteRelations = relations(userNotes, ({ one }) => ({
+  user: one(users, {
+    fields: [userNotes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const verseDiscussionRelations = relations(verseDiscussions, ({ one }) => ({
+  user: one(users, {
+    fields: [verseDiscussions.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertUserHighlightSchema = createInsertSchema(userHighlights).omit({ id: true, createdAt: true });
+export type UserHighlight = typeof userHighlights.$inferSelect;
+export type InsertUserHighlight = z.infer<typeof insertUserHighlightSchema>;
+
+export const insertUserNoteSchema = createInsertSchema(userNotes).omit({ id: true, createdAt: true, updatedAt: true });
+export type UserNote = typeof userNotes.$inferSelect;
+export type InsertUserNote = z.infer<typeof insertUserNoteSchema>;
+
+export const insertVerseDiscussionSchema = createInsertSchema(verseDiscussions).omit({ id: true, createdAt: true });
+export type VerseDiscussion = typeof verseDiscussions.$inferSelect;
+export type InsertVerseDiscussion = z.infer<typeof insertVerseDiscussionSchema>;
+
+export const insertGroupAnnotationSchema = createInsertSchema(groupAnnotations).omit({ id: true, createdAt: true });
+export type GroupAnnotation = typeof groupAnnotations.$inferSelect;
+export type InsertGroupAnnotation = z.infer<typeof insertGroupAnnotationSchema>;
