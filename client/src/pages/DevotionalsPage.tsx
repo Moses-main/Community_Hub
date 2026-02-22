@@ -3,6 +3,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import { 
   BookOpen, 
   Loader2, 
@@ -10,7 +15,9 @@ import {
   CheckCircle,
   ChevronRight,
   Clock,
-  Target
+  Target,
+  Plus,
+  Sparkles
 } from "lucide-react";
 import { buildApiUrl } from "@/lib/api-config";
 
@@ -43,12 +50,30 @@ interface ReadingProgress {
 
 export default function DevotionalsPage() {
   const { user, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [todayDevotional, setTodayDevotional] = useState<DailyDevotional | null>(null);
   const [devotionals, setDevotionals] = useState<DailyDevotional[]>([]);
   const [readingPlans, setReadingPlans] = useState<BibleReadingPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<BibleReadingPlan | null>(null);
   const [progress, setProgress] = useState<ReadingProgress[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Admin states
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [newDevotional, setNewDevotional] = useState({
+    title: "",
+    content: "",
+    author: "",
+    bibleVerse: "",
+    theme: "",
+    publishDate: "",
+  });
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const isAdmin = user?.isAdmin;
 
   useEffect(() => {
     async function fetchData() {
@@ -125,6 +150,73 @@ export default function DevotionalsPage() {
   const completedDays = progress.filter(p => p.completed).length;
   const progressPercentage = selectedPlan ? Math.round((completedDays / selectedPlan.duration) * 100) : 0;
 
+  const createDevotional = async () => {
+    if (!newDevotional.title || !newDevotional.content) {
+      toast({ title: "Error", description: "Title and content are required", variant: "destructive" });
+      return;
+    }
+    setIsCreating(true);
+    try {
+      const res = await fetch(buildApiUrl("/api/devotionals"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(newDevotional),
+      });
+      if (res.ok) {
+        toast({ title: "Success", description: "Devotional created successfully!" });
+        setShowCreateDialog(false);
+        setNewDevotional({ title: "", content: "", author: "", bibleVerse: "", theme: "", publishDate: "" });
+        // Refresh devotionals
+        const devotionalRes = await fetch(buildApiUrl("/api/devotionals?published=true"));
+        if (devotionalRes.ok) {
+          const data = await devotionalRes.json();
+          setDevotionals(data);
+        }
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to create devotional", variant: "destructive" });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const generateWithAI = async () => {
+    if (!aiPrompt) {
+      toast({ title: "Error", description: "Please enter a topic or theme", variant: "destructive" });
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const res = await fetch(buildApiUrl("/api/devotionals/ai-generate"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ prompt: aiPrompt }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNewDevotional({
+          title: data.title || "",
+          content: data.content || "",
+          author: data.author || "",
+          bibleVerse: data.bibleVerse || "",
+          theme: data.theme || "",
+          publishDate: data.publishDate || "",
+        });
+        toast({ title: "Success", description: "Devotional generated! You can edit before saving." });
+        setShowAIDialog(false);
+        setShowCreateDialog(true);
+      } else {
+        toast({ title: "Error", description: "Failed to generate devotional", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to generate devotional", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -135,11 +227,133 @@ export default function DevotionalsPage() {
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Daily Devotionals</h1>
-        <p className="text-muted-foreground mt-1">
-          Grow in your faith with daily devotionals and Bible reading plans
-        </p>
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Daily Devotionals</h1>
+          <p className="text-muted-foreground mt-1">
+            Grow in your faith with daily devotionals and Bible reading plans
+          </p>
+        </div>
+        
+        {isAdmin && (
+          <div className="flex gap-2">
+            <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Generate with AI
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>AI Devotional Generator</DialogTitle>
+                  <DialogDescription>
+                    Enter a topic or theme, and AI will generate a devotional for you
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Topic or Theme</Label>
+                    <Textarea
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      placeholder="e.g., God's love, faith, forgiveness, Easter, etc."
+                      rows={3}
+                    />
+                  </div>
+                  <Button
+                    onClick={generateWithAI}
+                    disabled={isGenerating}
+                    className="w-full gap-2"
+                  >
+                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Generate Devotional
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Create Devotional
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Create New Devotional</DialogTitle>
+                  <DialogDescription>
+                    Create a new daily devotional for the community
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                  <div>
+                    <Label>Title *</Label>
+                    <Input
+                      value={newDevotional.title}
+                      onChange={(e) => setNewDevotional({ ...newDevotional, title: e.target.value })}
+                      placeholder="Enter devotional title"
+                    />
+                  </div>
+                  <div>
+                    <Label>Content *</Label>
+                    <Textarea
+                      value={newDevotional.content}
+                      onChange={(e) => setNewDevotional({ ...newDevotional, content: e.target.value })}
+                      placeholder="Write your devotional content..."
+                      rows={8}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Author</Label>
+                      <Input
+                        value={newDevotional.author}
+                        onChange={(e) => setNewDevotional({ ...newDevotional, author: e.target.value })}
+                        placeholder="Author name"
+                      />
+                    </div>
+                    <div>
+                      <Label>Bible Verse</Label>
+                      <Input
+                        value={newDevotional.bibleVerse}
+                        onChange={(e) => setNewDevotional({ ...newDevotional, bibleVerse: e.target.value })}
+                        placeholder="e.g., John 3:16"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Theme</Label>
+                      <Input
+                        value={newDevotional.theme}
+                        onChange={(e) => setNewDevotional({ ...newDevotional, theme: e.target.value })}
+                        placeholder="Theme or category"
+                      />
+                    </div>
+                    <div>
+                      <Label>Publish Date</Label>
+                      <Input
+                        type="date"
+                        value={newDevotional.publishDate}
+                        onChange={(e) => setNewDevotional({ ...newDevotional, publishDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    onClick={createDevotional}
+                    disabled={isCreating}
+                    className="w-full"
+                  >
+                    {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    {isCreating ? "Creating..." : "Create Devotional"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="devotional" className="space-y-6">
