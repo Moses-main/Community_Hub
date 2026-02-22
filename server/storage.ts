@@ -54,7 +54,9 @@ export interface IStorage {
 
   // Prayer Requests
   getPrayerRequests(): Promise<PrayerRequest[]>;
+  getPrayerRequestById(id: number): Promise<PrayerRequest | undefined>;
   createPrayerRequest(request: InsertPrayerRequest): Promise<PrayerRequest>;
+  updatePrayerRequest(id: number, updates: Partial<PrayerRequest>): Promise<PrayerRequest>;
   incrementPrayCount(id: number): Promise<PrayerRequest | undefined>;
   deletePrayerRequest(id: number): Promise<void>;
 
@@ -398,9 +400,23 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(prayerRequests).orderBy(desc(prayerRequests.createdAt));
   }
 
+  async getPrayerRequestById(id: number): Promise<PrayerRequest | undefined> {
+    const [request] = await db.select().from(prayerRequests).where(eq(prayerRequests.id, id));
+    return request;
+  }
+
   async createPrayerRequest(insertRequest: InsertPrayerRequest): Promise<PrayerRequest> {
     const [request] = await db.insert(prayerRequests).values(insertRequest).returning();
     return request;
+  }
+
+  async updatePrayerRequest(id: number, updates: Partial<PrayerRequest>): Promise<PrayerRequest> {
+    const [updated] = await db
+      .update(prayerRequests)
+      .set(updates)
+      .where(eq(prayerRequests.id, id))
+      .returning();
+    return updated;
   }
 
   async incrementPrayCount(id: number): Promise<PrayerRequest | undefined> {

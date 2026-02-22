@@ -62,10 +62,12 @@ export const sermons = pgTable("sermons", {
 
 export const prayerRequests = pgTable("prayer_requests", {
   id: serial("id").primaryKey(),
-  userId: uuid("user_id").references(() => users.id), // Link to auth users
-  authorName: text("author_name"), // For display if user is not linked or anonymous
+  userId: uuid("user_id").references(() => users.id),
+  authorName: text("author_name"),
   content: text("content").notNull(),
   isAnonymous: boolean("is_anonymous").default(false),
+  isAnswered: boolean("is_answered").default(false),
+  answeredAt: timestamp("answered_at"),
   createdAt: timestamp("created_at").defaultNow(),
   prayCount: integer("pray_count").default(0),
 });
