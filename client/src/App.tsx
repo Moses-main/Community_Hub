@@ -39,6 +39,7 @@ import MusicPage from "@/pages/MusicPage";
 import GroupsPage from "@/pages/GroupsPage";
 import BiblePage from "@/pages/BiblePage";
 import DiscipleshipPage from "@/pages/DiscipleshipPage";
+import SermonClipGeneratorPage from "@/pages/SermonClipGeneratorPage";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { LanguageProvider } from "@/hooks/use-language";
 
@@ -85,6 +86,7 @@ function Router() {
           <Route path="/groups" component={GroupsPage} />
           <Route path="/bible" component={BiblePage} />
           <Route path="/discipleship" component={DiscipleshipPage} />
+          <Route path="/admin/sermon-clips" component={SermonClipGeneratorPage} />
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/messages" component={MessagesPage} />
           {/* Detail pages could be added here later e.g. /sermons/:id */}

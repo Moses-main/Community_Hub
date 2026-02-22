@@ -3977,6 +3977,79 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // === Sermon Clip Generator Routes ===
+
+  app.get("/api/sermon-clips", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const clips = await storage.getSermonClips();
+      res.json(clips);
+    } catch (err) {
+      console.error("Error getting sermon clips:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/sermon-clips/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const clip = await storage.getSermonClip(Number(req.params.id));
+      if (!clip) return res.status(404).json({ message: "Clip not found" });
+      res.json(clip);
+    } catch (err) {
+      console.error("Error getting sermon clip:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/sermon-clips", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const { title, sourceVideoUrl, clipStartTime, clipEndTime, format, overlayText, verseReference } = req.body;
+      
+      const clip = await storage.createSermonClip({
+        title,
+        sourceVideoUrl,
+        clipStartTime,
+        clipEndTime,
+        format: format || "landscape",
+        overlayText,
+        verseReference,
+        status: "pending",
+        createdBy: req.user.id,
+      });
+      res.json(clip);
+    } catch (err) {
+      console.error("Error creating sermon clip:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/sermon-clips/:id/process", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      
+      const clip = await storage.getSermonClip(Number(req.params.id));
+      if (!clip) return res.status(404).json({ message: "Clip not found" });
+      
+      await storage.updateSermonClip(Number(req.params.id), { status: "processing" });
+      
+      res.json({ message: "Clip processing started", clipId: clip.id });
+    } catch (err) {
+      console.error("Error processing sermon clip:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/sermon-clips/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      await storage.deleteSermonClip(Number(req.params.id));
+      res.json({ message: "Clip deleted" });
+    } catch (err) {
+      console.error("Error deleting sermon clip:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
 

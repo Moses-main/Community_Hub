@@ -12,6 +12,7 @@ import {
   privacySettings, contentFlags, abuseReports,
   userHighlights, userNotes, verseDiscussions, groupAnnotations,
   discipleshipTracks, lessons, quizzes, userProgress, reflections,
+  sermonClips,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -40,7 +41,8 @@ import {
   type Lesson, type InsertLesson,
   type Quiz, type InsertQuiz,
   type UserProgress, type InsertUserProgress,
-  type Reflection, type InsertReflection
+  type Reflection, type InsertReflection,
+  type SermonClip, type InsertSermonClip
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -328,6 +330,13 @@ export interface IStorage {
   getReflections(userId: string, lessonId?: number): Promise<Reflection[]>;
   createReflection(reflection: InsertReflection): Promise<Reflection>;
   deleteReflection(id: number): Promise<void>;
+
+  // Sermon Clips
+  getSermonClips(): Promise<SermonClip[]>;
+  getSermonClip(id: number): Promise<SermonClip | undefined>;
+  createSermonClip(clip: InsertSermonClip): Promise<SermonClip>;
+  updateSermonClip(id: number, updates: Partial<SermonClip>): Promise<SermonClip>;
+  deleteSermonClip(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2030,6 +2039,34 @@ export class DatabaseStorage implements IStorage {
 
   async deleteReflection(id: number): Promise<void> {
     await db.delete(reflections).where(eq(reflections.id, id));
+  }
+
+  // Sermon Clips
+  async getSermonClips(): Promise<SermonClip[]> {
+    return db.select().from(sermonClips).orderBy(desc(sermonClips.createdAt));
+  }
+
+  async getSermonClip(id: number): Promise<SermonClip | undefined> {
+    const [clip] = await db.select().from(sermonClips).where(eq(sermonClips.id, id));
+    return clip;
+  }
+
+  async createSermonClip(clip: InsertSermonClip): Promise<SermonClip> {
+    const [created] = await db.insert(sermonClips).values(clip).returning();
+    return created;
+  }
+
+  async updateSermonClip(id: number, updates: Partial<SermonClip>): Promise<SermonClip> {
+    const [updated] = await db
+      .update(sermonClips)
+      .set(updates)
+      .where(eq(sermonClips.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSermonClip(id: number): Promise<void> {
+    await db.delete(sermonClips).where(eq(sermonClips.id, id));
   }
 }
 
