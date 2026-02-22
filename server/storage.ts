@@ -2,10 +2,13 @@ import {
   users, branding, events, sermons, prayerRequests, donations, eventRsvps,
   attendance, attendanceLinks, attendanceSettings, memberMessages, fundraisingCampaigns,
   dailyDevotionals, bibleReadingPlans, bibleReadingProgress,
+  music, musicGenres, musicPlaylists, playlistMusic,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
+  type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
   type Attendance, type AttendanceLink, type AttendanceSettings, type MemberMessage,
-  type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings, type InsertMemberMessage
+  type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings, type InsertMemberMessage,
+  type InsertMusic, type InsertMusicPlaylist
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -152,6 +155,29 @@ export interface IStorage {
   createBibleReadingPlan(plan: Partial<BibleReadingPlan>): Promise<BibleReadingPlan>;
   updateBibleReadingProgress(userId: string, planId: number, dayNumber: number): Promise<BibleReadingProgress>;
   getUserReadingProgress(userId: string, planId: number): Promise<BibleReadingProgress[]>;
+
+  // Music Library
+  getMusic(publishedOnly?: boolean): Promise<Music[]>;
+  getMusicById(id: number): Promise<Music | undefined>;
+  createMusic(music: InsertMusic): Promise<Music>;
+  updateMusic(id: number, music: Partial<Music>): Promise<Music>;
+  deleteMusic(id: number): Promise<void>;
+  incrementMusicPlayCount(id: number): Promise<Music>;
+
+  // Music Genres
+  getMusicGenres(): Promise<MusicGenre[]>;
+  createMusicGenre(name: string, description?: string): Promise<MusicGenre>;
+  deleteMusicGenre(id: number): Promise<void>;
+
+  // Music Playlists
+  getMusicPlaylists(userId?: string): Promise<MusicPlaylist[]>;
+  getMusicPlaylistById(id: number): Promise<MusicPlaylist | undefined>;
+  createMusicPlaylist(playlist: InsertMusicPlaylist): Promise<MusicPlaylist>;
+  updateMusicPlaylist(id: number, playlist: Partial<MusicPlaylist>): Promise<MusicPlaylist>;
+  deleteMusicPlaylist(id: number): Promise<void>;
+  addMusicToPlaylist(playlistId: number, musicId: number): Promise<void>;
+  removeMusicFromPlaylist(playlistId: number, musicId: number): Promise<void>;
+  getPlaylistTracks(playlistId: number): Promise<Music[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1082,6 +1108,141 @@ export class DatabaseStorage implements IStorage {
         eq(bibleReadingProgress.planId, planId)
       ))
       .orderBy(asc(bibleReadingProgress.dayNumber));
+  }
+
+  // Music Library
+  async getMusic(publishedOnly: boolean = false): Promise<Music[]> {
+    if (publishedOnly) {
+      return db.select().from(music).where(eq(music.isPublished, true)).orderBy(desc(music.playCount), desc(music.createdAt));
+    }
+    return db.select().from(music).orderBy(desc(music.playCount), desc(music.createdAt));
+  }
+
+  async getMusicById(id: number): Promise<Music | undefined> {
+    const [track] = await db.select().from(music).where(eq(music.id, id));
+    return track;
+  }
+
+  async createMusic(musicData: InsertMusic): Promise<Music> {
+    const [created] = await db.insert(music).values(musicData as any).returning();
+    return created;
+  }
+
+  async updateMusic(id: number, updates: Partial<Music>): Promise<Music> {
+    const [updated] = await db
+      .update(music)
+      .set(updates)
+      .where(eq(music.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteMusic(id: number): Promise<void> {
+    await db.delete(music).where(eq(music.id, id));
+  }
+
+  async incrementMusicPlayCount(id: number): Promise<Music> {
+    await db.execute(sql`UPDATE music SET play_count = play_count + 1 WHERE id = ${id}`);
+    const [updated] = await db.select().from(music).where(eq(music.id, id));
+    return updated!;
+  }
+
+  // Music Genres
+  async getMusicGenres(): Promise<MusicGenre[]> {
+    return db.select().from(musicGenres).orderBy(musicGenres.name);
+  }
+
+  async createMusicGenre(name: string, description?: string): Promise<MusicGenre> {
+    const [created] = await db.insert(musicGenres).values({ name, description }).returning();
+    return created;
+  }
+
+  async deleteMusicGenre(id: number): Promise<void> {
+    await db.delete(musicGenres).where(eq(musicGenres.id, id));
+  }
+
+  // Music Playlists
+  async getMusicPlaylists(userId?: string): Promise<MusicPlaylist[]> {
+    if (userId) {
+      return db
+        .select()
+        .from(musicPlaylists)
+        .where(or(eq(musicPlaylists.userId, userId), eq(musicPlaylists.isPublic, true)))
+        .orderBy(desc(musicPlaylists.updatedAt));
+    }
+    return db.select().from(musicPlaylists).where(eq(musicPlaylists.isPublic, true)).orderBy(desc(musicPlaylists.updatedAt));
+  }
+
+  async getMusicPlaylistById(id: number): Promise<MusicPlaylist | undefined> {
+    const [playlist] = await db.select().from(musicPlaylists).where(eq(musicPlaylists.id, id));
+    return playlist;
+  }
+
+  async createMusicPlaylist(playlist: InsertMusicPlaylist): Promise<MusicPlaylist> {
+    const [created] = await db.insert(musicPlaylists).values(playlist as any).returning();
+    return created;
+  }
+
+  async updateMusicPlaylist(id: number, updates: Partial<MusicPlaylist>): Promise<MusicPlaylist> {
+    const [updated] = await db
+      .update(musicPlaylists)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(musicPlaylists.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteMusicPlaylist(id: number): Promise<void> {
+    await db.delete(musicPlaylists).where(eq(musicPlaylists.id, id));
+  }
+
+  async addMusicToPlaylist(playlistId: number, musicId: number): Promise<void> {
+    const existing = await db
+      .select()
+      .from(playlistMusic)
+      .where(and(
+        eq(playlistMusic.playlistId, playlistId),
+        eq(playlistMusic.musicId, musicId)
+      ));
+
+    if (existing.length > 0) return;
+
+    const maxPosition = await db
+      .select({ maxPos: sql<number>`MAX(${playlistMusic.position})` })
+      .from(playlistMusic)
+      .where(eq(playlistMusic.playlistId, playlistId));
+
+    const position = (maxPosition[0]?.maxPos ?? 0) + 1;
+
+    await db.insert(playlistMusic).values({
+      playlistId,
+      musicId,
+      position,
+    });
+  }
+
+  async removeMusicFromPlaylist(playlistId: number, musicId: number): Promise<void> {
+    await db
+      .delete(playlistMusic)
+      .where(and(
+        eq(playlistMusic.playlistId, playlistId),
+        eq(playlistMusic.musicId, musicId)
+      ));
+  }
+
+  async getPlaylistTracks(playlistId: number): Promise<Music[]> {
+    const tracks = await db
+      .select()
+      .from(playlistMusic)
+      .where(eq(playlistMusic.playlistId, playlistId))
+      .orderBy(playlistMusic.position);
+
+    const musicTracks: Music[] = [];
+    for (const track of tracks) {
+      const [musicTrack] = await db.select().from(music).where(eq(music.id, track.musicId));
+      if (musicTrack) musicTracks.push(musicTrack);
+    }
+    return musicTracks;
   }
 }
 

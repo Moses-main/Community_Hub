@@ -386,3 +386,94 @@ export type InsertMemberMessage = z.infer<typeof insertMemberMessageSchema>;
 // Request types
 export type CreateAttendanceRequest = InsertAttendance;
 export type CreateAttendanceLinkRequest = InsertAttendanceLink;
+
+// === MUSIC LIBRARY ===
+
+export const musicGenres = pgTable("music_genres", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const music = pgTable("music", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  artist: text("artist").notNull(),
+  album: text("album"),
+  genreId: integer("genre_id").references(() => musicGenres.id),
+  duration: integer("duration"), // in seconds
+  audioUrl: text("audio_url"),
+  audioFilePath: text("audio_file_path"),
+  coverImageUrl: text("cover_image_url"),
+  lyrics: text("lyrics"),
+  isPublished: boolean("is_published").default(false),
+  playCount: integer("play_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: uuid("created_by").references(() => users.id),
+});
+
+export const musicPlaylists = pgTable("music_playlists", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  coverImageUrl: text("cover_image_url"),
+  userId: uuid("user_id").references(() => users.id),
+  isPublic: boolean("is_public").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const playlistMusic = pgTable("playlist_music", {
+  id: serial("id").primaryKey(),
+  playlistId: integer("playlist_id").references(() => musicPlaylists.id).notNull(),
+  musicId: integer("music_id").references(() => music.id).notNull(),
+  position: integer("position").notNull(),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
+// === MUSIC RELATIONS ===
+export const musicRelations = relations(music, ({ one }) => ({
+  genre: one(musicGenres, {
+    fields: [music.genreId],
+    references: [musicGenres.id],
+  }),
+  creator: one(users, {
+    fields: [music.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const musicPlaylistsRelations = relations(musicPlaylists, ({ one, many }) => ({
+  user: one(users, {
+    fields: [musicPlaylists.userId],
+    references: [users.id],
+  }),
+  tracks: many(playlistMusic),
+}));
+
+export const playlistMusicRelations = relations(playlistMusic, ({ one }) => ({
+  playlist: one(musicPlaylists, {
+    fields: [playlistMusic.playlistId],
+    references: [musicPlaylists.id],
+  }),
+  music: one(music, {
+    fields: [playlistMusic.musicId],
+    references: [music.id],
+  }),
+}));
+
+// === MUSIC SCHEMAS ===
+export const insertMusicSchema = createInsertSchema(music).omit({ id: true, playCount: true, createdAt: true });
+export const insertMusicPlaylistSchema = createInsertSchema(musicPlaylists).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPlaylistMusicSchema = createInsertSchema(playlistMusic).omit({ id: true, addedAt: true });
+
+// === MUSIC TYPES ===
+export type Music = typeof music.$inferSelect;
+export type MusicPlaylist = typeof musicPlaylists.$inferSelect;
+export type PlaylistMusic = typeof playlistMusic.$inferSelect;
+export type MusicGenre = typeof musicGenres.$inferSelect;
+
+export type InsertMusic = z.infer<typeof insertMusicSchema>;
+export type InsertMusicPlaylist = z.infer<typeof insertMusicPlaylistSchema>;
+export type InsertPlaylistMusic = z.infer<typeof insertPlaylistMusicSchema>;

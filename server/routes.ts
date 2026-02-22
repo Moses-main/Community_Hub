@@ -1994,6 +1994,281 @@ export async function registerRoutes(
     console.error("Error seeding database on startup:", err);
   }
 
+  // === MUSIC LIBRARY ROUTES ===
+
+  // Get all music tracks (public)
+  app.get("/api/music", async (req, res) => {
+    try {
+      const publishedOnly = req.query.published === "true";
+      const tracks = await storage.getMusic(publishedOnly);
+      res.json(tracks);
+    } catch (err) {
+      console.error("Error fetching music:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single track
+  app.get("/api/music/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const track = await storage.getMusicById(id);
+      if (!track) {
+        return res.status(404).json({ message: "Track not found" });
+      }
+      res.json(track);
+    } catch (err) {
+      console.error("Error fetching track:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create music track (admin only)
+  app.post("/api/music", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { title, artist, album, genreId, duration, audioUrl, audioFilePath, coverImageUrl, lyrics, isPublished } = req.body;
+      const track = await storage.createMusic({
+        title,
+        artist,
+        album,
+        genreId: genreId || null,
+        duration: duration || null,
+        audioUrl: audioUrl || null,
+        audioFilePath: audioFilePath || null,
+        coverImageUrl: coverImageUrl || null,
+        lyrics: lyrics || null,
+        isPublished: isPublished ?? false,
+        createdBy: req.user!.id,
+      });
+      res.status(201).json(track);
+    } catch (err) {
+      console.error("Error creating track:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update music track (admin only)
+  app.put("/api/music/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { title, artist, album, genreId, duration, audioUrl, audioFilePath, coverImageUrl, lyrics, isPublished } = req.body;
+      const track = await storage.updateMusic(id, {
+        title,
+        artist,
+        album,
+        genreId: genreId || null,
+        duration: duration || null,
+        audioUrl: audioUrl || null,
+        audioFilePath: audioFilePath || null,
+        coverImageUrl: coverImageUrl || null,
+        lyrics: lyrics || null,
+        isPublished,
+      });
+      res.json(track);
+    } catch (err) {
+      console.error("Error updating track:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete music track (admin only)
+  app.delete("/api/music/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteMusic(id);
+      res.json({ message: "Track deleted" });
+    } catch (err) {
+      console.error("Error deleting track:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Increment play count (public - for tracking)
+  app.post("/api/music/:id/play", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const track = await storage.incrementMusicPlayCount(id);
+      res.json({ message: "Play count updated", playCount: track.playCount });
+    } catch (err) {
+      console.error("Error updating play count:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get music genres
+  app.get("/api/music/genres", async (req, res) => {
+    try {
+      const genres = await storage.getMusicGenres();
+      res.json(genres);
+    } catch (err) {
+      console.error("Error fetching genres:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create music genre (admin only)
+  app.post("/api/music/genres", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, description } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Genre name is required" });
+      }
+      const genre = await storage.createMusicGenre(name, description);
+      res.status(201).json(genre);
+    } catch (err) {
+      console.error("Error creating genre:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete music genre (admin only)
+  app.delete("/api/music/genres/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteMusicGenre(id);
+      res.json({ message: "Genre deleted" });
+    } catch (err) {
+      console.error("Error deleting genre:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get playlists
+  app.get("/api/music/playlists", async (req, res) => {
+    try {
+      const userId = req.query.userId as string;
+      const playlists = await storage.getMusicPlaylists(userId);
+      res.json(playlists);
+    } catch (err) {
+      console.error("Error fetching playlists:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single playlist with tracks
+  app.get("/api/music/playlists/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const playlist = await storage.getMusicPlaylistById(id);
+      if (!playlist) {
+        return res.status(404).json({ message: "Playlist not found" });
+      }
+      const tracks = await storage.getPlaylistTracks(id);
+      res.json({ ...playlist, tracks });
+    } catch (err) {
+      console.error("Error fetching playlist:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create playlist (authenticated users)
+  app.post("/api/music/playlists", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { name, description, coverImageUrl, isPublic } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Playlist name is required" });
+      }
+      const playlist = await storage.createMusicPlaylist({
+        name,
+        description: description || null,
+        coverImageUrl: coverImageUrl || null,
+        userId: req.user!.id,
+        isPublic: isPublic ?? false,
+      });
+      res.status(201).json(playlist);
+    } catch (err) {
+      console.error("Error creating playlist:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update playlist
+  app.put("/api/music/playlists/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const playlist = await storage.getMusicPlaylistById(id);
+      if (!playlist) {
+        return res.status(404).json({ message: "Playlist not found" });
+      }
+      if (playlist.userId !== req.user!.id && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Not authorized to update this playlist" });
+      }
+      const { name, description, coverImageUrl, isPublic } = req.body;
+      const updated = await storage.updateMusicPlaylist(id, {
+        name: name || playlist.name,
+        description: description !== undefined ? description : playlist.description,
+        coverImageUrl: coverImageUrl !== undefined ? coverImageUrl : playlist.coverImageUrl,
+        isPublic: isPublic !== undefined ? isPublic : playlist.isPublic,
+      });
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating playlist:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete playlist
+  app.delete("/api/music/playlists/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const playlist = await storage.getMusicPlaylistById(id);
+      if (!playlist) {
+        return res.status(404).json({ message: "Playlist not found" });
+      }
+      if (playlist.userId !== req.user!.id && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Not authorized to delete this playlist" });
+      }
+      await storage.deleteMusicPlaylist(id);
+      res.json({ message: "Playlist deleted" });
+    } catch (err) {
+      console.error("Error deleting playlist:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Add track to playlist
+  app.post("/api/music/playlists/:id/tracks", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const playlistId = Number(req.params.id);
+      const playlist = await storage.getMusicPlaylistById(playlistId);
+      if (!playlist) {
+        return res.status(404).json({ message: "Playlist not found" });
+      }
+      if (playlist.userId !== req.user!.id && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Not authorized to modify this playlist" });
+      }
+      const { musicId } = req.body;
+      if (!musicId) {
+        return res.status(400).json({ message: "Music ID is required" });
+      }
+      await storage.addMusicToPlaylist(playlistId, musicId);
+      res.json({ message: "Track added to playlist" });
+    } catch (err) {
+      console.error("Error adding track to playlist:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Remove track from playlist
+  app.delete("/api/music/playlists/:id/tracks/:musicId", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const playlistId = Number(req.params.id);
+      const musicId = Number(req.params.musicId);
+      const playlist = await storage.getMusicPlaylistById(playlistId);
+      if (!playlist) {
+        return res.status(404).json({ message: "Playlist not found" });
+      }
+      if (playlist.userId !== req.user!.id && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Not authorized to modify this playlist" });
+      }
+      await storage.removeMusicFromPlaylist(playlistId, musicId);
+      res.json({ message: "Track removed from playlist" });
+    } catch (err) {
+      console.error("Error removing track from playlist:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
 
