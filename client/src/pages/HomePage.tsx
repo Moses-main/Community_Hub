@@ -10,6 +10,7 @@ import { FaPray } from "react-icons/fa";
 import { FaHandHoldingHeart } from "react-icons/fa";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { LocationMap } from "@/components/LocationMap";
 
 export default function HomePage() {
   const { data: sermons, isLoading: loadingSermons } = useSermons();
@@ -352,6 +353,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Location Map Section */}
+      <LocationMap />
     </div>
   );
 }
