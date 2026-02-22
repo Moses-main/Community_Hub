@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useUnreadCount } from "@/hooks/use-messages";
+import { useLanguage } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,26 +22,27 @@ export function Navbar() {
   const [location] = useLocation();
   const { user, isLoading: authLoading, logout } = useAuth();
   const { data: unreadCount } = useUnreadCount();
+  const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { href: "/", label: "Home" },
-    { href: "/live", label: "Live" },
-    { href: "/events", label: "Events" },
-    { href: "/prayer", label: "Prayer" },
-    { href: "/volunteer", label: "Volunteer" },
-    { href: "/devotionals", label: "Devotionals" },
-    { href: "/give", label: "Give" },
+    { href: "/", label: t("home") },
+    { href: "/live", label: t("live") },
+    { href: "/events", label: t("events") },
+    { href: "/prayer", label: t("prayer") },
+    { href: "/volunteer", label: t("volunteer") },
+    { href: "/devotionals", label: t("devotionals") },
+    { href: "/give", label: t("give") },
   ];
 
   const mediaLinks = [
-    { href: "/sermons", label: "Sermons", icon: Mic },
-    { href: "/music", label: "Music", icon: Music },
+    { href: "/sermons", label: t("sermons"), icon: Mic },
+    { href: "/music", label: t("music"), icon: Music },
   ];
 
   const communityLinks = [
-    { href: "/groups", label: "Groups", icon: Users },
-    { href: "/house-cells", label: "House Cells", icon: Heart },
+    { href: "/groups", label: t("groups"), icon: Users },
+    { href: "/house-cells", label: t("houseCells"), icon: Heart },
   ];
 
   const isActive = (path: string) => location === path;
@@ -93,7 +95,7 @@ export function Navbar() {
           {/* Media Dropdown - Hover */}
           <div className="relative group">
             <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-lg flex items-center gap-1">
-              Media <ChevronDown className="w-4 h-4" />
+              {t("media")} <ChevronDown className="w-4 h-4" />
             </button>
             <div className="absolute left-0 top-full pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               <div className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-xl rounded-xl py-2 w-48 overflow-hidden">
@@ -114,7 +116,7 @@ export function Navbar() {
           {/* Community Dropdown - Hover */}
           <div className="relative group">
             <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-primary hover:bg-gray-50 rounded-lg flex items-center gap-1">
-              Community <ChevronDown className="w-4 h-4" />
+              {t("community")} <ChevronDown className="w-4 h-4" />
             </button>
             <div className="absolute left-0 top-full pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               <div className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-xl rounded-xl py-2 w-48 overflow-hidden">
