@@ -38,6 +38,7 @@ export function Navbar() {
   const mediaLinks = [
     { href: "/sermons", label: t("sermons"), icon: Mic },
     { href: "/music", label: t("music"), icon: Music },
+    { href: "/bible", label: t("bible"), icon: BookOpen },
   ];
 
   const communityLinks = [

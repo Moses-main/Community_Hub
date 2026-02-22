@@ -10,6 +10,7 @@ import {
   apiKeys, webhooks,
   volunteerSkills, volunteerProfiles, volunteerOpportunities, volunteerAssignments, volunteerBadges, userBadges,
   privacySettings, contentFlags, abuseReports,
+  userHighlights, userNotes, verseDiscussions, groupAnnotations,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -29,7 +30,11 @@ import {
   type UserBadge, type InsertUserBadge,
   type PrivacySettings, type InsertPrivacySettings,
   type ContentFlag, type InsertContentFlag,
-  type AbuseReport, type InsertAbuseReport
+  type AbuseReport, type InsertAbuseReport,
+  type UserHighlight, type InsertUserHighlight,
+  type UserNote, type InsertUserNote,
+  type VerseDiscussion, type InsertVerseDiscussion,
+  type GroupAnnotation, type InsertGroupAnnotation
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -285,6 +290,17 @@ export interface IStorage {
   getAbuseReports(status?: string): Promise<AbuseReport[]>;
   createAbuseReport(report: InsertAbuseReport): Promise<AbuseReport>;
   updateAbuseReport(id: number, updates: Partial<AbuseReport>): Promise<AbuseReport>;
+
+  // Bible Study
+  getUserHighlights(userId: string): Promise<UserHighlight[]>;
+  createUserHighlight(highlight: InsertUserHighlight): Promise<UserHighlight>;
+  deleteUserHighlight(id: number): Promise<void>;
+  getUserNotes(userId: string): Promise<UserNote[]>;
+  createUserNote(note: InsertUserNote): Promise<UserNote>;
+  updateUserNote(id: number, updates: Partial<UserNote>): Promise<UserNote>;
+  deleteUserNote(id: number): Promise<void>;
+  getVerseDiscussions(book: string, chapter: number, verse: number): Promise<VerseDiscussion[]>;
+  createVerseDiscussion(discussion: InsertVerseDiscussion): Promise<VerseDiscussion>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1819,6 +1835,56 @@ export class DatabaseStorage implements IStorage {
       .where(eq(abuseReports.id, id))
       .returning();
     return updated;
+  }
+
+  // Bible Study
+  async getUserHighlights(userId: string): Promise<UserHighlight[]> {
+    return db.select().from(userHighlights).where(eq(userHighlights.userId, userId));
+  }
+
+  async createUserHighlight(highlight: InsertUserHighlight): Promise<UserHighlight> {
+    const [created] = await db.insert(userHighlights).values(highlight).returning();
+    return created;
+  }
+
+  async deleteUserHighlight(id: number): Promise<void> {
+    await db.delete(userHighlights).where(eq(userHighlights.id, id));
+  }
+
+  async getUserNotes(userId: string): Promise<UserNote[]> {
+    return db.select().from(userNotes).where(eq(userNotes.userId, userId));
+  }
+
+  async createUserNote(note: InsertUserNote): Promise<UserNote> {
+    const [created] = await db.insert(userNotes).values(note).returning();
+    return created;
+  }
+
+  async updateUserNote(id: number, updates: Partial<UserNote>): Promise<UserNote> {
+    const [updated] = await db
+      .update(userNotes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(userNotes.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteUserNote(id: number): Promise<void> {
+    await db.delete(userNotes).where(eq(userNotes.id, id));
+  }
+
+  async getVerseDiscussions(book: string, chapter: number, verse: number): Promise<VerseDiscussion[]> {
+    return db.select().from(verseDiscussions)
+      .where(and(
+        eq(verseDiscussions.book, book),
+        eq(verseDiscussions.chapter, chapter),
+        eq(verseDiscussions.verse, verse)
+      ));
+  }
+
+  async createVerseDiscussion(discussion: InsertVerseDiscussion): Promise<VerseDiscussion> {
+    const [created] = await db.insert(verseDiscussions).values(discussion).returning();
+    return created;
   }
 }
 
