@@ -2909,6 +2909,69 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // === AUDIT LOGS & PERMISSIONS ===
+
+  // Get audit logs (admin only)
+  app.get("/api/audit-logs", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const logs = await storage.getAuditLogs(limit);
+      res.json(logs);
+    } catch (err) {
+      console.error("Error fetching audit logs:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Helper function to log admin actions
+  const logAdminAction = async (userId: string, action: string, entityType: string, entityId: string, details?: any) => {
+    try {
+      await storage.createAuditLog({
+        userId,
+        action,
+        entityType,
+        entityId,
+        details,
+      });
+    } catch (err) {
+      console.error("Error logging admin action:", err);
+    }
+  };
+
+  // Get user's permissions based on role
+  app.get("/api/permissions", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const user = await storage.getUserById(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Role to permissions mapping
+      const rolePermissions: Record<string, string[]> = {
+        ADMIN: ['manage_members', 'manage_events', 'manage_sermons', 'manage_donations', 'manage_finance', 'manage_groups', 'manage_attendance', 'send_messages', 'view_analytics', 'manage_settings', 'manage_content', 'moderate_content'],
+        PASTOR: ['manage_members', 'manage_events', 'manage_sermons', 'manage_groups', 'manage_attendance', 'send_messages', 'view_analytics', 'manage_content', 'moderate_content'],
+        PASTORS_WIFE: ['manage_members', 'manage_events', 'manage_sermons', 'manage_groups', 'send_messages', 'view_analytics', 'manage_content'],
+        CELL_LEADER: ['manage_attendance', 'send_messages', 'view_analytics'],
+        USHERS_LEADER: ['manage_attendance', 'send_messages'],
+        FINANCE_TEAM: ['manage_donations', 'manage_finance', 'view_analytics'],
+        PRAYER_TEAM: ['moderate_content'],
+        TECH_TEAM: ['manage_sermons', 'manage_events'],
+        MEMBER: [],
+        USER: [],
+      };
+
+      const permissions = rolePermissions[user.role] || rolePermissions.MEMBER;
+      res.json({
+        role: user.role,
+        permissions,
+        isAdmin: user.email === 'admin@wccrm.com',
+      });
+    } catch (err) {
+      console.error("Error fetching permissions:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
 
