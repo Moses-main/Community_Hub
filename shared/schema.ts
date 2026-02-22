@@ -698,3 +698,54 @@ export const liveStreamRelations = relations(liveStreams, ({ one }) => ({
 export const insertLiveStreamSchema = createInsertSchema(liveStreams).omit({ id: true, createdAt: true, viewerCount: true });
 export type LiveStream = typeof liveStreams.$inferSelect;
 export type InsertLiveStream = z.infer<typeof insertLiveStreamSchema>;
+
+// === API Keys for External Integrations ===
+
+export const apiKeys = pgTable("api_keys", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  name: text("name").notNull(),
+  key: text("key").notNull().unique(),
+  prefix: text("prefix").notNull(),
+  permissions: jsonb("permissions").default("[\"read\"]"),
+  rateLimit: integer("rate_limit").default(100), // requests per hour
+  lastUsedAt: timestamp("last_used_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  isActive: boolean("is_active").default(true),
+});
+
+export const apiKeyRelations = relations(apiKeys, ({ one }) => ({
+  user: one(users, {
+    fields: [apiKeys.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({ id: true, createdAt: true, key: true, prefix: true });
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+
+// === Webhooks for External Integrations ===
+
+export const webhooks = pgTable("webhooks", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  url: text("url").notNull(),
+  events: jsonb("events").notNull(), // event types to trigger webhook
+  secret: text("secret"),
+  isActive: boolean("is_active").default(true),
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const webhookRelations = relations(webhooks, ({ one }) => ({
+  user: one(users, {
+    fields: [webhooks.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertWebhookSchema = createInsertSchema(webhooks).omit({ id: true, createdAt: true });
+export type Webhook = typeof webhooks.$inferSelect;
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
