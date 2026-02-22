@@ -8,9 +8,11 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import multiparty from "multiparty";
+import multer from "multer";
 import { sendNewMessageNotification } from "./websocket";
 import { processVideoClip } from "./video-processing";
+
+const upload = multer({ dest: path.join(process.cwd(), "uploads", "videos") });
 
 // Extend Express Request type to include user
 interface AuthenticatedRequest extends Request {
@@ -4004,34 +4006,21 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
-  app.post("/api/sermon-clips/upload", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/sermon-clips/upload", isAuthenticated, upload.single("video"), async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
       
-      const uploadDir = path.join(process.cwd(), "uploads", "videos");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      if (!req.file) {
+        return res.status(400).json({ message: "No video file provided" });
       }
 
-      const form = new multiparty.Form({ uploadDir });
-      
-      form.parse(req, (err, fields, files) => {
-        if (err) {
-          console.error("Upload error:", err);
-          return res.status(500).json({ message: "Upload failed" });
-        }
+      const filename = `${Date.now()}-${req.file.originalname}`;
+      const filepath = path.join(process.cwd(), "uploads", "videos", filename);
+      const fileUrl = `/uploads/videos/${filename}`;
 
-        const videoFile = files.video?.[0];
-        if (!videoFile) {
-          return res.status(400).json({ message: "No video file provided" });
-        }
+      fs.renameSync(req.file.path, filepath);
 
-        const filename = `${Date.now()}-${path.basename(videoFile.originalFilename || "video.mp4")}`;
-        const filepath = path.join(uploadDir, filename);
-        const fileUrl = `/uploads/videos/${filename}`;
-
-        res.json({ path: filepath, url: fileUrl });
-      });
+      res.json({ path: filepath, url: fileUrl });
     } catch (err) {
       console.error("Error uploading video:", err);
       res.status(500).json({ message: "Internal server error" });
