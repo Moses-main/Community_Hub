@@ -12,7 +12,8 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 }
 
 export interface ProcessingOptions {
-  sourceUrl: string;
+  sourceUrl?: string;
+  sourcePath?: string;
   startTime: number;
   endTime: number;
   format: "square" | "vertical" | "landscape";
@@ -54,7 +55,7 @@ function getYoutubeDlUrl(videoUrl: string): Promise<string> {
 }
 
 export async function processVideoClip(options: ProcessingOptions): Promise<ProcessingResult> {
-  const { sourceUrl, startTime, endTime, format, overlayText, verseReference, title } = options;
+  const { sourceUrl, sourcePath, startTime, endTime, format, overlayText, verseReference, title } = options;
   const duration = endTime - startTime;
   const { width, height } = getVideoDimensions(format);
   
@@ -63,15 +64,21 @@ export async function processVideoClip(options: ProcessingOptions): Promise<Proc
   const outputUrl = `/uploads/clips/${outputFilename}`;
 
   try {
-    let videoSource = sourceUrl;
+    let videoSource = sourcePath || sourceUrl;
 
-    if (sourceUrl.includes("youtube.com") || sourceUrl.includes("youtu.be")) {
+    if (!videoSource) {
+      throw new Error("No video source provided");
+    }
+
+    if (sourceUrl && (sourceUrl.includes("youtube.com") || sourceUrl.includes("youtu.be"))) {
       console.log("Downloading from YouTube...");
       try {
         videoSource = await getYoutubeDlUrl(sourceUrl);
       } catch (ytError) {
         console.error("Failed to get YouTube URL, trying direct URL:", ytError);
-        videoSource = sourceUrl;
+        if (sourceUrl.startsWith("http")) {
+          videoSource = sourceUrl;
+        }
       }
     }
 

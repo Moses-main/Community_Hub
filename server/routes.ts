@@ -6,6 +6,9 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import multiparty from "multiparty";
 import { sendNewMessageNotification } from "./websocket";
 import { processVideoClip } from "./video-processing";
 
@@ -4001,14 +4004,49 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  app.post("/api/sermon-clips/upload", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      
+      const uploadDir = path.join(process.cwd(), "uploads", "videos");
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const form = new multiparty.Form({ uploadDir });
+      
+      form.parse(req, (err, fields, files) => {
+        if (err) {
+          console.error("Upload error:", err);
+          return res.status(500).json({ message: "Upload failed" });
+        }
+
+        const videoFile = files.video?.[0];
+        if (!videoFile) {
+          return res.status(400).json({ message: "No video file provided" });
+        }
+
+        const filename = `${Date.now()}-${path.basename(videoFile.originalFilename || "video.mp4")}`;
+        const filepath = path.join(uploadDir, filename);
+        const fileUrl = `/uploads/videos/${filename}`;
+
+        res.json({ path: filepath, url: fileUrl });
+      });
+    } catch (err) {
+      console.error("Error uploading video:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/sermon-clips", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
-      const { title, sourceVideoUrl, clipStartTime, clipEndTime, format, overlayText, verseReference } = req.body;
+      const { title, sourceVideoUrl, sourceVideoPath, clipStartTime, clipEndTime, format, overlayText, verseReference } = req.body;
       
       const clip = await storage.createSermonClip({
         title,
         sourceVideoUrl,
+        sourceVideoPath,
         clipStartTime,
         clipEndTime,
         format: format || "landscape",
@@ -4030,12 +4068,13 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       
       const clip = await storage.getSermonClip(Number(req.params.id));
       if (!clip) return res.status(404).json({ message: "Clip not found" });
-      if (!clip.sourceVideoUrl) return res.status(400).json({ message: "No source video URL" });
+      if (!clip.sourceVideoUrl && !clip.sourceVideoPath) return res.status(400).json({ message: "No source video" });
       
       await storage.updateSermonClip(Number(req.params.id), { status: "processing" });
       
       processVideoClip({
-        sourceUrl: clip.sourceVideoUrl,
+        sourceUrl: clip.sourceVideoUrl || undefined,
+        sourcePath: clip.sourceVideoPath || undefined,
         startTime: clip.clipStartTime,
         endTime: clip.clipEndTime,
         format: clip.format as "square" | "vertical" | "landscape",
@@ -4087,12 +4126,13 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       
       const clip = await storage.getSermonClip(Number(req.params.id));
       if (!clip) return res.status(404).json({ message: "Clip not found" });
-      if (!clip.sourceVideoUrl) return res.status(400).json({ message: "No source video URL" });
+      if (!clip.sourceVideoUrl && !clip.sourceVideoPath) return res.status(400).json({ message: "No source video" });
       
       await storage.updateSermonClip(Number(req.params.id), { status: "processing" });
       
       const result = await processVideoClip({
-        sourceUrl: clip.sourceVideoUrl,
+        sourceUrl: clip.sourceVideoUrl || undefined,
+        sourcePath: clip.sourceVideoPath || undefined,
         startTime: clip.clipStartTime,
         endTime: clip.clipEndTime,
         format: clip.format as "square" | "vertical" | "landscape",
