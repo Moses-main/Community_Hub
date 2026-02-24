@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage, type ISermonFilter } from "./storage";
 import { db } from "./db";
-import { supportedLanguages, groupJoinRequests, groupActivityLogs } from "@shared/schema";
+import { supportedLanguages, groupJoinRequests, groupActivityLogs, volunteerSkills, volunteerBadges, volunteerOpportunities } from "@shared/schema";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -4663,6 +4663,99 @@ async function seedDatabase() {
       content: "The Christian life is a journey of transformation. Paul wrote 'be transformed by the renewing of your mind'...",
       order: 1,
       isPublished: true,
+    });
+  }
+
+  // Seed Volunteer Skills
+  const existingSkills = await db.select().from(volunteerSkills);
+  if (existingSkills.length === 0) {
+    await storage.createVolunteerSkill({ name: "Welcome/Ushering", description: "Greet and assist visitors", category: "Welcome" });
+    await storage.createVolunteerSkill({ name: "Music/Worship", description: "Lead worship through music", category: "Worship" });
+    await storage.createVolunteerSkill({ name: "Sound/AV", description: "Manage audio and visual equipment", category: "Technical" });
+    await storage.createVolunteerSkill({ name: "Children's Ministry", description: "Work with children", category: "Kids" });
+    await storage.createVolunteerSkill({ name: "Youth Ministry", description: "Work with teenagers", category: "Youth" });
+    await storage.createVolunteerSkill({ name: "Prayer Team", description: "Lead prayer during services", category: "Prayer" });
+    await storage.createVolunteerSkill({ name: "Security", description: "Ensure safety during events", category: "Safety" });
+    await storage.createVolunteerSkill({ name: "Decorations", description: "Set up for events", category: "Creative" });
+    await storage.createVolunteerSkill({ name: "Photography/Videography", description: "Capture events", category: "Media" });
+    await storage.createVolunteerSkill({ name: "Hospitality", description: "Provide refreshments", category: "Fellowship" });
+  }
+
+  // Seed Volunteer Badges
+  const existingBadges = await db.select().from(volunteerBadges);
+  if (existingBadges.length === 0) {
+    await storage.createVolunteerBadge({
+      name: "First Time Volunteer",
+      description: "Completed your first volunteer assignment",
+      icon: "star",
+    });
+    await storage.createVolunteerBadge({
+      name: "Dedicated Servant",
+      description: "Completed 10 volunteer hours",
+      icon: "heart",
+    });
+    await storage.createVolunteerBadge({
+      name: "Faithful Volunteer",
+      description: "Volunteered for 3 consecutive months",
+      icon: "award",
+    });
+    await storage.createVolunteerBadge({
+      name: "Team Leader",
+      description: "Led a volunteer team",
+      icon: "crown",
+    });
+    await storage.createVolunteerBadge({
+      name: "Community Hero",
+      description: "Completed 50 volunteer hours",
+      icon: "shield",
+    });
+  }
+
+  // Seed Volunteer Opportunities
+  const existingOpportunities = await db.select().from(volunteerOpportunities);
+  if (existingOpportunities.length === 0) {
+    await storage.createVolunteerOpportunity({
+      title: "Sunday Welcome Team",
+      description: "Greet visitors and help them find their way around the church",
+      requiredSkills: JSON.stringify(["Welcome/Ushering"]),
+      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      duration: 120,
+      location: "Main Entrance",
+      spotsAvailable: 5,
+      isActive: true,
+    });
+
+    await storage.createVolunteerOpportunity({
+      title: "Sound Booth Operator",
+      description: "Help manage the sound system during Sunday services",
+      requiredSkills: JSON.stringify(["Sound/AV"]),
+      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      duration: 180,
+      location: "Sound Booth",
+      spotsAvailable: 2,
+      isActive: true,
+    });
+
+    await storage.createVolunteerOpportunity({
+      title: "Children's Church Helper",
+      description: "Assist with children's ministry during the service",
+      requiredSkills: JSON.stringify(["Children's Ministry"]),
+      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      duration: 90,
+      location: "Children's Wing",
+      spotsAvailable: 4,
+      isActive: true,
+    });
+
+    await storage.createVolunteerOpportunity({
+      title: "Worship Team Member",
+      description: "Join the worship team for Sunday service",
+      requiredSkills: JSON.stringify(["Music/Worship"]),
+      date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      duration: 240,
+      location: "Sanctuary",
+      spotsAvailable: 3,
+      isActive: true,
     });
   }
 }
