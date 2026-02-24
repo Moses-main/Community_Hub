@@ -40,6 +40,7 @@ import GroupsPage from "@/pages/GroupsPage";
 import BiblePage from "@/pages/BiblePage";
 import DiscipleshipPage from "@/pages/DiscipleshipPage";
 import SermonClipGeneratorPage from "@/pages/SermonClipGeneratorPage";
+import SocialFeedPage from "@/pages/SocialFeedPage";
 import { useWebSocket } from "@/hooks/use-websocket";
 import LanguageSettingsPage from "@/pages/LanguageSettingsPage";
 import { LanguageProvider } from "@/hooks/use-language";
@@ -88,6 +89,7 @@ function Router() {
           <Route path="/bible" component={BiblePage} />
           <Route path="/discipleship" component={DiscipleshipPage} />
           <Route path="/admin/sermon-clips" component={SermonClipGeneratorPage} />
+          <Route path="/feed" component={SocialFeedPage} />
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/messages" component={MessagesPage} />
           <Route path="/settings/language" component={LanguageSettingsPage} />

@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, ChevronDown, LogOut, LayoutDashboard, CalendarCheck, QrCode, Shield, Bell, Music, Mic, Users, Heart, BookOpen, Video, X } from "lucide-react";
+import { Menu, ChevronDown, LogOut, LayoutDashboard, CalendarCheck, QrCode, Shield, Bell, Music, Mic, Users, Heart, BookOpen, Video, X, MessageCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
@@ -49,6 +49,7 @@ export function Navbar() {
   ];
 
   const communityLinks = [
+    { href: "/feed", label: t("feed") || "Feed", icon: MessageCircle },
     { href: "/groups", label: t("groups"), icon: Users },
     { href: "/house-cells", label: t("houseCells"), icon: Heart },
   ];

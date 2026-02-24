@@ -55,6 +55,7 @@ export interface User {
   role?: UserRole;
   isAdmin?: boolean;
   isVerified?: boolean;
+  profileImage?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

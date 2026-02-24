@@ -14,6 +14,7 @@ import {
   discipleshipTracks, lessons, quizzes, userProgress, reflections,
   sermonClips,
   supportedLanguages,
+  posts, postLikes, postComments, commentLikes, postShares, userConnections, hashtags, postHashtags,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -44,7 +45,14 @@ import {
   type UserProgress, type InsertUserProgress,
   type Reflection, type InsertReflection,
   type SermonClip, type InsertSermonClip,
-  type SupportedLanguage, type InsertSupportedLanguage
+  type SupportedLanguage, type InsertSupportedLanguage,
+  type Post, type InsertPost,
+  type PostLike, type InsertPostLike,
+  type PostComment, type InsertPostComment,
+  type CommentLike, type InsertCommentLike,
+  type PostShare, type InsertPostShare,
+  type UserConnection, type InsertUserConnection,
+  type Hashtag, type InsertHashtag
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -2238,6 +2246,208 @@ export class DatabaseStorage implements IStorage {
       .sort((a, b) => b.score - a.score)
       .slice(0, 10)
       .map(g => g.group);
+  }
+
+  // Social Feed - Posts
+  async getPosts(limit = 50, offset = 0, userId?: string, visibility?: string): Promise<Post[]> {
+    let query = db.select().from(posts)
+      .where(eq(posts.isHidden, false))
+      .orderBy(desc(posts.isPinned), desc(posts.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    return await query;
+  }
+
+  async getPostById(id: number): Promise<Post | undefined> {
+    const [post] = await db.select().from(posts).where(eq(posts.id, id));
+    return post;
+  }
+
+  async createPost(post: InsertPost): Promise<Post> {
+    const [created] = await db.insert(posts).values(post).returning();
+    
+    if (post.content) {
+      const hashtagMatches = post.content.match(/#[\w-]+/g);
+      if (hashtagMatches) {
+        for (const tag of [...new Set(hashtagMatches)]) {
+          const tagName = tag.slice(1).toLowerCase();
+          const [hashtag] = await db.select().from(hashtags).where(eq(hashtags.name, tagName));
+          if (hashtag) {
+            await db.update(hashtags).set({ postsCount: hashtag.postsCount + 1 }).where(eq(hashtags.id, hashtag.id));
+          } else {
+            await db.insert(hashtags).values({ name: tagName, postsCount: 1 });
+          }
+        }
+      }
+    }
+    
+    return created;
+  }
+
+  async updatePost(id: number, updates: Partial<Post>): Promise<Post> {
+    const [updated] = await db.update(posts).set({ ...updates, updatedAt: new Date() }).where(eq(posts.id, id)).returning();
+    return updated;
+  }
+
+  async deletePost(id: number): Promise<void> {
+    await db.delete(posts).where(eq(posts.id, id));
+  }
+
+  async togglePinPost(id: number): Promise<Post> {
+    const post = await this.getPostById(id);
+    if (!post) throw new Error("Post not found");
+    return await this.updatePost(id, { isPinned: !post.isPinned });
+  }
+
+  // Social Feed - Likes
+  async likePost(postId: number, userId: string): Promise<PostLike> {
+    const existing = await db.select().from(postLikes).where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+    if (existing.length > 0) {
+      await db.delete(postLikes).where(eq(postLikes.id, existing[0].id));
+      await db.update(posts).set({ likesCount: sql`${posts.likesCount} - 1` }).where(eq(posts.id, postId));
+      return existing[0];
+    }
+    
+    const [like] = await db.insert(postLikes).values({ postId, userId }).returning();
+    await db.update(posts).set({ likesCount: sql`${posts.likesCount} + 1` }).where(eq(posts.id, postId));
+    return like;
+  }
+
+  async getPostLikes(postId: number): Promise<PostLike[]> {
+    return await db.select().from(postLikes).where(eq(postLikes.postId, postId));
+  }
+
+  async hasUserLikedPost(postId: number, userId: string): Promise<boolean> {
+    const likes = await db.select().from(postLikes).where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+    return likes.length > 0;
+  }
+
+  // Social Feed - Comments
+  async getPostComments(postId: number): Promise<PostComment[]> {
+    return await db.select().from(postComments).where(eq(postComments.postId, postId)).orderBy(asc(postComments.createdAt));
+  }
+
+  async createPostComment(comment: InsertPostComment): Promise<PostComment> {
+    const [created] = await db.insert(postComments).values(comment).returning();
+    await db.update(posts).set({ commentsCount: sql`${posts.commentsCount} + 1` }).where(eq(posts.id, comment.postId));
+    return created;
+  }
+
+  async updatePostComment(id: number, updates: Partial<PostComment>): Promise<PostComment> {
+    const [updated] = await db.update(postComments).set({ ...updates, updatedAt: new Date() }).where(eq(postComments.id, id)).returning();
+    return updated;
+  }
+
+  async deletePostComment(id: number): Promise<void> {
+    const comment = await db.select().from(postComments).where(eq(postComments.id, id));
+    if (comment.length > 0) {
+      await db.delete(postComments).where(eq(postComments.id, id));
+      await db.update(posts).set({ commentsCount: sql`${posts.commentsCount} - 1` }).where(eq(posts.id, comment[0].postId));
+    }
+  }
+
+  async likeComment(commentId: number, userId: string): Promise<CommentLike> {
+    const existing = await db.select().from(commentLikes).where(and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId)));
+    if (existing.length > 0) {
+      await db.delete(commentLikes).where(eq(commentLikes.id, existing[0].id));
+      await db.update(postComments).set({ likesCount: sql`${postComments.likesCount} - 1` }).where(eq(postComments.id, commentId));
+      return existing[0];
+    }
+    
+    const [like] = await db.insert(commentLikes).values({ commentId, userId }).returning();
+    await db.update(postComments).set({ likesCount: sql`${postComments.likesCount} + 1` }).where(eq(postComments.id, commentId));
+    return like;
+  }
+
+  // Social Feed - Shares
+  async sharePost(originalPostId: number, userId: string, content?: string): Promise<PostShare> {
+    const sharedPost = await this.createPost({
+      userId,
+      content: content || "",
+      type: "TEXT",
+      visibility: "MEMBERS_ONLY"
+    });
+    
+    const [share] = await db.insert(postShares).values({
+      originalPostId,
+      userId,
+      sharedPostId: sharedPost.id
+    }).returning();
+    
+    await db.update(posts).set({ sharesCount: sql`${posts.sharesCount} + 1` }).where(eq(posts.id, originalPostId));
+    return share;
+  }
+
+  // User Connections
+  async followUser(followerId: string, followingId: string): Promise<UserConnection> {
+    const existing = await db.select().from(userConnections).where(
+      and(eq(userConnections.followerId, followerId), eq(userConnections.followingId, followingId))
+    );
+    if (existing.length > 0) {
+      return existing[0];
+    }
+    
+    const [connection] = await db.insert(userConnections).values({ followerId, followingId }).returning();
+    return connection;
+  }
+
+  async unfollowUser(followerId: string, followingId: string): Promise<void> {
+    await db.delete(userConnections).where(
+      and(eq(userConnections.followerId, followerId), eq(userConnections.followingId, followingId))
+    );
+  }
+
+  async getUserFollowers(userId: string): Promise<UserConnection[]> {
+    return await db.select().from(userConnections).where(eq(userConnections.followingId, userId));
+  }
+
+  async getUserFollowing(userId: string): Promise<UserConnection[]> {
+    return await db.select().from(userConnections).where(eq(userConnections.followerId, userId));
+  }
+
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    const connections = await db.select().from(userConnections).where(
+      and(eq(userConnections.followerId, followerId), eq(userConnections.followingId, followingId))
+    );
+    return connections.length > 0;
+  }
+
+  // Hashtags
+  async getTrendingHashtags(limit = 10): Promise<Hashtag[]> {
+    return await db.select().from(hashtags).orderBy(desc(hashtags.postsCount)).limit(limit);
+  }
+
+  async getPostsByHashtag(hashtag: string, limit = 50, offset = 0): Promise<Post[]> {
+    const hashtagRecord = await db.select().from(hashtags).where(eq(hashtags.name, hashtag.toLowerCase()));
+    if (hashtagRecord.length === 0) return [];
+    
+    const hashtagPosts = await db.select().from(postHashtags).where(eq(postHashtags.hashtagId, hashtagRecord[0].id));
+    const postIds = hashtagPosts.map(p => p.postId);
+    
+    if (postIds.length === 0) return [];
+    
+    return await db.select().from(posts)
+      .where(and(eq(posts.isHidden, false), sql`${posts.id} IN (${postIds})`))
+      .orderBy(desc(posts.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  // Feed - Get personalized feed for user
+  async getFeedForUser(userId: string, limit = 50, offset = 0): Promise<Post[]> {
+    const following = await this.getUserFollowing(userId);
+    const followingIds = following.map(f => f.followingId);
+    followingIds.push(userId);
+    
+    return await db.select().from(posts)
+      .where(and(
+        eq(posts.isHidden, false),
+        sql`${posts.userId} IN (${followingIds})`
+      ))
+      .orderBy(desc(posts.isPinned), desc(posts.createdAt))
+      .limit(limit)
+      .offset(offset);
   }
 }
 

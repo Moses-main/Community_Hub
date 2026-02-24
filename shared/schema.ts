@@ -1240,3 +1240,212 @@ export const sermonClips = pgTable("sermon_clips", {
 export const insertSermonClipSchema = createInsertSchema(sermonClips).omit({ id: true, createdAt: true });
 export type SermonClip = typeof sermonClips.$inferSelect;
 export type InsertSermonClip = z.infer<typeof insertSermonClipSchema>;
+
+// === CHURCH SOCIAL FEED ===
+
+export const postVisibilityEnum = pgEnum('post_visibility', [
+  'PUBLIC',
+  'MEMBERS_ONLY',
+  'PRIVATE'
+]);
+
+export const postTypeEnum = pgEnum('post_type', [
+  'TEXT',
+  'IMAGE',
+  'VIDEO',
+  'TESTIMONY',
+  'PRAYER_REQUEST',
+  'ANNOUNCEMENT'
+]);
+
+export const posts = pgTable("posts", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  content: text("content"),
+  type: postTypeEnum("type").default("TEXT"),
+  visibility: postVisibilityEnum("visibility").default("MEMBERS_ONLY"),
+  imageUrl: text("image_url"),
+  videoUrl: text("video_url"),
+  verseReference: text("verse_reference"),
+  likesCount: integer("likes_count").default(0),
+  commentsCount: integer("comments_count").default(0),
+  sharesCount: integer("shares_count").default(0),
+  isPinned: boolean("is_pinned").default(false),
+  isHidden: boolean("is_hidden").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const postLikes = pgTable("post_likes", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").references(() => posts.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const postComments = pgTable("post_comments", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").references(() => posts.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  parentId: integer("parent_id"),
+  content: text("content").notNull(),
+  likesCount: integer("likes_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const commentLikes = pgTable("comment_likes", {
+  id: serial("id").primaryKey(),
+  commentId: integer("comment_id").references(() => postComments.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const postShares = pgTable("post_shares", {
+  id: serial("id").primaryKey(),
+  originalPostId: integer("original_post_id").references(() => posts.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  sharedPostId: integer("shared_post_id").references(() => posts.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userConnections = pgTable("user_connections", {
+  id: serial("id").primaryKey(),
+  followerId: uuid("follower_id").references(() => users.id).notNull(),
+  followingId: uuid("following_id").references(() => users.id).notNull(),
+  status: text("status").default("ACTIVE"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const hashtags = pgTable("hashtags", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  postsCount: integer("posts_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const postHashtags = pgTable("post_hashtags", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").references(() => posts.id).notNull(),
+  hashtagId: integer("hashtag_id").references(() => hashtags.id).notNull(),
+});
+
+// Relations
+export const postsRelations = relations(posts, ({ one, many }) => ({
+  user: one(users, {
+    fields: [posts.userId],
+    references: [users.id],
+  }),
+  likes: many(postLikes),
+  comments: many(postComments),
+  shares: many(postShares),
+  hashtags: many(postHashtags),
+}));
+
+export const postLikesRelations = relations(postLikes, ({ one }) => ({
+  post: one(posts, {
+    fields: [postLikes.postId],
+    references: [posts.id],
+  }),
+  user: one(users, {
+    fields: [postLikes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const postCommentsRelations = relations(postComments, ({ one, many }) => ({
+  post: one(posts, {
+    fields: [postComments.postId],
+    references: [posts.id],
+  }),
+  user: one(users, {
+    fields: [postComments.userId],
+    references: [users.id],
+  }),
+  parent: one(postComments, {
+    fields: [postComments.parentId],
+    references: [postComments.id],
+  }),
+  likes: many(commentLikes),
+}));
+
+export const commentLikesRelations = relations(commentLikes, ({ one }) => ({
+  comment: one(postComments, {
+    fields: [commentLikes.commentId],
+    references: [postComments.id],
+  }),
+  user: one(users, {
+    fields: [commentLikes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const postSharesRelations = relations(postShares, ({ one }) => ({
+  originalPost: one(posts, {
+    fields: [postShares.originalPostId],
+    references: [posts.id],
+  }),
+  user: one(users, {
+    fields: [postShares.userId],
+    references: [users.id],
+  }),
+  sharedPost: one(posts, {
+    fields: [postShares.sharedPostId],
+    references: [posts.id],
+  }),
+}));
+
+export const userConnectionsRelations = relations(userConnections, ({ one }) => ({
+  follower: one(users, {
+    fields: [userConnections.followerId],
+    references: [users.id],
+  }),
+  following: one(users, {
+    fields: [userConnections.followingId],
+    references: [users.id],
+  }),
+}));
+
+export const hashtagsRelations = relations(hashtags, ({ many }) => ({
+  posts: many(postHashtags),
+}));
+
+export const postHashtagsRelations = relations(postHashtags, ({ one }) => ({
+  post: one(posts, {
+    fields: [postHashtags.postId],
+    references: [posts.id],
+  }),
+  hashtag: one(hashtags, {
+    fields: [postHashtags.hashtagId],
+    references: [hashtags.id],
+  }),
+}));
+
+// Insert schemas
+export const insertPostSchema = createInsertSchema(posts).omit({ id: true, createdAt: true, updatedAt: true, likesCount: true, commentsCount: true, sharesCount: true });
+export type Post = typeof posts.$inferSelect;
+export type InsertPost = z.infer<typeof insertPostSchema>;
+
+export const insertPostLikeSchema = createInsertSchema(postLikes).omit({ id: true, createdAt: true });
+export type PostLike = typeof postLikes.$inferSelect;
+export type InsertPostLike = z.infer<typeof insertPostLikeSchema>;
+
+export const insertPostCommentSchema = createInsertSchema(postComments).omit({ id: true, createdAt: true, updatedAt: true, likesCount: true });
+export type PostComment = typeof postComments.$inferSelect;
+export type InsertPostComment = z.infer<typeof insertPostCommentSchema>;
+
+export const insertCommentLikeSchema = createInsertSchema(commentLikes).omit({ id: true, createdAt: true });
+export type CommentLike = typeof commentLikes.$inferSelect;
+export type InsertCommentLike = z.infer<typeof insertCommentLikeSchema>;
+
+export const insertPostShareSchema = createInsertSchema(postShares).omit({ id: true, createdAt: true });
+export type PostShare = typeof postShares.$inferSelect;
+export type InsertPostShare = z.infer<typeof insertPostShareSchema>;
+
+export const insertUserConnectionSchema = createInsertSchema(userConnections).omit({ id: true, createdAt: true });
+export type UserConnection = typeof userConnections.$inferSelect;
+export type InsertUserConnection = z.infer<typeof insertUserConnectionSchema>;
+
+export const insertHashtagSchema = createInsertSchema(hashtags).omit({ id: true, createdAt: true, postsCount: true });
+export type Hashtag = typeof hashtags.$inferSelect;
+export type InsertHashtag = z.infer<typeof insertHashtagSchema>;

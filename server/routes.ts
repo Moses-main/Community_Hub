@@ -4508,6 +4508,336 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // ========== SOCIAL FEED ROUTES ==========
+  
+  // Get feed posts (public or user feed)
+  app.get("/api/feed", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const type = req.query.type as string;
+      
+      let posts;
+      if (type === "personal") {
+        posts = await storage.getFeedForUser(req.user!.id, limit, offset);
+      } else {
+        posts = await storage.getPosts(limit, offset);
+      }
+      
+      const postsWithUser = await Promise.all(posts.map(async (post) => {
+        const user = await storage.getUserById(post.userId);
+        return {
+          ...post,
+          user: user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage } : null,
+          hasLiked: await storage.hasUserLikedPost(post.id, req.user!.id),
+        };
+      }));
+      
+      res.json(postsWithUser);
+    } catch (err) {
+      console.error("Error fetching feed:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single post
+  app.get("/api/posts/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const post = await storage.getPostById(parseInt(req.params.id));
+      if (!post) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      
+      const user = await storage.getUserById(post.userId);
+      const comments = await storage.getPostComments(post.id);
+      const commentsWithUser = await Promise.all(comments.map(async (comment) => {
+        const commentUser = await storage.getUserById(comment.userId);
+        return {
+          ...comment,
+          user: commentUser ? { id: commentUser.id, firstName: commentUser.firstName, lastName: commentUser.lastName, profileImage: commentUser.profileImage } : null,
+        };
+      }));
+      
+      res.json({
+        ...post,
+        user: user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage } : null,
+        comments: commentsWithUser,
+        hasLiked: await storage.hasUserLikedPost(post.id, req.user!.id),
+      });
+    } catch (err) {
+      console.error("Error fetching post:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create post
+  app.post("/api/posts", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { content, type, visibility, imageUrl, videoUrl, verseReference } = req.body;
+      
+      const post = await storage.createPost({
+        userId: req.user!.id,
+        content,
+        type: type || "TEXT",
+        visibility: visibility || "MEMBERS_ONLY",
+        imageUrl,
+        videoUrl,
+        verseReference,
+      });
+      
+      const user = await storage.getUserById(post.userId);
+      res.status(201).json({
+        ...post,
+        user: user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage } : null,
+      });
+    } catch (err) {
+      console.error("Error creating post:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update post
+  app.put("/api/posts/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const post = await storage.getPostById(parseInt(req.params.id));
+      if (!post) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      
+      if (post.userId !== req.user!.id && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      
+      const { content, visibility, imageUrl, videoUrl, verseReference } = req.body;
+      const updated = await storage.updatePost(parseInt(req.params.id), {
+        content,
+        visibility,
+        imageUrl,
+        videoUrl,
+        verseReference,
+      });
+      
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating post:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete post
+  app.delete("/api/posts/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const post = await storage.getPostById(parseInt(req.params.id));
+      if (!post) {
+        return res.status(404).json({ message: "Post not found" });
+      }
+      
+      if (post.userId !== req.user!.id && !req.user!.isAdmin) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      
+      await storage.deletePost(parseInt(req.params.id));
+      res.json({ message: "Post deleted" });
+    } catch (err) {
+      console.error("Error deleting post:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Pin/unpin post
+  app.post("/api/posts/:id/pin", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const post = await storage.togglePinPost(parseInt(req.params.id));
+      res.json(post);
+    } catch (err) {
+      console.error("Error toggling pin:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Like/unlike post
+  app.post("/api/posts/:id/like", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const like = await storage.likePost(parseInt(req.params.id), req.user!.id);
+      const post = await storage.getPostById(parseInt(req.params.id));
+      res.json({ like, post });
+    } catch (err) {
+      console.error("Error toggling like:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Comment on post
+  app.post("/api/posts/:id/comments", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { content, parentId } = req.body;
+      const comment = await storage.createPostComment({
+        postId: parseInt(req.params.id),
+        userId: req.user!.id,
+        content,
+        parentId,
+      });
+      
+      const user = await storage.getUserById(comment.userId);
+      res.status(201).json({
+        ...comment,
+        user: user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage } : null,
+      });
+    } catch (err) {
+      console.error("Error creating comment:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update comment
+  app.put("/api/comments/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { content } = req.body;
+      const updated = await storage.updatePostComment(parseInt(req.params.id), { content });
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating comment:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete comment
+  app.delete("/api/comments/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      await storage.deletePostComment(parseInt(req.params.id));
+      res.json({ message: "Comment deleted" });
+    } catch (err) {
+      console.error("Error deleting comment:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Like/unlike comment
+  app.post("/api/comments/:id/like", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const like = await storage.likeComment(parseInt(req.params.id), req.user!.id);
+      res.json(like);
+    } catch (err) {
+      console.error("Error toggling comment like:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Share post
+  app.post("/api/posts/:id/share", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { content } = req.body;
+      const share = await storage.sharePost(parseInt(req.params.id), req.user!.id, content);
+      res.status(201).json(share);
+    } catch (err) {
+      console.error("Error sharing post:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get trending hashtags
+  app.get("/api/hashtags/trending", async (req, res) => {
+    try {
+      const hashtags = await storage.getTrendingHashtags(10);
+      res.json(hashtags);
+    } catch (err) {
+      console.error("Error fetching hashtags:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get posts by hashtag
+  app.get("/api/hashtags/:tag/posts", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const posts = await storage.getPostsByHashtag(req.params.tag, limit, offset);
+      
+      const postsWithUser = await Promise.all(posts.map(async (post) => {
+        const user = await storage.getUserById(post.userId);
+        return {
+          ...post,
+          user: user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage } : null,
+          hasLiked: await storage.hasUserLikedPost(post.id, req.user!.id),
+        };
+      }));
+      
+      res.json(postsWithUser);
+    } catch (err) {
+      console.error("Error fetching hashtag posts:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Follow/unfollow user
+  app.post("/api/users/:id/follow", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const targetUserId = req.params.id;
+      if (targetUserId === req.user!.id) {
+        return res.status(400).json({ message: "Cannot follow yourself" });
+      }
+      
+      const isFollowing = await storage.isFollowing(req.user!.id, targetUserId);
+      if (isFollowing) {
+        await storage.unfollowUser(req.user!.id, targetUserId);
+        res.json({ following: false });
+      } else {
+        await storage.followUser(req.user!.id, targetUserId);
+        res.json({ following: true });
+      }
+    } catch (err) {
+      console.error("Error toggling follow:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user followers
+  app.get("/api/users/:id/followers", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const followers = await storage.getUserFollowers(req.params.id);
+      const followersWithUser = await Promise.all(followers.map(async (f) => {
+        const user = await storage.getUserById(f.followerId);
+        return {
+          ...f,
+          user: user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage } : null,
+        };
+      }));
+      res.json(followersWithUser);
+    } catch (err) {
+      console.error("Error fetching followers:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user following
+  app.get("/api/users/:id/following", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const following = await storage.getUserFollowing(req.params.id);
+      const followingWithUser = await Promise.all(following.map(async (f) => {
+        const user = await storage.getUserById(f.followingId);
+        return {
+          ...f,
+          user: user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage } : null,
+        };
+      }));
+      res.json(followingWithUser);
+    } catch (err) {
+      console.error("Error fetching following:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Check if following
+  app.get("/api/users/:id/following-status", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const isFollowing = await storage.isFollowing(req.user!.id, req.params.id);
+      res.json({ following: isFollowing });
+    } catch (err) {
+      console.error("Error checking follow status:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
 
