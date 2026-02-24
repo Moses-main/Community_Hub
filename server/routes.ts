@@ -3718,6 +3718,82 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // === Group Annotations (Bible Study) ===
+  
+  // Get group annotations
+  app.get("/api/bible/group-annotations/:groupId", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const annotations = await storage.getGroupAnnotations(Number(req.params.groupId));
+      res.json(annotations);
+    } catch (err) {
+      console.error("Error getting group annotations:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create group annotation
+  app.post("/api/bible/group-annotations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { groupId, book, chapter, verse, content } = req.body;
+      const annotation = await storage.createGroupAnnotation({
+        groupId,
+        book,
+        chapter,
+        verse,
+        content,
+        createdBy: req.user.id,
+      });
+      res.json(annotation);
+    } catch (err) {
+      console.error("Error creating group annotation:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete group annotation
+  app.delete("/api/bible/group-annotations/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      await storage.deleteGroupAnnotation(Number(req.params.id));
+      res.json({ message: "Annotation deleted" });
+    } catch (err) {
+      console.error("Error deleting group annotation:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Daily Verse Notifications ===
+  
+  // Get daily verse notifications
+  app.get("/api/bible/daily-verse/notifications", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const notifications = await storage.getDailyVerseNotifications(req.user.id);
+      res.json(notifications);
+    } catch (err) {
+      console.error("Error getting daily verse notifications:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create daily verse notification (for testing or admin)
+  app.post("/api/bible/daily-verse/notifications", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { title, content, verse, userId } = req.body;
+      const notification = await storage.createDailyVerseNotification({
+        userId: userId || req.user.id,
+        title,
+        content,
+        verse,
+      });
+      res.json(notification);
+    } catch (err) {
+      console.error("Error creating daily verse notification:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // === Discipleship Pathways Routes ===
 
   // Get all tracks (public)

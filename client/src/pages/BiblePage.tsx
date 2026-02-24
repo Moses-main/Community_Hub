@@ -123,6 +123,55 @@ async function createDiscussion(data: { book: string; chapter: number; verse: nu
   return res.json();
 }
 
+interface GroupAnnotation {
+  id: number;
+  groupId: number;
+  book: string;
+  chapter: number;
+  verse: number;
+  content: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+async function fetchGroupAnnotations(groupId: number): Promise<GroupAnnotation[]> {
+  const res = await fetch(`/api/bible/group-annotations/${groupId}`, { credentials: "include" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function createGroupAnnotation(data: { groupId: number; book: string; chapter: number; verse: number; content: string }) {
+  const res = await fetch("/api/bible/group-annotations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create group annotation");
+  return res.json();
+}
+
+async function deleteGroupAnnotation(id: number) {
+  const res = await fetch(`/api/bible/group-annotations/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to delete group annotation");
+}
+
+const DAILY_VERSES = [
+  { verse: "John 3:16", text: "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life." },
+  { verse: "Psalm 23:1", text: "The Lord is my shepherd; I shall not want." },
+  { verse: "Proverbs 3:5", text: "Trust in the Lord with all your heart and lean not on your own understanding." },
+  { verse: "Romans 8:28", text: "And we know that in all things God works for the good of those who love him, who have been called according to his purpose." },
+  { verse: "Philippians 4:13", text: "I can do all this through him who gives me strength." },
+  { verse: "Isaiah 40:31", text: "But they who wait for the Lord shall renew their strength; they shall mount up with wings as eagles; they shall run, and not be weary; and they shall walk, and not faint." },
+  { verse: "Matthew 11:28", text: "Come to me, all who labor and are heavy laden, and I will give you rest." },
+  { verse: "2 Corinthians 5:17", text: "Therefore, if anyone is in Christ, he is a new creation. The old has passed away; behold, the new has come." },
+  { verse: "Hebrews 11:1", text: "Now faith is the substance of things hoped for, the evidence of things not seen." },
+  { verse: "1 Peter 5:7", text: "Cast all your anxiety on him because he cares for you." },
+];
+
 export default function BiblePage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -133,16 +182,22 @@ export default function BiblePage() {
   const [highlights, setHighlights] = useState<UserHighlight[]>([]);
   const [notes, setNotes] = useState<UserNote[]>([]);
   const [discussions, setDiscussions] = useState<VerseDiscussion[]>([]);
+  const [groupAnnotations, setGroupAnnotations] = useState<GroupAnnotation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGroupAnnotations, setShowGroupAnnotations] = useState(false);
   
   const [showHighlightDialog, setShowHighlightDialog] = useState(false);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showDiscussionDialog, setShowDiscussionDialog] = useState(false);
+  const [showGroupAnnotationDialog, setShowGroupAnnotationDialog] = useState(false);
   
   const [highlightColor, setHighlightColor] = useState("#FFEB3B");
   const [highlightNote, setHighlightNote] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [discussionContent, setDiscussionContent] = useState("");
+  const [groupAnnotationContent, setGroupAnnotationContent] = useState("");
+  
+  const dailyVerse = DAILY_VERSES[new Date().getDate() % DAILY_VERSES.length];
 
   useEffect(() => {
     loadData();
@@ -246,6 +301,34 @@ export default function BiblePage() {
     }
   }
 
+  async function handleCreateGroupAnnotation() {
+    try {
+      const annotations = await createGroupAnnotation({
+        groupId: 1,
+        book: selectedBook,
+        chapter: selectedChapter,
+        verse: selectedVerse,
+        content: groupAnnotationContent,
+      });
+      setGroupAnnotations([...groupAnnotations, annotations]);
+      setShowGroupAnnotationDialog(false);
+      setGroupAnnotationContent("");
+      toast({ title: "Success", description: "Group annotation added!" });
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to add annotation", variant: "destructive" });
+    }
+  }
+
+  async function handleDeleteGroupAnnotation(id: number) {
+    try {
+      await deleteGroupAnnotation(id);
+      setGroupAnnotations(groupAnnotations.filter(a => a.id !== id));
+      toast({ title: "Success", description: "Annotation removed" });
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to delete annotation", variant: "destructive" });
+    }
+  }
+
   const verseHighlights = highlights.filter(h => 
     h.book === selectedBook && h.chapter === selectedChapter && h.verse === selectedVerse
   );
@@ -274,6 +357,18 @@ export default function BiblePage() {
         </h1>
         <p className="text-gray-600 mt-1">Read, highlight, take notes, and discuss verses</p>
       </div>
+
+      <Card className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <span className="text-2xl">☀️</span> Daily Verse
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xl font-semibold text-blue-800 mb-2">{dailyVerse.verse}</p>
+          <p className="text-gray-700 italic">"{dailyVerse.text}"</p>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="md:col-span-1">

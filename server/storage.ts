@@ -2103,6 +2103,43 @@ export class DatabaseStorage implements IStorage {
   async deleteSupportedLanguage(id: number): Promise<void> {
     await db.delete(supportedLanguages).where(eq(supportedLanguages.id, id));
   }
+
+  // Group Annotations (Bible Study Tools)
+  async getGroupAnnotations(groupId: number): Promise<GroupAnnotation[]> {
+    return db.select().from(groupAnnotations).where(eq(groupAnnotations.groupId, groupId)).orderBy(desc(groupAnnotations.createdAt));
+  }
+
+  async createGroupAnnotation(annotation: InsertGroupAnnotation): Promise<GroupAnnotation> {
+    const [created] = await db.insert(groupAnnotations).values(annotation).returning();
+    return created;
+  }
+
+  async deleteGroupAnnotation(id: number): Promise<void> {
+    await db.delete(groupAnnotations).where(eq(groupAnnotations.id, id));
+  }
+
+  // Daily Verse Notifications
+  async getDailyVerseNotifications(userId: string): Promise<any[]> {
+    const notifications = await db.select().from(memberMessages)
+      .where(and(
+        eq(memberMessages.userId, userId),
+        eq(memberMessages.type, "DAILY_VERSE" as any)
+      ))
+      .orderBy(desc(memberMessages.createdAt));
+    return notifications;
+  }
+
+  async createDailyVerseNotification(data: { userId: string; title: string; content: string; verse: string }) {
+    const [notification] = await db.insert(memberMessages).values({
+      userId: data.userId,
+      type: "DAILY_VERSE" as any,
+      title: data.title,
+      content: data.content,
+      priority: "low" as any,
+      createdBy: data.userId,
+    }).returning();
+    return notification;
+  }
 }
 
 export const storage = new DatabaseStorage();
