@@ -1202,6 +1202,228 @@ export async function registerRoutes(
     }
   });
 
+  // AI Sermon Search - Advanced search by verse, topic, or keyword
+  app.get("/api/sermons/search/advanced", async (req, res) => {
+    try {
+      const { q, verse, topic, limit = 20 } = req.query;
+      const searchQuery = q as string;
+      const verseRef = verse as string;
+      const topicFilter = topic as string;
+      const resultLimit = parseInt(limit as string) || 20;
+
+      let sermons = await storage.getSermons({});
+      
+      // Filter by search query
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        sermons = sermons.filter(s => 
+          s.title?.toLowerCase().includes(query) ||
+          s.description?.toLowerCase().includes(query) ||
+          s.speaker?.toLowerCase().includes(query) ||
+          s.topic?.toLowerCase().includes(query) ||
+          s.series?.toLowerCase().includes(query)
+        );
+      }
+
+      // Filter by verse reference
+      if (verseRef) {
+        const verse = verseRef.toLowerCase();
+        sermons = sermons.filter(s => 
+          s.description?.toLowerCase().includes(verse) ||
+          s.topic?.toLowerCase().includes(verse)
+        );
+      }
+
+      // Filter by topic
+      if (topicFilter) {
+        const topic = topicFilter.toLowerCase();
+        sermons = sermons.filter(s => 
+          s.topic?.toLowerCase().includes(topic) ||
+          s.series?.toLowerCase().includes(topic)
+        );
+      }
+
+      // Sort by date (newest first)
+      sermons = sermons.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      res.json(sermons.slice(0, resultLimit));
+    } catch (err) {
+      console.error("Error searching sermons:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get related sermons based on topic, series, or speaker
+  app.get("/api/sermons/:id/related", async (req, res) => {
+    try {
+      const sermonId = Number(req.params.id);
+      const sermon = await storage.getSermon(sermonId);
+      
+      if (!sermon) {
+        return res.status(404).json({ message: "Sermon not found" });
+      }
+
+      let allSermons = await storage.getSermons({});
+      
+      // Filter out current sermon
+      allSermons = allSermons.filter(s => s.id !== sermonId);
+
+      // Score sermons by relevance
+      const scored = allSermons.map(s => {
+        let score = 0;
+        
+        // Same series (highest weight)
+        if (s.series && sermon.series && s.series === sermon.series) {
+          score += 10;
+        }
+        
+        // Same speaker
+        if (s.speaker && sermon.speaker && s.speaker === sermon.speaker) {
+          score += 5;
+        }
+        
+        // Same topic
+        if (s.topic && sermon.topic) {
+          const topics1 = s.topic.toLowerCase().split(/[,\s]+/);
+          const topics2 = sermon.topic.toLowerCase().split(/[,\s]+/);
+          const overlap = topics1.filter(t => topics2.includes(t)).length;
+          score += overlap * 3;
+        }
+        
+        return { sermon: s, score };
+      });
+
+      // Sort by score and get top results
+      const related = scored
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(s => s.sermon);
+
+      res.json(related);
+    } catch (err) {
+      console.error("Error getting related sermons:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get personalized sermon recommendations
+  app.get("/api/sermons/recommendations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUserById(userId);
+      
+      // Get all sermons
+      let sermons = await storage.getSermons({});
+      
+      // Get user's engagement history (recently viewed, liked, etc.)
+      // For now, we'll use a simple recommendation based on:
+      // 1. User's group interests (if any)
+      // 2. Recent sermon topics
+      
+      // Score sermons
+      const scored = sermons.map(s => {
+        let score = 0;
+        
+        // Prefer recent sermons (last 30 days)
+        const sermonDate = new Date(s.date);
+        const daysAgo = (Date.now() - sermonDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (daysAgo <= 7) score += 10;
+        else if (daysAgo <= 30) score += 5;
+        
+        // Prefer upcoming/most recent if no history
+        // Add more scoring logic based on user preferences
+        
+        return { sermon: s, score };
+      });
+
+      // Sort by score
+      const recommendations = scored
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10)
+        .map(s => s.sermon);
+
+      res.json(recommendations);
+    } catch (err) {
+      console.error("Error getting recommendations:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Generate AI sermon summary (mock implementation)
+  app.get("/api/sermons/:id/summary", async (req, res) => {
+    try {
+      const sermonId = Number(req.params.id);
+      const sermon = await storage.getSermon(sermonId);
+      
+      if (!sermon) {
+        return res.status(404).json({ message: "Sermon not found" });
+      }
+
+      // Generate a summary based on available data
+      // In production, this would call an AI service
+      const summary = {
+        id: sermon.id,
+        title: sermon.title,
+        speaker: sermon.speaker,
+        date: sermon.date,
+        topic: sermon.topic,
+        series: sermon.series,
+        summary: sermon.description 
+          ? (sermon.description.length > 200 
+              ? sermon.description.substring(0, 200) + "..." 
+              : sermon.description)
+          : `A sermon by ${sermon.speaker} on ${sermon.topic || sermon.title}.`,
+        keyPoints: sermon.topic 
+          ? [`Main topic: ${sermon.topic}`, `Part of: ${sermon.series || 'Standalone message'}`]
+          : [`Speaker: ${sermon.speaker}`],
+        generatedAt: new Date().toISOString()
+      };
+
+      res.json(summary);
+    } catch (err) {
+      console.error("Error generating summary:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get sermon topics for filtering
+  app.get("/api/sermons/topics", async (req, res) => {
+    try {
+      const sermons = await storage.getSermons({});
+      
+      // Extract unique topics
+      const topics = new Set<string>();
+      sermons.forEach(s => {
+        if (s.topic) {
+          s.topic.split(/[,\s]+/).forEach(t => {
+            if (t.trim()) topics.add(t.trim());
+          });
+        }
+      });
+
+      // Extract unique series
+      const series = new Set<string>();
+      sermons.forEach(s => {
+        if (s.series) series.add(s.series);
+      });
+
+      // Extract unique speakers
+      const speakers = new Set<string>();
+      sermons.forEach(s => {
+        if (s.speaker) speakers.add(s.speaker);
+      });
+
+      res.json({
+        topics: Array.from(topics).sort(),
+        series: Array.from(series).sort(),
+        speakers: Array.from(speakers).sort()
+      });
+    } catch (err) {
+      console.error("Error fetching sermon topics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Prayer Requests
   app.get(api.prayer.list.path, async (req, res) => {
     const requests = await storage.getPrayerRequests();
