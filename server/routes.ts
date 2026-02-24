@@ -1,6 +1,8 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage, type ISermonFilter } from "./storage";
+import { db } from "./db";
+import { supportedLanguages } from "@shared/schema";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -4144,6 +4146,142 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     } catch (err) {
       console.error("Error processing sermon clip:", err);
       await storage.updateSermonClip(Number(req.params.id), { status: "failed" });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === MULTI-LANGUAGE & LOCALIZATION ROUTES ===
+
+  // Get supported languages
+  app.get("/api/languages", async (req, res) => {
+    try {
+      const languages = await storage.getSupportedLanguages();
+      res.json(languages);
+    } catch (err) {
+      console.error("Error getting languages:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single language
+  app.get("/api/languages/:id", async (req, res) => {
+    try {
+      const language = await storage.getSupportedLanguage(Number(req.params.id));
+      if (!language) return res.status(404).json({ message: "Language not found" });
+      res.json(language);
+    } catch (err) {
+      console.error("Error getting language:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get default language
+  app.get("/api/languages/default", async (req, res) => {
+    try {
+      const language = await storage.getDefaultLanguage();
+      res.json(language || { code: "en", name: "English", nativeName: "English" });
+    } catch (err) {
+      console.error("Error getting default language:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create language (admin only)
+  app.post("/api/languages", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      
+      const { code, name, nativeName, isActive, isDefault, order } = req.body;
+      
+      if (isDefault) {
+        await db.update(supportedLanguages).set({ isDefault: false });
+      }
+      
+      const language = await storage.createSupportedLanguage({
+        code,
+        name,
+        nativeName,
+        isActive: isActive ?? true,
+        isDefault: isDefault ?? false,
+        order: order ?? 0,
+      });
+      
+      res.status(201).json(language);
+    } catch (err) {
+      console.error("Error creating language:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update language (admin only)
+  app.put("/api/languages/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      
+      const { isActive, isDefault, ...rest } = req.body;
+      
+      if (isDefault) {
+        await db.update(supportedLanguages).set({ isDefault: false });
+      }
+      
+      const language = await storage.updateSupportedLanguage(Number(req.params.id), {
+        ...rest,
+        isActive,
+        isDefault,
+      });
+      
+      res.json(language);
+    } catch (err) {
+      console.error("Error updating language:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete language (admin only)
+  app.delete("/api/languages/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      await storage.deleteSupportedLanguage(Number(req.params.id));
+      res.json({ message: "Language deleted" });
+    } catch (err) {
+      console.error("Error deleting language:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update user language preferences
+  app.put("/api/user/preferences/language", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { language, timezone, currency } = req.body;
+      
+      const updates: any = {};
+      if (language) updates.preferredLanguage = language;
+      if (timezone) updates.timezone = timezone;
+      if (currency) updates.currency = currency;
+      
+      const user = await storage.updateUser(req.user!.id, updates);
+      res.json({
+        preferredLanguage: user.preferredLanguage,
+        timezone: user.timezone,
+        currency: user.currency,
+      });
+    } catch (err) {
+      console.error("Error updating user preferences:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user language preferences
+  app.get("/api/user/preferences/language", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const user = await storage.getUserById(req.user!.id);
+      res.json({
+        preferredLanguage: user?.preferredLanguage || "en",
+        timezone: user?.timezone || "UTC",
+        currency: user?.currency || "USD",
+      });
+    } catch (err) {
+      console.error("Error getting user preferences:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });

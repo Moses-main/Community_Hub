@@ -6,11 +6,21 @@ interface Translations {
   [key: string]: string;
 }
 
+interface UserPreferences {
+  preferredLanguage: Language;
+  timezone: string;
+  currency: string;
+}
+
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
   languages: { code: Language; name: string; nativeName: string }[];
+  preferences: UserPreferences;
+  updatePreferences: (prefs: Partial<UserPreferences>) => Promise<void>;
+  supportedTimezones: string[];
+  supportedCurrencies: string[];
 }
 
 const translations: Record<Language, Translations> = {
@@ -450,21 +460,115 @@ const languages = [
   { code: "yo" as Language, name: "Yoruba", nativeName: "Yoruba" },
 ];
 
+const supportedTimezones = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Toronto",
+  "America/Sao_Paulo",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Africa/Lagos",
+  "Africa/Nairobi",
+  "Asia/Dubai",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Australia/Sydney",
+];
+
+const supportedCurrencies = [
+  "USD",
+  "EUR",
+  "GBP",
+  "NGN",
+  "KES",
+  "ZAR",
+  "BRL",
+  "CAD",
+  "AUD",
+  "JPY",
+  "CNY",
+  "INR",
+];
+
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>("en");
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    preferredLanguage: "en",
+    timezone: "UTC",
+    currency: "USD",
+  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("language") as Language;
     if (saved && translations[saved]) {
       setLanguageState(saved);
     }
+    
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
   }, []);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchUserPreferences();
+    }
+  }, [isLoggedIn]);
+
+  const fetchUserPreferences = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/user/preferences/language", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPreferences(data);
+        if (data.preferredLanguage && translations[data.preferredLanguage]) {
+          setLanguageState(data.preferredLanguage);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch user preferences:", error);
+    }
+  };
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem("language", lang);
+  };
+
+  const updatePreferences = async (prefs: Partial<UserPreferences>) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/user/preferences/language", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(prefs),
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        setPreferences(updated);
+        if (updated.preferredLanguage && translations[updated.preferredLanguage]) {
+          setLanguageState(updated.preferredLanguage);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to update preferences:", error);
+      throw error;
+    }
   };
 
   const t = useCallback((key: string): string => {
@@ -473,7 +577,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return result;
   }, [language]);
 
-  const value = useMemo(() => ({ language, setLanguage, t, languages }), [language, t]);
+  const value = useMemo(() => ({ 
+    language, 
+    setLanguage, 
+    t, 
+    languages, 
+    preferences,
+    updatePreferences,
+    supportedTimezones,
+    supportedCurrencies,
+  }), [language, t, preferences]);
 
   return (
     <LanguageContext.Provider value={value}>

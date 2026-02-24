@@ -41,6 +41,7 @@ import BiblePage from "@/pages/BiblePage";
 import DiscipleshipPage from "@/pages/DiscipleshipPage";
 import SermonClipGeneratorPage from "@/pages/SermonClipGeneratorPage";
 import { useWebSocket } from "@/hooks/use-websocket";
+import LanguageSettingsPage from "@/pages/LanguageSettingsPage";
 import { LanguageProvider } from "@/hooks/use-language";
 
 import { useLocation } from "wouter";
@@ -89,6 +90,7 @@ function Router() {
           <Route path="/admin/sermon-clips" component={SermonClipGeneratorPage} />
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/messages" component={MessagesPage} />
+          <Route path="/settings/language" component={LanguageSettingsPage} />
           {/* Detail pages could be added here later e.g. /sermons/:id */}
           <Route component={NotFound} />
         </Switch>

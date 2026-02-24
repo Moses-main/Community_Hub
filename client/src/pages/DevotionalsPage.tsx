@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -12,12 +10,13 @@ import {
   BookOpen, 
   Loader2, 
   Calendar, 
-  CheckCircle,
   ChevronRight,
   Clock,
   Target,
   Plus,
-  Sparkles
+  Sparkles,
+  CheckCircle2,
+  ArrowLeft
 } from "lucide-react";
 import { buildApiUrl } from "@/lib/api-config";
 
@@ -57,8 +56,8 @@ export default function DevotionalsPage() {
   const [selectedPlan, setSelectedPlan] = useState<BibleReadingPlan | null>(null);
   const [progress, setProgress] = useState<ReadingProgress[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDevotionalId, setSelectedDevotionalId] = useState<number | null>(null);
   
-  // Admin states
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [newDevotional, setNewDevotional] = useState({
@@ -88,6 +87,7 @@ export default function DevotionalsPage() {
           setDevotionals(devotionalData);
           if (devotionalData.length > 0) {
             setTodayDevotional(devotionalData[0]);
+            setSelectedDevotionalId(devotionalData[0].id);
           }
         }
 
@@ -167,7 +167,6 @@ export default function DevotionalsPage() {
         toast({ title: "Success", description: "Devotional created successfully!" });
         setShowCreateDialog(false);
         setNewDevotional({ title: "", content: "", author: "", bibleVerse: "", theme: "", publishDate: "" });
-        // Refresh devotionals
         const devotionalRes = await fetch(buildApiUrl("/api/devotionals?published=true"));
         if (devotionalRes.ok) {
           const data = await devotionalRes.json();
@@ -217,6 +216,8 @@ export default function DevotionalsPage() {
     }
   };
 
+  const selectedDevotional = devotionals.find(d => d.id === selectedDevotionalId) || todayDevotional;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -226,308 +227,320 @@ export default function DevotionalsPage() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Daily Devotionals</h1>
-          <p className="text-muted-foreground mt-1">
-            Grow in your faith with daily devotionals and Bible reading plans
-          </p>
-        </div>
-        
-        {isAdmin && (
-          <div className="flex gap-2">
-            <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  Generate with AI
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>AI Devotional Generator</DialogTitle>
-                  <DialogDescription>
-                    Enter a topic or theme, and AI will generate a devotional for you
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Topic or Theme</Label>
-                    <Textarea
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      placeholder="e.g., God's love, faith, forgiveness, Easter, etc."
-                      rows={3}
-                    />
-                  </div>
-                  <Button
-                    onClick={generateWithAI}
-                    disabled={isGenerating}
-                    className="w-full gap-2"
-                  >
-                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Generate Devotional
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+    <div className="min-h-screen bg-slate-50/50">
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <header className="mb-12">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">Daily Devotionals</h1>
+              <p className="mt-2 text-slate-500 text-[15px] font-normal">
+                Grow in your faith with daily reflections and Bible reading plans
+              </p>
+            </div>
+            
+            {isAdmin && (
+              <div className="flex items-center gap-3">
+                <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="gap-2 h-10 rounded-lg border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all duration-200">
+                      <Sparkles className="w-4 h-4 text-slate-600" />
+                      <span className="text-slate-600">Generate with AI</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="rounded-xl border-0 shadow-2xl bg-white p-6">
+                    <DialogHeader className="pb-4">
+                      <DialogTitle className="text-xl font-semibold text-slate-900">AI Devotional Generator</DialogTitle>
+                      <DialogDescription className="text-slate-500">
+                        Enter a topic or theme, and AI will generate a devotional for you
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium text-slate-700">Topic or Theme</Label>
+                        <Textarea
+                          value={aiPrompt}
+                          onChange={(e) => setAiPrompt(e.target.value)}
+                          placeholder="e.g., God's love, faith, forgiveness, Easter, etc."
+                          rows={3}
+                          className="mt-1.5 rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+                        />
+                      </div>
+                      <Button
+                        onClick={generateWithAI}
+                        disabled={isGenerating}
+                        className="w-full h-11 rounded-lg bg-primary hover:bg-primary/90 gap-2 font-medium"
+                      >
+                        {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                        Generate Devotional
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Create Devotional
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Create New Devotional</DialogTitle>
-                  <DialogDescription>
-                    Create a new daily devotional for the community
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-                  <div>
-                    <Label>Title *</Label>
-                    <Input
-                      value={newDevotional.title}
-                      onChange={(e) => setNewDevotional({ ...newDevotional, title: e.target.value })}
-                      placeholder="Enter devotional title"
-                    />
-                  </div>
-                  <div>
-                    <Label>Content *</Label>
-                    <Textarea
-                      value={newDevotional.content}
-                      onChange={(e) => setNewDevotional({ ...newDevotional, content: e.target.value })}
-                      placeholder="Write your devotional content..."
-                      rows={8}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Author</Label>
-                      <Input
-                        value={newDevotional.author}
-                        onChange={(e) => setNewDevotional({ ...newDevotional, author: e.target.value })}
-                        placeholder="Author name"
-                      />
+                <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2 h-10 rounded-lg bg-slate-900 hover:bg-slate-800 gap-2 font-medium">
+                      <Plus className="w-4 h-4" />
+                      Create
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl rounded-xl border-0 shadow-2xl bg-white p-6">
+                    <DialogHeader className="pb-4">
+                      <DialogTitle className="text-xl font-semibold text-slate-900">Create New Devotional</DialogTitle>
+                      <DialogDescription className="text-slate-500">
+                        Create a new daily devotional for the community
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                      <div>
+                        <Label className="text-sm font-medium text-slate-700">Title *</Label>
+                        <Input
+                          value={newDevotional.title}
+                          onChange={(e) => setNewDevotional({ ...newDevotional, title: e.target.value })}
+                          placeholder="Enter devotional title"
+                          className="mt-1.5 rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-slate-700">Content *</Label>
+                        <Textarea
+                          value={newDevotional.content}
+                          onChange={(e) => setNewDevotional({ ...newDevotional, content: e.target.value })}
+                          placeholder="Write your devotional content..."
+                          rows={8}
+                          className="mt-1.5 rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-slate-700">Author</Label>
+                          <Input
+                            value={newDevotional.author}
+                            onChange={(e) => setNewDevotional({ ...newDevotional, author: e.target.value })}
+                            placeholder="Author name"
+                            className="mt-1.5 rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-slate-700">Bible Verse</Label>
+                          <Input
+                            value={newDevotional.bibleVerse}
+                            onChange={(e) => setNewDevotional({ ...newDevotional, bibleVerse: e.target.value })}
+                            placeholder="e.g., John 3:16"
+                            className="mt-1.5 rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-slate-700">Theme</Label>
+                          <Input
+                            value={newDevotional.theme}
+                            onChange={(e) => setNewDevotional({ ...newDevotional, theme: e.target.value })}
+                            placeholder="Theme or category"
+                            className="mt-1.5 rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-slate-700">Publish Date</Label>
+                          <Input
+                            type="date"
+                            value={newDevotional.publishDate}
+                            onChange={(e) => setNewDevotional({ ...newDevotional, publishDate: e.target.value })}
+                            className="mt-1.5 rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        onClick={createDevotional}
+                        disabled={isCreating}
+                        className="w-full h-11 rounded-lg bg-slate-900 hover:bg-slate-800 font-medium"
+                      >
+                        {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        {isCreating ? "Creating..." : "Create Devotional"}
+                      </Button>
                     </div>
-                    <div>
-                      <Label>Bible Verse</Label>
-                      <Input
-                        value={newDevotional.bibleVerse}
-                        onChange={(e) => setNewDevotional({ ...newDevotional, bibleVerse: e.target.value })}
-                        placeholder="e.g., John 3:16"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Theme</Label>
-                      <Input
-                        value={newDevotional.theme}
-                        onChange={(e) => setNewDevotional({ ...newDevotional, theme: e.target.value })}
-                        placeholder="Theme or category"
-                      />
-                    </div>
-                    <div>
-                      <Label>Publish Date</Label>
-                      <Input
-                        type="date"
-                        value={newDevotional.publishDate}
-                        onChange={(e) => setNewDevotional({ ...newDevotional, publishDate: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={createDevotional}
-                    disabled={isCreating}
-                    className="w-full"
-                  >
-                    {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                    {isCreating ? "Creating..." : "Create Devotional"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </header>
 
-      <Tabs defaultValue="devotional" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="devotional">
-            <BookOpen className="w-4 h-4 mr-2" />
-            Today's Devotional
-          </TabsTrigger>
-          <TabsTrigger value="plans">
-            <Target className="w-4 h-4 mr-2" />
-            Reading Plans
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="devotional" className="space-y-6">
-          {todayDevotional ? (
-            <Card className="overflow-hidden">
-              {todayDevotional.imageUrl && (
-                <div className="h-64 overflow-hidden">
-                  <img 
-                    src={todayDevotional.imageUrl} 
-                    alt={todayDevotional.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              <CardHeader>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>{new Date(todayDevotional.publishDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-                  {todayDevotional.theme && (
-                    <>
-                      <span>•</span>
-                      <span className="bg-primary/10 px-2 py-0.5 rounded-full text-primary">{todayDevotional.theme}</span>
-                    </>
+        <div className="grid lg:grid-cols-[1fr_320px] gap-8">
+          <main>
+            {selectedDevotional ? (
+              <article className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
+                {selectedDevotional.imageUrl && (
+                  <div className="h-56 overflow-hidden">
+                    <img 
+                      src={selectedDevotional.imageUrl} 
+                      alt={selectedDevotional.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div className="p-8 md:p-10">
+                  <div className="flex items-center gap-3 text-sm text-slate-400 mb-6">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4" />
+                      {new Date(selectedDevotional.publishDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    </span>
+                    {selectedDevotional.theme && (
+                      <>
+                        <span className="text-slate-300">·</span>
+                        <span className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 font-medium text-xs">
+                          {selectedDevotional.theme}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  
+                  <h2 className="text-2xl font-semibold text-slate-900 tracking-tight mb-2">
+                    {selectedDevotional.title}
+                  </h2>
+                  {selectedDevotional.author && (
+                    <p className="text-slate-500 mb-8">By {selectedDevotional.author}</p>
+                  )}
+                  
+                  <div className="prose prose-lg max-w-none">
+                    <p className="whitespace-pre-wrap leading-8 text-slate-600 text-[17px] font-normal">
+                      {selectedDevotional.content}
+                    </p>
+                  </div>
+                  
+                  {selectedDevotional.bibleVerse && (
+                    <div className="mt-10 p-6 rounded-xl bg-slate-50 border border-slate-100">
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Bible Verse</p>
+                      <p className="text-lg font-medium text-slate-800">{selectedDevotional.bibleVerse}</p>
+                    </div>
                   )}
                 </div>
-                <CardTitle className="text-2xl">{todayDevotional.title}</CardTitle>
-                {todayDevotional.author && (
-                  <CardDescription className="text-base">By {todayDevotional.author}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="prose prose-lg max-w-none">
-                  <p className="whitespace-pre-wrap leading-relaxed">{todayDevotional.content}</p>
-                </div>
-                {todayDevotional.bibleVerse && (
-                  <div className="bg-secondary/50 p-4 rounded-lg border">
-                    <p className="text-sm text-muted-foreground mb-1">Bible Verse</p>
-                    <p className="font-medium text-lg">{todayDevotional.bibleVerse}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No devotional available today.</p>
-              </CardContent>
-            </Card>
-          )}
+              </article>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+                <BookOpen className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                <p className="text-slate-500">No devotional available today.</p>
+              </div>
+            )}
 
-          {devotionals.length > 1 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Past Devotionals</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                {devotionals.slice(1, 5).map((devotional) => (
-                  <Card key={devotional.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{devotional.title}</CardTitle>
-                      <CardDescription>
+            {devotionals.length > 1 && (
+              <div className="mt-10">
+                <h3 className="text-lg font-semibold text-slate-900 mb-6">Past Devotionals</h3>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {devotionals.slice(1, 5).map((devotional) => (
+                    <button
+                      key={devotional.id}
+                      onClick={() => setSelectedDevotionalId(devotional.id)}
+                      className={`text-left p-5 rounded-xl transition-all duration-200 ${
+                        selectedDevotionalId === devotional.id
+                          ? 'bg-white shadow-md ring-1 ring-slate-200'
+                          : 'bg-white shadow-sm hover:shadow-md hover:ring-1 hover:ring-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
+                        <Calendar className="w-3.5 h-3.5" />
                         {new Date(devotional.publishDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{devotional.content.substring(0, 150)}...</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </div>
+                      <h4 className="font-medium text-slate-900 mb-1.5 line-clamp-1">{devotional.title}</h4>
+                      <p className="text-sm text-slate-500 line-clamp-2">{devotional.content.substring(0, 100)}...</p>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </TabsContent>
+            )}
+          </main>
 
-        <TabsContent value="plans" className="space-y-6">
-          {readingPlans.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No reading plans available at the moment.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {readingPlans.map((plan) => (
-                  <Button
-                    key={plan.id}
-                    variant={selectedPlan?.id === plan.id ? "default" : "outline"}
-                    onClick={() => setSelectedPlan(plan)}
-                    className="whitespace-nowrap"
-                  >
-                    {plan.title}
-                  </Button>
-                ))}
+          <aside className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                  <Target className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900">Reading Plans</h3>
+                  <p className="text-sm text-slate-500">Bible reading tracks</p>
+                </div>
               </div>
 
-              {selectedPlan && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{selectedPlan.title}</CardTitle>
-                    {selectedPlan.description && (
-                      <CardDescription>{selectedPlan.description}</CardDescription>
-                    )}
-                    <div className="flex items-center gap-4 mt-2">
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        <span>{selectedPlan.duration} days</span>
+              {readingPlans.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">No reading plans available</p>
+              ) : (
+                <>
+                  <div className="space-y-2 mb-6">
+                    {readingPlans.map((plan) => (
+                      <button
+                        key={plan.id}
+                        onClick={() => setSelectedPlan(plan)}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                          selectedPlan?.id === plan.id
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {plan.title}
+                      </button>
+                    ))}
+                  </div>
+
+                  {selectedPlan && (
+                    <div className="border-t border-slate-100 pt-5">
+                      <div className="flex items-center justify-between text-sm mb-3">
+                        <span className="text-slate-500">Progress</span>
+                        <span className="font-semibold text-slate-900">{progressPercentage}%</span>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <CheckCircle className="w-4 h-4" />
-                        <span>{completedDays} days completed</span>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Progress</span>
-                        <span className="font-medium">{progressPercentage}%</span>
-                      </div>
-                      <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
                         <div 
-                          className="h-full bg-green-500 rounded-full transition-all"
+                          className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-500"
                           style={{ width: `${progressPercentage}%` }}
                         />
                       </div>
-                    </div>
+                      
+                      <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{selectedPlan.duration} days</span>
+                        <span className="text-slate-200">·</span>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>{completedDays} completed</span>
+                      </div>
 
-                    <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                      {Array.from({ length: selectedPlan.duration }, (_, i) => {
-                        const dayNumber = i + 1;
-                        const isCompleted = progress.some(p => p.dayNumber === dayNumber && p.completed);
-                        
-                        return (
-                          <Button
-                            key={dayNumber}
-                            variant={isCompleted ? "secondary" : "outline"}
-                            className="relative"
-                            disabled={!user}
-                            onClick={() => !isCompleted && markDayComplete(dayNumber)}
-                          >
-                            Day {dayNumber}
-                            {isCompleted && (
-                              <CheckCircle className="w-4 h-4 absolute -top-1 -right-1 text-green-500 bg-white rounded-full" />
-                            )}
-                          </Button>
-                        );
-                      })}
-                    </div>
+                      <div className="grid grid-cols-5 gap-1.5 max-h-48 overflow-y-auto">
+                        {Array.from({ length: selectedPlan.duration }, (_, i) => {
+                          const dayNumber = i + 1;
+                          const isCompleted = progress.some(p => p.dayNumber === dayNumber && p.completed);
+                          
+                          return (
+                            <button
+                              key={dayNumber}
+                              onClick={() => !isCompleted && markDayComplete(dayNumber)}
+                              disabled={!user || isCompleted}
+                              className={`h-9 rounded-lg text-xs font-medium transition-all duration-200 ${
+                                isCompleted
+                                  ? 'bg-emerald-50 text-emerald-600'
+                                  : user
+                                  ? 'bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'
+                                  : 'bg-slate-50 text-slate-300 cursor-not-allowed'
+                              }`}
+                            >
+                              {dayNumber}
+                            </button>
+                          );
+                        })}
+                      </div>
 
-                    {!user && (
-                      <p className="text-sm text-muted-foreground text-center">
-                        Log in to track your reading progress
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+                      {!user && (
+                        <p className="text-xs text-slate-400 text-center mt-4">
+                          Sign in to track progress
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
+            </div>
+          </aside>
+        </div>
+      </div>
     </div>
   );
 }
