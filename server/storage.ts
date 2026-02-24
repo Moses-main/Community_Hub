@@ -4,7 +4,7 @@ import {
   dailyDevotionals, bibleReadingPlans, bibleReadingProgress,
   music, musicGenres, musicPlaylists, playlistMusic,
   houseCells, houseCellMessages,
-  groups, groupMembers, groupMessages,
+  groups, groupMembers, groupMessages, groupJoinRequests, groupActivityLogs,
   auditLogs, permissions,
   liveStreams,
   apiKeys, webhooks,
@@ -21,7 +21,7 @@ import {
   type InsertAttendance, type InsertAttendanceLink, type InsertAttendanceSettings, type InsertMemberMessage,
   type InsertMusic, type InsertMusicPlaylist,
   type HouseCell, type HouseCellMessage, type InsertHouseCell, type InsertHouseCellMessage,
-  type Group, type GroupMember, type GroupMessage, type InsertGroup, type InsertGroupMember, type InsertGroupMessage,
+  type Group, type GroupMember, type GroupMessage, type GroupJoinRequest, type GroupActivityLog, type InsertGroup, type InsertGroupMember, type InsertGroupMessage, type InsertGroupJoinRequest, type InsertGroupActivityLog,
   type LiveStream, type InsertLiveStream,
   type ApiKey, type InsertApiKey,
   type Webhook, type InsertWebhook,
@@ -238,11 +238,19 @@ export interface IStorage {
   updateGroup(id: number, updates: Partial<Group>): Promise<Group>;
   deleteGroup(id: number): Promise<void>;
   getGroupMembers(groupId: number): Promise<GroupMember[]>;
+  getGroupMember(groupId: number, userId: string): Promise<GroupMember | undefined>;
   addGroupMember(member: InsertGroupMember): Promise<GroupMember>;
   removeGroupMember(groupId: number, userId: string): Promise<void>;
   getGroupMessages(groupId: number): Promise<GroupMessage[]>;
   createGroupMessage(message: InsertGroupMessage): Promise<GroupMessage>;
   getUserGroups(userId: string): Promise<Group[]>;
+  suggestGroups(userId: string, userInterests?: string[], userCity?: string, userState?: string): Promise<Group[]>;
+  getGroupJoinRequests(groupId: number): Promise<GroupJoinRequest[]>;
+  getUserJoinRequest(groupId: number, userId: string): Promise<GroupJoinRequest | undefined>;
+  createGroupJoinRequest(request: InsertGroupJoinRequest): Promise<GroupJoinRequest>;
+  updateGroupJoinRequest(id: number, status: string, reviewedBy: string): Promise<GroupJoinRequest>;
+  getGroupActivityLogs(groupId: number, limit?: number): Promise<GroupActivityLog[]>;
+  createGroupActivityLog(log: InsertGroupActivityLog): Promise<GroupActivityLog>;
 
   // Audit Logs
   createAuditLog(log: { userId?: string; action: string; entityType?: string; entityId?: string; details?: any; ipAddress?: string }): Promise<void>;
@@ -1519,6 +1527,14 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(groupMembers).where(eq(groupMembers.groupId, groupId));
   }
 
+  async getGroupMember(groupId: number, userId: string): Promise<GroupMember | undefined> {
+    const [member] = await db.select().from(groupMembers).where(and(
+      eq(groupMembers.groupId, groupId),
+      eq(groupMembers.userId, userId)
+    ));
+    return member;
+  }
+
   async addGroupMember(member: InsertGroupMember): Promise<GroupMember> {
     const [created] = await db.insert(groupMembers).values(member as any).returning();
     return created;
@@ -2139,6 +2155,89 @@ export class DatabaseStorage implements IStorage {
       createdBy: data.userId,
     }).returning();
     return notification;
+  }
+
+  // Group Join Requests
+  async getGroupJoinRequests(groupId: number): Promise<GroupJoinRequest[]> {
+    return db.select().from(groupJoinRequests)
+      .where(and(eq(groupJoinRequests.groupId, groupId), eq(groupJoinRequests.status, "PENDING")))
+      .orderBy(desc(groupJoinRequests.createdAt));
+  }
+
+  async getUserJoinRequest(groupId: number, userId: string): Promise<GroupJoinRequest | undefined> {
+    const [request] = await db.select().from(groupJoinRequests)
+      .where(and(eq(groupJoinRequests.groupId, groupId), eq(groupJoinRequests.userId, userId)));
+    return request;
+  }
+
+  async createGroupJoinRequest(request: InsertGroupJoinRequest): Promise<GroupJoinRequest> {
+    const [created] = await db.insert(groupJoinRequests).values(request).returning();
+    return created;
+  }
+
+  async updateGroupJoinRequest(id: number, status: string, reviewedBy: string): Promise<GroupJoinRequest> {
+    const [updated] = await db.update(groupJoinRequests)
+      .set({ status, reviewedBy, reviewedAt: new Date() })
+      .where(eq(groupJoinRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Group Activity Logs
+  async getGroupActivityLogs(groupId: number, limit = 50): Promise<GroupActivityLog[]> {
+    return db.select().from(groupActivityLogs)
+      .where(eq(groupActivityLogs.groupId, groupId))
+      .orderBy(desc(groupActivityLogs.createdAt))
+      .limit(limit);
+  }
+
+  async createGroupActivityLog(log: InsertGroupActivityLog): Promise<GroupActivityLog> {
+    const [created] = await db.insert(groupActivityLogs).values(log).returning();
+    return created;
+  }
+
+  // Smart Group Matching
+  async suggestGroups(userId: string, userInterests: string[] = [], userCity: string = "", userState: string = ""): Promise<Group[]> {
+    const user = await this.getUserById(userId);
+    if (!user) return [];
+
+    const userBirthYear = user.birthday ? new Date(user.birthday).getFullYear() : null;
+    const currentYear = new Date().getFullYear();
+    const userAge = userBirthYear ? currentYear - userBirthYear : null;
+
+    const allGroups = await db.select().from(groups).where(eq(groups.isPrivate, false));
+
+    const scoredGroups = allGroups.map(group => {
+      let score = 0;
+
+      if (group.city && userCity && group.city.toLowerCase() === userCity.toLowerCase()) {
+        score += 30;
+      }
+      if (group.state && userState && group.state.toLowerCase() === userState.toLowerCase()) {
+        score += 20;
+      }
+
+      if (group.targetAgeMin && group.targetAgeMax && userAge) {
+        if (userAge >= group.targetAgeMin && userAge <= group.targetAgeMax) {
+          score += 25;
+        }
+      }
+
+      if (group.interests && Array.isArray(group.interests) && userInterests.length > 0) {
+        const matchingInterests = group.interests.filter((i: string) => 
+          userInterests.some(ui => ui.toLowerCase() === i.toLowerCase())
+        );
+        score += matchingInterests.length * 15;
+      }
+
+      return { group, score };
+    });
+
+    return scoredGroups
+      .filter(g => g.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+      .map(g => g.group);
   }
 }
 

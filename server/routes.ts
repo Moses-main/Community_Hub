@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage, type ISermonFilter } from "./storage";
 import { db } from "./db";
-import { supportedLanguages } from "@shared/schema";
+import { supportedLanguages, groupJoinRequests, groupActivityLogs } from "@shared/schema";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -2913,6 +2913,152 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       res.status(201).json(message);
     } catch (err) {
       console.error("Error sending message:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Group Join Requests ===
+  
+  // Request to join a group
+  app.post("/api/groups/:id/join-request", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const group = await storage.getGroupById(id);
+      if (!group) return res.status(404).json({ message: "Group not found" });
+      
+      const existingRequest = await storage.getUserJoinRequest(id, req.user!.id);
+      if (existingRequest && existingRequest.status === "PENDING") {
+        return res.status(400).json({ message: "You already have a pending request" });
+      }
+      
+      const existingMember = await storage.getGroupMember(id, req.user!.id);
+      if (existingMember) {
+        return res.status(400).json({ message: "You are already a member" });
+      }
+      
+      const { message } = req.body;
+      const request = await storage.createGroupJoinRequest({
+        groupId: id,
+        userId: req.user!.id,
+        message: message || null,
+      });
+      
+      await storage.createGroupActivityLog({
+        groupId: id,
+        userId: req.user!.id,
+        action: "JOIN_REQUEST",
+        details: { requestId: request.id },
+      });
+      
+      res.status(201).json(request);
+    } catch (err) {
+      console.error("Error requesting to join:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get join requests for a group (admin only)
+  app.get("/api/groups/:id/join-requests", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const group = await storage.getGroupById(id);
+      if (!group) return res.status(404).json({ message: "Group not found" });
+      
+      const isMember = await storage.getGroupMember(id, req.user!.id);
+      if (!isMember || !["ADMIN", "OWNER"].includes(isMember.role)) {
+        return res.status(403).json({ message: "Only group admins can view requests" });
+      }
+      
+      const requests = await storage.getGroupJoinRequests(id);
+      res.json(requests);
+    } catch (err) {
+      console.error("Error fetching join requests:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Approve or reject join request (group admin only)
+  app.put("/api/groups/join-requests/:requestId", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const requestId = Number(req.params.requestId);
+      const { status } = req.body;
+      
+      if (!["APPROVED", "REJECTED"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const requests = await db.select().from(groupJoinRequests).where(eq(groupJoinRequests.id, requestId));
+      const request = requests[0];
+      if (!request) return res.status(404).json({ message: "Request not found" });
+      
+      const isMember = await storage.getGroupMember(request.groupId, req.user!.id);
+      if (!isMember || !["ADMIN", "OWNER"].includes(isMember.role)) {
+        return res.status(403).json({ message: "Only group admins can review requests" });
+      }
+      
+      const updated = await storage.updateGroupJoinRequest(requestId, status, req.user!.id);
+      
+      if (status === "APPROVED") {
+        await storage.addGroupMember({
+          groupId: request.groupId,
+          userId: request.userId!,
+          role: "MEMBER",
+        });
+        
+        await storage.createGroupActivityLog({
+          groupId: request.groupId,
+          userId: request.userId!,
+          action: "MEMBER_JOINED",
+          details: { requestId },
+        });
+      }
+      
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating join request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Group Activity Tracking ===
+  
+  // Get group activity
+  app.get("/api/groups/:id/activity", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      const isMember = await storage.getGroupMember(id, req.user!.id);
+      if (!isMember) {
+        return res.status(403).json({ message: "Only members can view activity" });
+      }
+      
+      const activity = await storage.getGroupActivityLogs(id, limit);
+      res.json(activity);
+    } catch (err) {
+      console.error("Error fetching group activity:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Smart Group Matching ===
+  
+  // Get personalized group suggestions
+  app.get("/api/groups/suggestions", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const user = await storage.getUserById(req.user!.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      
+      const suggestions = await storage.suggestGroups(
+        user.id,
+        [],
+        user.address?.split(",")[0] || "",
+        user.address?.split(",")[1]?.trim() || ""
+      );
+      
+      res.json(suggestions);
+    } catch (err) {
+      console.error("Error fetching group suggestions:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });

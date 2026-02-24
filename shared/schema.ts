@@ -562,6 +562,16 @@ export const groups = pgTable("groups", {
   createdBy: uuid("created_by").references(() => users.id),
   isPrivate: boolean("is_private").default(false),
   allowMemberInvite: boolean("allow_member_invite").default(true),
+  location: text("location"),
+  city: text("city"),
+  state: text("state"),
+  country: text("country"),
+  targetAgeMin: integer("target_age_min"),
+  targetAgeMax: integer("target_age_max"),
+  interests: jsonb("interests").default("[]"),
+  category: text("category"),
+  requireApproval: boolean("require_approval").default(false),
+  maxMembers: integer("max_members"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -571,7 +581,28 @@ export const groupMembers = pgTable("group_members", {
   groupId: integer("group_id").notNull().references(() => groups.id),
   userId: uuid("user_id").references(() => users.id),
   role: text("role").default("MEMBER"),
+  status: text("status").default("ACTIVE"),
   joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const groupJoinRequests = pgTable("group_join_requests", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull().references(() => groups.id),
+  userId: uuid("user_id").references(() => users.id),
+  message: text("message"),
+  status: text("status").default("PENDING"),
+  reviewedBy: uuid("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const groupActivityLogs = pgTable("group_activity_logs", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull().references(() => groups.id),
+  userId: uuid("user_id").references(() => users.id),
+  action: text("action").notNull(),
+  details: jsonb("details").default("{}"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const groupMessages = pgTable("group_messages", {
@@ -614,18 +645,50 @@ export const groupMessagesRelations = relations(groupMessages, ({ one }) => ({
   }),
 }));
 
+export const groupJoinRequestsRelations = relations(groupJoinRequests, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupJoinRequests.groupId],
+    references: [groups.id],
+  }),
+  user: one(users, {
+    fields: [groupJoinRequests.userId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [groupJoinRequests.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+export const groupActivityLogsRelations = relations(groupActivityLogs, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupActivityLogs.groupId],
+    references: [groups.id],
+  }),
+  user: one(users, {
+    fields: [groupActivityLogs.userId],
+    references: [users.id],
+  }),
+}));
+
 // === GROUP SCHEMAS ===
 export const insertGroupSchema = createInsertSchema(groups).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertGroupMemberSchema = createInsertSchema(groupMembers).omit({ id: true, joinedAt: true });
 export const insertGroupMessageSchema = createInsertSchema(groupMessages).omit({ id: true, createdAt: true });
+export const insertGroupJoinRequestSchema = createInsertSchema(groupJoinRequests).omit({ id: true, createdAt: true });
+export const insertGroupActivityLogSchema = createInsertSchema(groupActivityLogs).omit({ id: true, createdAt: true });
 
 // === GROUP TYPES ===
 export type Group = typeof groups.$inferSelect;
 export type GroupMember = typeof groupMembers.$inferSelect;
 export type GroupMessage = typeof groupMessages.$inferSelect;
+export type GroupJoinRequest = typeof groupJoinRequests.$inferSelect;
+export type GroupActivityLog = typeof groupActivityLogs.$inferSelect;
 export type InsertGroup = z.infer<typeof insertGroupSchema>;
 export type InsertGroupMember = z.infer<typeof insertGroupMemberSchema>;
 export type InsertGroupMessage = z.infer<typeof insertGroupMessageSchema>;
+export type InsertGroupJoinRequest = z.infer<typeof insertGroupJoinRequestSchema>;
+export type InsertGroupActivityLog = z.infer<typeof insertGroupActivityLogSchema>;
 
 // === AUDIT LOGS ===
 export const auditLogs = pgTable("audit_logs", {
