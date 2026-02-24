@@ -13,6 +13,7 @@ import {
   userHighlights, userNotes, verseDiscussions, groupAnnotations,
   discipleshipTracks, lessons, quizzes, userProgress, reflections,
   sermonClips,
+  supportedLanguages,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -42,7 +43,8 @@ import {
   type Quiz, type InsertQuiz,
   type UserProgress, type InsertUserProgress,
   type Reflection, type InsertReflection,
-  type SermonClip, type InsertSermonClip
+  type SermonClip, type InsertSermonClip,
+  type SupportedLanguage, type InsertSupportedLanguage
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -2067,6 +2069,39 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSermonClip(id: number): Promise<void> {
     await db.delete(sermonClips).where(eq(sermonClips.id, id));
+  }
+
+  // Supported Languages (Multi-Language & Localization)
+  async getSupportedLanguages(): Promise<SupportedLanguage[]> {
+    return db.select().from(supportedLanguages).where(eq(supportedLanguages.isActive, true)).orderBy(supportedLanguages.order);
+  }
+
+  async getSupportedLanguage(id: number): Promise<SupportedLanguage | undefined> {
+    const [lang] = await db.select().from(supportedLanguages).where(eq(supportedLanguages.id, id));
+    return lang;
+  }
+
+  async getDefaultLanguage(): Promise<SupportedLanguage | undefined> {
+    const [lang] = await db.select().from(supportedLanguages).where(eq(supportedLanguages.isDefault, true));
+    return lang;
+  }
+
+  async createSupportedLanguage(lang: InsertSupportedLanguage): Promise<SupportedLanguage> {
+    const [created] = await db.insert(supportedLanguages).values(lang).returning();
+    return created;
+  }
+
+  async updateSupportedLanguage(id: number, updates: Partial<SupportedLanguage>): Promise<SupportedLanguage> {
+    const [updated] = await db
+      .update(supportedLanguages)
+      .set(updates)
+      .where(eq(supportedLanguages.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSupportedLanguage(id: number): Promise<void> {
+    await db.delete(supportedLanguages).where(eq(supportedLanguages.id, id));
   }
 }
 

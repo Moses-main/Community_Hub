@@ -750,6 +750,26 @@ export const insertWebhookSchema = createInsertSchema(webhooks).omit({ id: true,
 export type Webhook = typeof webhooks.$inferSelect;
 export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
 
+// === MULTI-LANGUAGE & LOCALIZATION ===
+
+export const supportedLanguages = pgTable("supported_languages", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  nativeName: text("native_name").notNull(),
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const supportedLanguagesRelations = relations(supportedLanguages, ({ one }) => ({
+}));
+
+export const insertSupportedLanguageSchema = createInsertSchema(supportedLanguages).omit({ id: true, createdAt: true });
+export type SupportedLanguage = typeof supportedLanguages.$inferSelect;
+export type InsertSupportedLanguage = z.infer<typeof insertSupportedLanguageSchema>;
+
 // === Volunteer Management ===
 
 export const volunteerSkills = pgTable("volunteer_skills", {
