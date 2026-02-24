@@ -4582,4 +4582,87 @@ async function seedDatabase() {
       await storage.updateEvent(existingEvents[i].id, { date: eventDates[i] || eventDates[0] });
     }
   }
+
+  // Seed Discipleship Tracks
+  const existingTracks = await storage.getDiscipleshipTracks();
+  if (existingTracks.length === 0) {
+    // New Believer Track
+    const newBelieverTrack = await storage.createDiscipleshipTrack({
+      title: "Foundations of Faith",
+      description: "A beginner's guide to the Christian faith. Learn the basic beliefs and practices of Christianity.",
+      category: "new_believer",
+      imageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=60",
+      estimatedWeeks: 8,
+      isActive: true,
+      order: 1,
+    });
+
+    // Add lessons for New Believer track
+    await storage.createLesson({
+      trackId: newBelieverTrack.id,
+      title: "What is Christianity?",
+      description: "Understanding the core beliefs of the Christian faith",
+      content: "Christianity is based on the life, teachings, death, and resurrection of Jesus Christ...",
+      order: 1,
+      isPublished: true,
+    });
+
+    await storage.createLesson({
+      trackId: newBelieverTrack.id,
+      title: "The Bible",
+      description: "How to read and understand the Bible",
+      content: "The Bible is God's Word to us. It contains 66 books written over thousands of years...",
+      order: 2,
+      isPublished: true,
+    });
+
+    await storage.createLesson({
+      trackId: newBelieverTrack.id,
+      title: "Prayer",
+      description: "How to communicate with God",
+      content: "Prayer is conversing with God. It's not about fancy words but sincere hearts...",
+      order: 3,
+      isPublished: true,
+    });
+
+    // Leadership Track
+    const leadershipTrack = await storage.createDiscipleshipTrack({
+      title: "Leadership Development",
+      description: "Equip yourself with skills to lead others in ministry and everyday life.",
+      category: "leadership",
+      imageUrl: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&auto=format&fit=crop&q=60",
+      estimatedWeeks: 12,
+      isActive: true,
+      order: 2,
+    });
+
+    await storage.createLesson({
+      trackId: leadershipTrack.id,
+      title: "Biblical Leadership",
+      description: "Understanding leadership from a Christian perspective",
+      content: "Biblical leadership is servant leadership. Jesus said 'the greatest among you shall be your servant'...",
+      order: 1,
+      isPublished: true,
+    });
+
+    // Discipleship Track
+    const discipleshipTrack = await storage.createDiscipleshipTrack({
+      title: "Growing in Christ",
+      description: "Deepen your relationship with God and become a disciple maker.",
+      category: "discipleship",
+      imageUrl: "https://images.unsplash.com/photo-1476247246365-4c5e18c92cd7?w=800&auto=format&fit=crop&q=60",
+      estimatedWeeks: 10,
+      isActive: true,
+      order: 3,
+    });
+
+    await storage.createLesson({
+      trackId: discipleshipTrack.id,
+      title: "The Christian Life",
+      description: "Living daily for Christ",
+      content: "The Christian life is a journey of transformation. Paul wrote 'be transformed by the renewing of your mind'...",
+      order: 1,
+      isPublished: true,
+    });
+  }
 }
