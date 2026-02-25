@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, type ISermonFilter } from "./storage";
 import { db } from "./db";
 import { supportedLanguages, groupJoinRequests, groupActivityLogs, volunteerSkills, volunteerBadges, volunteerOpportunities } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -2392,7 +2393,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Mark message as read
   app.put("/api/messages/:id/read", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const messageId = parseInt(req.params.id as string);
+      const messageId = parseInt(String(req.params.id));
       await storage.markMessageAsRead(messageId);
       res.json({ success: true });
     } catch (err) {
@@ -2404,7 +2405,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Reply to message
   app.post("/api/messages/:id/reply", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const messageId = parseInt(req.params.id as string);
+      const messageId = parseInt(String(req.params.id));
       const { content } = req.body;
       
       if (!content) {
@@ -2428,7 +2429,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Get message thread
   app.get("/api/messages/:id/thread", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const messageId = parseInt(req.params.id as string);
+      const messageId = parseInt(String(req.params.id));
       const thread = await storage.getMessageThread(messageId);
       res.json(thread);
     } catch (err) {
@@ -3187,7 +3188,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       if (!group) return res.status(404).json({ message: "Group not found" });
       
       const isMember = await storage.getGroupMember(id, req.user!.id);
-      if (!isMember || !["ADMIN", "OWNER"].includes(isMember.role)) {
+      if (!isMember || !isMember.role || !["ADMIN", "OWNER"].includes(isMember.role)) {
         return res.status(403).json({ message: "Only group admins can view requests" });
       }
       
@@ -3214,7 +3215,8 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       if (!request) return res.status(404).json({ message: "Request not found" });
       
       const isMember = await storage.getGroupMember(request.groupId, req.user!.id);
-      if (!isMember || !["ADMIN", "OWNER"].includes(isMember.role)) {
+      const memberRole = isMember?.role || "";
+      if (!isMember || !["ADMIN", "OWNER"].includes(memberRole)) {
         return res.status(403).json({ message: "Only group admins can review requests" });
       }
       
@@ -4765,7 +4767,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Get single post
   app.get("/api/posts/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const post = await storage.getPostById(parseInt(req.params.id));
+      const post = await storage.getPostById(parseInt(String(req.params.id)));
       if (!post) {
         return res.status(404).json({ message: "Post not found" });
       }
@@ -4821,7 +4823,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Update post
   app.put("/api/posts/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const post = await storage.getPostById(parseInt(req.params.id));
+      const post = await storage.getPostById(parseInt(String(req.params.id)));
       if (!post) {
         return res.status(404).json({ message: "Post not found" });
       }
@@ -4831,7 +4833,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       }
       
       const { content, visibility, imageUrl, videoUrl, verseReference } = req.body;
-      const updated = await storage.updatePost(parseInt(req.params.id), {
+      const updated = await storage.updatePost(parseInt(String(req.params.id)), {
         content,
         visibility,
         imageUrl,
@@ -4849,7 +4851,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Delete post
   app.delete("/api/posts/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const post = await storage.getPostById(parseInt(req.params.id));
+      const post = await storage.getPostById(parseInt(String(req.params.id)));
       if (!post) {
         return res.status(404).json({ message: "Post not found" });
       }
@@ -4858,7 +4860,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
         return res.status(403).json({ message: "Not authorized" });
       }
       
-      await storage.deletePost(parseInt(req.params.id));
+      await storage.deletePost(parseInt(String(req.params.id)));
       res.json({ message: "Post deleted" });
     } catch (err) {
       console.error("Error deleting post:", err);
@@ -4869,7 +4871,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Pin/unpin post
   app.post("/api/posts/:id/pin", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
     try {
-      const post = await storage.togglePinPost(parseInt(req.params.id));
+      const post = await storage.togglePinPost(parseInt(String(req.params.id)));
       res.json(post);
     } catch (err) {
       console.error("Error toggling pin:", err);
@@ -4880,8 +4882,8 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Like/unlike post
   app.post("/api/posts/:id/like", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const like = await storage.likePost(parseInt(req.params.id), req.user!.id);
-      const post = await storage.getPostById(parseInt(req.params.id));
+      const like = await storage.likePost(parseInt(String(req.params.id)), req.user!.id);
+      const post = await storage.getPostById(parseInt(String(req.params.id)));
       res.json({ like, post });
     } catch (err) {
       console.error("Error toggling like:", err);
@@ -4894,7 +4896,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     try {
       const { content, parentId } = req.body;
       const comment = await storage.createPostComment({
-        postId: parseInt(req.params.id),
+        postId: parseInt(String(req.params.id)),
         userId: req.user!.id,
         content,
         parentId,
@@ -4915,7 +4917,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   app.put("/api/comments/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const { content } = req.body;
-      const updated = await storage.updatePostComment(parseInt(req.params.id), { content });
+      const updated = await storage.updatePostComment(parseInt(String(req.params.id)), { content });
       res.json(updated);
     } catch (err) {
       console.error("Error updating comment:", err);
@@ -4926,7 +4928,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Delete comment
   app.delete("/api/comments/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      await storage.deletePostComment(parseInt(req.params.id));
+      await storage.deletePostComment(parseInt(String(req.params.id)));
       res.json({ message: "Comment deleted" });
     } catch (err) {
       console.error("Error deleting comment:", err);
@@ -4937,7 +4939,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Like/unlike comment
   app.post("/api/comments/:id/like", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const like = await storage.likeComment(parseInt(req.params.id), req.user!.id);
+      const like = await storage.likeComment(parseInt(String(req.params.id)), req.user!.id);
       res.json(like);
     } catch (err) {
       console.error("Error toggling comment like:", err);
@@ -4949,7 +4951,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   app.post("/api/posts/:id/share", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const { content } = req.body;
-      const share = await storage.sharePost(parseInt(req.params.id), req.user!.id, content);
+      const share = await storage.sharePost(parseInt(String(req.params.id)), req.user!.id, content);
       res.status(201).json(share);
     } catch (err) {
       console.error("Error sharing post:", err);
@@ -4973,7 +4975,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
-      const posts = await storage.getPostsByHashtag(req.params.tag, limit, offset);
+      const posts = await storage.getPostsByHashtag(String(req.params.tag), limit, offset);
       
       const postsWithUser = await Promise.all(posts.map(async (post) => {
         const user = await storage.getUserById(post.userId);
@@ -4994,7 +4996,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Follow/unfollow user
   app.post("/api/users/:id/follow", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const targetUserId = req.params.id;
+      const targetUserId = req.params.id as string;
       if (targetUserId === req.user!.id) {
         return res.status(400).json({ message: "Cannot follow yourself" });
       }
@@ -5016,7 +5018,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Get user followers
   app.get("/api/users/:id/followers", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const followers = await storage.getUserFollowers(req.params.id);
+      const followers = await storage.getUserFollowers(req.params.id as string);
       const followersWithUser = await Promise.all(followers.map(async (f) => {
         const user = await storage.getUserById(f.followerId);
         return {
@@ -5034,7 +5036,8 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Get user following
   app.get("/api/users/:id/following", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const following = await storage.getUserFollowing(req.params.id);
+      const userId: string = req.params.id as string;
+      const following = await storage.getUserFollowing(userId);
       const followingWithUser = await Promise.all(following.map(async (f) => {
         const user = await storage.getUserById(f.followingId);
         return {
@@ -5052,7 +5055,8 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   // Check if following
   app.get("/api/users/:id/following-status", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const isFollowing = await storage.isFollowing(req.user!.id, req.params.id);
+      const targetUserId: string = req.params.id as string;
+      const isFollowing = await storage.isFollowing(req.user!.id, targetUserId);
       res.json({ following: isFollowing });
     } catch (err) {
       console.error("Error checking follow status:", err);

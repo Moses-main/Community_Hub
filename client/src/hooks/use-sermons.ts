@@ -8,6 +8,7 @@ export interface SermonFilters {
   series?: string;
   status?: "upcoming" | "past";
   search?: string;
+  topic?: string;
 }
 
 export function useSermons(filters?: SermonFilters) {

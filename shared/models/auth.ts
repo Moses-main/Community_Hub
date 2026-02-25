@@ -31,6 +31,7 @@ export const users = pgTable('users', {
   lastName: text('last_name').notNull(),
   phone: text('phone'),
   address: text('address'),
+  profileImage: text('profile_image'),
   houseFellowship: text('house_fellowship'),
   houseCellLocation: text('house_cell_location'),
   houseCellId: integer('house_cell_id'),
