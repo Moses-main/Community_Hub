@@ -1563,3 +1563,117 @@ export type InsertGroupAnalytics = z.infer<typeof insertGroupAnalyticsSchema>;
 export const insertAnalyticsReportSchema = createInsertSchema(analyticsReports).omit({ id: true, createdAt: true });
 export type AnalyticsReport = typeof analyticsReports.$inferSelect;
 export type InsertAnalyticsReport = z.infer<typeof insertAnalyticsReportSchema>;
+
+// === PASTORAL CARE & COUNSELING SYSTEM ===
+
+export const counselingRequests = pgTable("counseling_requests", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id),
+  requestType: text("request_type").notNull(),
+  urgency: text("urgency").default("normal"),
+  subject: text("subject").notNull(),
+  description: text("description").notNull(),
+  status: text("status").default("pending"),
+  assignedTo: uuid("assigned_to").references(() => users.id),
+  assignedAt: timestamp("assigned_at"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const counselingNotes = pgTable("counseling_notes", {
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id").references(() => counselingRequests.id).notNull(),
+  authorId: uuid("author_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  isInternal: boolean("is_internal").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const counselingFollowups = pgTable("counseling_followups", {
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id").references(() => counselingRequests.id).notNull(),
+  scheduledDate: date("scheduled_date").notNull(),
+  completed: boolean("completed").default(false),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pastoralVisits = pgTable("pastoral_visits", {
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id").references(() => counselingRequests.id),
+  visitorId: uuid("visitor_id").references(() => users.id).notNull(),
+  visitedUserId: uuid("visited_user_id").references(() => users.id),
+  visitDate: date("visit_date").notNull(),
+  location: text("location"),
+  notes: text("notes"),
+  followUpNeeded: boolean("follow_up_needed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const counselingRequestRelations = relations(counselingRequests, ({ one, many }) => ({
+  user: one(users, {
+    fields: [counselingRequests.userId],
+    references: [users.id],
+  }),
+  assignedTo: one(users, {
+    fields: [counselingRequests.assignedTo],
+    references: [users.id],
+  }),
+  notes: many(counselingNotes),
+  followups: many(counselingFollowups),
+  visits: many(pastoralVisits),
+}));
+
+export const counselingNoteRelations = relations(counselingNotes, ({ one }) => ({
+  request: one(counselingRequests, {
+    fields: [counselingNotes.requestId],
+    references: [counselingRequests.id],
+  }),
+  author: one(users, {
+    fields: [counselingNotes.authorId],
+    references: [users.id],
+  }),
+}));
+
+export const counselingFollowupRelations = relations(counselingFollowups, ({ one }) => ({
+  request: one(counselingRequests, {
+    fields: [counselingFollowups.requestId],
+    references: [counselingRequests.id],
+  }),
+}));
+
+export const pastoralVisitRelations = relations(pastoralVisits, ({ one }) => ({
+  request: one(counselingRequests, {
+    fields: [pastoralVisits.requestId],
+    references: [counselingRequests.id],
+  }),
+  visitor: one(users, {
+    fields: [pastoralVisits.visitorId],
+    references: [users.id],
+  }),
+  visitedUser: one(users, {
+    fields: [pastoralVisits.visitedUserId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertCounselingRequestSchema = createInsertSchema(counselingRequests).omit({ id: true, createdAt: true, updatedAt: true });
+export type CounselingRequest = typeof counselingRequests.$inferSelect;
+export type InsertCounselingRequest = z.infer<typeof insertCounselingRequestSchema>;
+
+export const insertCounselingNoteSchema = createInsertSchema(counselingNotes).omit({ id: true, createdAt: true });
+export type CounselingNote = typeof counselingNotes.$inferSelect;
+export type InsertCounselingNote = z.infer<typeof insertCounselingNoteSchema>;
+
+export const insertCounselingFollowupSchema = createInsertSchema(counselingFollowups).omit({ id: true, createdAt: true });
+export type CounselingFollowup = typeof counselingFollowups.$inferSelect;
+export type InsertCounselingFollowup = z.infer<typeof insertCounselingFollowupSchema>;
+
+export const insertPastoralVisitSchema = createInsertSchema(pastoralVisits).omit({ id: true, createdAt: true });
+export type PastoralVisit = typeof pastoralVisits.$inferSelect;
+export type InsertPastoralVisit = z.infer<typeof insertPastoralVisitSchema>;
