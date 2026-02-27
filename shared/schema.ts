@@ -1,5 +1,5 @@
 export * from "./models/auth";
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, uuid, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./models/auth";
@@ -1449,3 +1449,117 @@ export type InsertUserConnection = z.infer<typeof insertUserConnectionSchema>;
 export const insertHashtagSchema = createInsertSchema(hashtags).omit({ id: true, createdAt: true, postsCount: true });
 export type Hashtag = typeof hashtags.$inferSelect;
 export type InsertHashtag = z.infer<typeof insertHashtagSchema>;
+
+// === SPIRITUAL HEALTH & ENGAGEMENT ANALYTICS ===
+
+export const userEngagementMetrics = pgTable("user_engagement_metrics", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  date: date("date").notNull().defaultNow(),
+  sermonsWatched: integer("sermons_watched").default(0),
+  prayersSubmitted: integer("prayers_submitted").default(0),
+  eventsAttended: integer("events_attended").default(0),
+  devotionalsRead: integer("devotionals_read").default(0),
+  groupMessages: integer("group_messages").default(0),
+  loginCount: integer("login_count").default(1),
+  totalSessionTime: integer("total_session_time").default(0),
+});
+
+export const spiritualHealthScores = pgTable("spiritual_health_scores", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  weekStart: date("week_start").notNull(),
+  attendanceScore: integer("attendance_score").default(0),
+  engagementScore: integer("engagement_score").default(0),
+  growthScore: integer("growth_score").default(0),
+  overallScore: integer("overall_score").default(0),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+});
+
+export const discipleshipAnalytics = pgTable("discipleship_analytics", {
+  id: serial("id").primaryKey(),
+  trackId: integer("track_id").references(() => discipleshipTracks.id),
+  totalEnrolled: integer("total_enrolled").default(0),
+  activeLearners: integer("active_learners").default(0),
+  completedCount: integer("completed_count").default(0),
+  averageCompletionTime: integer("average_completion_time"),
+  quizAverageScore: integer("quiz_average_score"),
+  weekStart: date("week_start").notNull(),
+});
+
+export const groupAnalytics = pgTable("group_analytics", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").references(() => groups.id),
+  weekStart: date("week_start").notNull(),
+  activeMembers: integer("active_members").default(0),
+  messagesCount: integer("messages_count").default(0),
+  meetingsHeld: integer("meetings_held").default(0),
+  newMembers: integer("new_members").default(0),
+});
+
+export const analyticsReports = pgTable("analytics_reports", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  reportType: text("report_type").notNull(),
+  filters: jsonb("filters").default("{}"),
+  generatedBy: uuid("generated_by").references(() => users.id),
+  filePath: text("file_path"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const userEngagementMetricsRelations = relations(userEngagementMetrics, ({ one }) => ({
+  user: one(users, {
+    fields: [userEngagementMetrics.userId],
+    references: [users.id],
+  }),
+}));
+
+export const spiritualHealthScoresRelations = relations(spiritualHealthScores, ({ one }) => ({
+  user: one(users, {
+    fields: [spiritualHealthScores.userId],
+    references: [users.id],
+  }),
+}));
+
+export const discipleshipAnalyticsRelations = relations(discipleshipAnalytics, ({ one }) => ({
+  track: one(discipleshipTracks, {
+    fields: [discipleshipAnalytics.trackId],
+    references: [discipleshipTracks.id],
+  }),
+}));
+
+export const groupAnalyticsRelations = relations(groupAnalytics, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupAnalytics.groupId],
+    references: [groups.id],
+  }),
+}));
+
+export const analyticsReportsRelations = relations(analyticsReports, ({ one }) => ({
+  generator: one(users, {
+    fields: [analyticsReports.generatedBy],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertUserEngagementMetricsSchema = createInsertSchema(userEngagementMetrics).omit({ id: true });
+export type UserEngagementMetrics = typeof userEngagementMetrics.$inferSelect;
+export type InsertUserEngagementMetrics = z.infer<typeof insertUserEngagementMetricsSchema>;
+
+export const insertSpiritualHealthScoreSchema = createInsertSchema(spiritualHealthScores).omit({ id: true, calculatedAt: true });
+export type SpiritualHealthScore = typeof spiritualHealthScores.$inferSelect;
+export type InsertSpiritualHealthScore = z.infer<typeof insertSpiritualHealthScoreSchema>;
+
+export const insertDiscipleshipAnalyticsSchema = createInsertSchema(discipleshipAnalytics).omit({ id: true });
+export type DiscipleshipAnalytics = typeof discipleshipAnalytics.$inferSelect;
+export type InsertDiscipleshipAnalytics = z.infer<typeof insertDiscipleshipAnalyticsSchema>;
+
+export const insertGroupAnalyticsSchema = createInsertSchema(groupAnalytics).omit({ id: true });
+export type GroupAnalytics = typeof groupAnalytics.$inferSelect;
+export type InsertGroupAnalytics = z.infer<typeof insertGroupAnalyticsSchema>;
+
+export const insertAnalyticsReportSchema = createInsertSchema(analyticsReports).omit({ id: true, createdAt: true });
+export type AnalyticsReport = typeof analyticsReports.$inferSelect;
+export type InsertAnalyticsReport = z.infer<typeof insertAnalyticsReportSchema>;
