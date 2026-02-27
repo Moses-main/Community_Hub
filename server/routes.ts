@@ -1558,6 +1558,241 @@ export async function registerRoutes(
     }
   });
 
+  // === AI CHURCH ASSISTANT (CHATBOT) ===
+
+  // Start a new chat conversation
+  app.post("/api/chat/conversations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { sessionId, title } = req.body;
+      
+      const conversation = await storage.createChatConversation({
+        userId,
+        sessionId: sessionId || `session_${Date.now()}`,
+        title,
+      });
+      
+      res.json(conversation);
+    } catch (err) {
+      console.error("Error creating conversation:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's chat conversations
+  app.get("/api/chat/conversations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const conversations = await storage.getChatConversationsByUser(userId);
+      res.json(conversations);
+    } catch (err) {
+      console.error("Error fetching conversations:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get a specific conversation with messages
+  app.get("/api/chat/conversations/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const conversation = await storage.getChatConversation(id);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      const messages = await storage.getChatMessages(id);
+      res.json({ conversation, messages });
+    } catch (err) {
+      console.error("Error fetching conversation:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Send a message to the chatbot
+  app.post("/api/chat/message", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { message, conversationId, sessionId } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      
+      let convId = conversationId;
+      
+      // Create new conversation if none provided
+      if (!convId) {
+        const conversation = await storage.createChatConversation({
+          userId,
+          sessionId: sessionId || `session_${Date.now()}`,
+        });
+        convId = conversation.id;
+      }
+      
+      // Save user message
+      await storage.addChatMessage({
+        conversationId: convId,
+        role: "user",
+        content: message,
+      });
+      
+      // Get AI response
+      const botResponse = await storage.generateChatbotResponse(message, convId);
+      
+      // Save assistant message
+      const assistantMessage = await storage.addChatMessage({
+        conversationId: convId,
+        role: "assistant",
+        content: botResponse.response,
+        metadata: { intentId: botResponse.intentId, intentName: botResponse.intentName },
+      });
+      
+      // Update conversation
+      await storage.updateChatConversation(convId, { status: "active" });
+      
+      res.json({
+        conversationId: convId,
+        userMessage: message,
+        response: botResponse.response,
+        messageId: assistantMessage.id,
+        intent: botResponse.intentName,
+      });
+    } catch (err) {
+      console.error("Error processing chat message:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Quick chat (anonymous, no session required)
+  app.post("/api/chat/quick", async (req, res) => {
+    try {
+      const { message } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      
+      const botResponse = await storage.generateChatbotResponse(message);
+      
+      res.json({
+        response: botResponse.response,
+        intent: botResponse.intentName,
+      });
+    } catch (err) {
+      console.error("Error in quick chat:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get chatbot intents (admin)
+  app.get("/api/chat/intents", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const intents = await storage.getChatbotIntents();
+      res.json(intents);
+    } catch (err) {
+      console.error("Error fetching intents:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create chatbot intent (admin)
+  app.post("/api/chat/intents", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, patterns, responses, category, keywords, priority } = req.body;
+      
+      const intent = await storage.createChatbotIntent({
+        name,
+        patterns,
+        responses,
+        category,
+        keywords,
+        priority: priority || 0,
+      });
+      
+      res.json(intent);
+    } catch (err) {
+      console.error("Error creating intent:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update chatbot intent (admin)
+  app.put("/api/chat/intents/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { name, patterns, responses, category, keywords, priority, isActive } = req.body;
+      
+      const intent = await storage.updateChatbotIntent(id, {
+        name,
+        patterns,
+        responses,
+        category,
+        keywords,
+        priority,
+        isActive,
+      });
+      
+      res.json(intent);
+    } catch (err) {
+      console.error("Error updating intent:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete chatbot intent (admin)
+  app.delete("/api/chat/intents/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteChatbotIntent(id);
+      res.json({ message: "Intent deleted" });
+    } catch (err) {
+      console.error("Error deleting intent:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get/update chatbot preferences
+  app.get("/api/chat/preferences", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const prefs = await storage.getChatbotPreferences(userId);
+      res.json(prefs || { userId, language: "en", notificationEnabled: true, digestPreference: "daily" });
+    } catch (err) {
+      console.error("Error fetching preferences:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/chat/preferences", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { language, notificationEnabled, digestPreference } = req.body;
+      
+      const prefs = await storage.updateChatbotPreferences(userId, {
+        language,
+        notificationEnabled,
+        digestPreference,
+      });
+      
+      res.json(prefs);
+    } catch (err) {
+      console.error("Error updating preferences:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get chatbot analytics (admin)
+  app.get("/api/chat/analytics", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const analytics = await storage.getChatbotAnalytics();
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error fetching analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Prayer Requests
   app.get(api.prayer.list.path, async (req, res) => {
     const requests = await storage.getPrayerRequests();

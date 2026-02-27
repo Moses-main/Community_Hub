@@ -18,6 +18,7 @@ import {
   userEngagementMetrics, spiritualHealthScores, discipleshipAnalytics, groupAnalytics, analyticsReports,
   counselingRequests, counselingNotes, counselingFollowups, pastoralVisits,
   sermonEmbeddings, sermonViews, userSermonPreferences, sermonRecommendations,
+  chatConversations, chatMessages, chatbotIntents, chatbotPreferences, chatbotAnalytics,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -68,7 +69,12 @@ import {
   type SermonEmbedding, type InsertSermonEmbedding,
   type SermonView, type InsertSermonView,
   type UserSermonPreference, type InsertUserSermonPreference,
-  type SermonRecommendation, type InsertSermonRecommendation
+  type SermonRecommendation, type InsertSermonRecommendation,
+  type ChatConversation, type InsertChatConversation,
+  type ChatMessage, type InsertChatMessage,
+  type ChatbotIntent, type InsertChatbotIntent,
+  type ChatbotPreference, type InsertChatbotPreference,
+  type ChatbotAnalytic, type InsertChatbotAnalytic
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -3068,6 +3074,222 @@ export class DatabaseStorage implements IStorage {
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
       .map(({ sermon }) => sermon);
+  }
+
+  // === AI CHURCH ASSISTANT (CHATBOT) ===
+
+  // Chat Conversations
+  async createChatConversation(conv: InsertChatConversation): Promise<ChatConversation> {
+    const [created] = await db.insert(chatConversations).values(conv).returning();
+    return created;
+  }
+
+  async getChatConversation(id: number): Promise<ChatConversation | undefined> {
+    const [conv] = await db.select().from(chatConversations).where(eq(chatConversations.id, id));
+    return conv;
+  }
+
+  async getChatConversationsBySession(sessionId: string): Promise<ChatConversation[]> {
+    return db.select().from(chatConversations).where(eq(chatConversations.sessionId, sessionId));
+  }
+
+  async getChatConversationsByUser(userId: string): Promise<ChatConversation[]> {
+    return db.select().from(chatConversations).where(eq(chatConversations.userId, userId)).orderBy(desc(chatConversations.updatedAt));
+  }
+
+  async updateChatConversation(id: number, updates: Partial<ChatConversation>): Promise<ChatConversation> {
+    const [updated] = await db
+      .update(chatConversations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(chatConversations.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Chat Messages
+  async addChatMessage(msg: InsertChatMessage): Promise<ChatMessage> {
+    const [created] = await db.insert(chatMessages).values(msg).returning();
+    
+    // Update conversation timestamp
+    await db
+      .update(chatConversations)
+      .set({ updatedAt: new Date() })
+      .where(eq(chatConversations.id, msg.conversationId));
+    
+    return created;
+  }
+
+  async getChatMessages(conversationId: number): Promise<ChatMessage[]> {
+    return db.select().from(chatMessages).where(eq(chatMessages.conversationId, conversationId)).orderBy(asc(chatMessages.createdAt));
+  }
+
+  // Chatbot Intents
+  async getChatbotIntents(): Promise<ChatbotIntent[]> {
+    return db.select().from(chatbotIntents).where(eq(chatbotIntents.isActive, true)).orderBy(desc(chatbotIntents.priority));
+  }
+
+  async getChatbotIntentById(id: number): Promise<ChatbotIntent | undefined> {
+    const [intent] = await db.select().from(chatbotIntents).where(eq(chatbotIntents.id, id));
+    return intent;
+  }
+
+  async createChatbotIntent(intent: InsertChatbotIntent): Promise<ChatbotIntent> {
+    const [created] = await db.insert(chatbotIntents).values(intent).returning();
+    return created;
+  }
+
+  async updateChatbotIntent(id: number, updates: Partial<ChatbotIntent>): Promise<ChatbotIntent> {
+    const [updated] = await db
+      .update(chatbotIntents)
+      .set(updates)
+      .where(eq(chatbotIntents.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteChatbotIntent(id: number): Promise<void> {
+    await db.delete(chatbotIntents).where(eq(chatbotIntents.id, id));
+  }
+
+  // Match user message to intent
+  async matchIntent(userMessage: string): Promise<ChatbotIntent | undefined> {
+    const intents = await this.getChatbotIntents();
+    const message = userMessage.toLowerCase();
+    
+    let bestMatch: ChatbotIntent | undefined;
+    let bestScore = 0;
+    
+    for (const intent of intents) {
+      let score = 0;
+      
+      // Check patterns
+      if (intent.patterns) {
+        for (const pattern of intent.patterns) {
+          if (message.includes(pattern.toLowerCase())) {
+            score += 10;
+          }
+        }
+      }
+      
+      // Check keywords
+      if (intent.keywords) {
+        for (const keyword of intent.keywords) {
+          if (message.includes(keyword.toLowerCase())) {
+            score += 5;
+          }
+        }
+      }
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = intent;
+      }
+    }
+    
+    return bestScore > 0 ? bestMatch : undefined;
+  }
+
+  // Generate chatbot response
+  async generateChatbotResponse(userMessage: string, conversationId?: number): Promise<{ response: string; intentId?: number; intentName?: string }> {
+    const startTime = Date.now();
+    
+    // Try to match an intent
+    const matchedIntent = await this.matchIntent(userMessage);
+    
+    if (matchedIntent && matchedIntent.responses && matchedIntent.responses.length > 0) {
+      // Random response from matched intent
+      const response = matchedIntent.responses[Math.floor(Math.random() * matchedIntent.responses.length)];
+      
+      // Log analytics
+      if (conversationId) {
+        await db.insert(chatbotAnalytics).values({
+          conversationId: conversationId,
+          intent: matchedIntent.name,
+          responseTimeMs: Date.now() - startTime,
+        } as any);
+      }
+      
+      return { 
+        response, 
+        intentId: matchedIntent.id, 
+        intentName: matchedIntent.name 
+      };
+    }
+    
+    // Default fallback responses
+    const fallbackResponses = [
+      "Thank you for your message. A member of our team will get back to you shortly.",
+      "I understand. Please contact our office for more detailed information.",
+      "That's a great question! Our pastoral team would be happy to help. Please reach out to us.",
+      "I appreciate you reaching out. For specific inquiries, please call our office."
+    ];
+    
+    const response = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+    
+    // Log analytics (no match)
+    if (conversationId) {
+      await db.insert(chatbotAnalytics).values({
+        conversationId: conversationId,
+        responseTimeMs: Date.now() - startTime,
+      } as any);
+    }
+    
+    return { response };
+  }
+
+  // Chatbot Preferences
+  async getChatbotPreferences(userId: string): Promise<ChatbotPreference | undefined> {
+    const [pref] = await db.select().from(chatbotPreferences).where(eq(chatbotPreferences.userId, userId));
+    return pref;
+  }
+
+  async updateChatbotPreferences(userId: string, updates: { language?: string; notificationEnabled?: boolean; digestPreference?: string }): Promise<ChatbotPreference> {
+    const existing = await this.getChatbotPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(chatbotPreferences)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(chatbotPreferences.userId, userId))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db
+      .insert(chatbotPreferences)
+      .values({ userId, ...updates })
+      .returning();
+    return created;
+  }
+
+  // Chatbot Analytics
+  async recordChatbotFeedback(conversationId: number, feedback: string): Promise<void> {
+    await db
+      .update(chatbotAnalytics)
+      .set({ feedback })
+      .where(eq(chatbotAnalytics.conversationId, conversationId));
+  }
+
+  async getChatbotAnalytics(startDate?: Date, endDate?: Date): Promise<any> {
+    let query = db.select().from(chatbotAnalytics);
+    
+    const analytics = await query;
+    
+    const totalChats = new Set(analytics.map(a => a.conversationId)).size;
+    const avgResponseTime = analytics.reduce((sum, a) => sum + (a.responseTimeMs || 0), 0) / (analytics.length || 1);
+    const intentCounts = analytics.reduce((acc, a) => {
+      if (a.intent) {
+        acc[a.intent] = (acc[a.intent] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return {
+      totalInteractions: analytics.length,
+      totalChats,
+      avgResponseTimeMs: Math.round(avgResponseTime),
+      topIntents: Object.entries(intentCounts).sort(([,a], [,b]) => b - a).slice(0, 10),
+    };
   }
 }
 
