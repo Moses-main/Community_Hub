@@ -19,6 +19,7 @@ import {
   counselingRequests, counselingNotes, counselingFollowups, pastoralVisits,
   sermonEmbeddings, sermonViews, userSermonPreferences, sermonRecommendations,
   chatConversations, chatMessages, chatbotIntents, chatbotPreferences, chatbotAnalytics,
+  campuses, branches, campusMembers, campusEvents, campusTransfers, campusReports,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -74,7 +75,13 @@ import {
   type ChatMessage, type InsertChatMessage,
   type ChatbotIntent, type InsertChatbotIntent,
   type ChatbotPreference, type InsertChatbotPreference,
-  type ChatbotAnalytic, type InsertChatbotAnalytic
+  type ChatbotAnalytic, type InsertChatbotAnalytic,
+  type Campus, type InsertCampus,
+  type Branch, type InsertBranch,
+  type CampusMember, type InsertCampusMember,
+  type CampusEvent, type InsertCampusEvent,
+  type CampusTransfer, type InsertCampusTransfer,
+  type CampusReport, type InsertCampusReport
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -3289,6 +3296,179 @@ export class DatabaseStorage implements IStorage {
       totalChats,
       avgResponseTimeMs: Math.round(avgResponseTime),
       topIntents: Object.entries(intentCounts).sort(([,a], [,b]) => b - a).slice(0, 10),
+    };
+  }
+
+  // === MULTI-CAMPUS & BRANCH MANAGEMENT ===
+
+  // Campuses
+  async createCampus(campus: InsertCampus): Promise<Campus> {
+    const [created] = await db.insert(campuses).values(campus).returning();
+    return created;
+  }
+
+  async getCampus(id: number): Promise<Campus | undefined> {
+    const [campus] = await db.select().from(campuses).where(eq(campuses.id, id));
+    return campus;
+  }
+
+  async getCampusByCode(code: string): Promise<Campus | undefined> {
+    const [campus] = await db.select().from(campuses).where(eq(campuses.code, code));
+    return campus;
+  }
+
+  async getCampuses(includeInactive = false): Promise<Campus[]> {
+    if (includeInactive) {
+      return db.select().from(campuses).orderBy(asc(campuses.name));
+    }
+    return db.select().from(campuses).where(eq(campuses.isActive, true)).orderBy(desc(campuses.isHeadquarters), asc(campuses.name));
+  }
+
+  async updateCampus(id: number, updates: Partial<Campus>): Promise<Campus> {
+    const [updated] = await db
+      .update(campuses)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(campuses.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCampus(id: number): Promise<void> {
+    await db.delete(campuses).where(eq(campuses.id, id));
+  }
+
+  async getHeadquarters(): Promise<Campus | undefined> {
+    const [campus] = await db.select().from(campuses).where(eq(campuses.isHeadquarters, true));
+    return campus;
+  }
+
+  // Branches
+  async createBranch(branch: InsertBranch): Promise<Branch> {
+    const [created] = await db.insert(branches).values(branch).returning();
+    return created;
+  }
+
+  async getBranch(id: number): Promise<Branch | undefined> {
+    const [branch] = await db.select().from(branches).where(eq(branches.id, id));
+    return branch;
+  }
+
+  async getBranchesByCampus(campusId: number, includeInactive = false): Promise<Branch[]> {
+    const query = db.select().from(branches).where(eq(branches.campusId, campusId));
+    if (!includeInactive) {
+      return query.where(eq(branches.isActive, true));
+    }
+    return query;
+  }
+
+  async getAllBranches(): Promise<Branch[]> {
+    return db.select().from(branches).orderBy(asc(branches.name));
+  }
+
+  async updateBranch(id: number, updates: Partial<Branch>): Promise<Branch> {
+    const [updated] = await db
+      .update(branches)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(branches.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBranch(id: number): Promise<void> {
+    await db.delete(branches).where(eq(branches.id, id));
+  }
+
+  // Campus Members
+  async assignMemberToCampus(member: InsertCampusMember): Promise<CampusMember> {
+    const [created] = await db.insert(campusMembers).values(member).onConflictDoUpdate({
+      target: campusMembers.userId,
+      set: { campusId: member.campusId, branchId: member.branchId, membershipType: member.membershipType, assignedAt: new Date() },
+    }).returning();
+    return created;
+  }
+
+  async getCampusMember(userId: string): Promise<CampusMember | undefined> {
+    const [member] = await db.select().from(campusMembers).where(eq(campusMembers.userId, userId));
+    return member;
+  }
+
+  async getCampusMembers(campusId: number): Promise<CampusMember[]> {
+    return db.select().from(campusMembers).where(eq(campusMembers.campusId, campusId));
+  }
+
+  async removeMemberFromCampus(userId: string): Promise<void> {
+    await db.delete(campusMembers).where(eq(campusMembers.userId, userId));
+  }
+
+  // Campus Transfers
+  async createTransfer(transfer: InsertCampusTransfer): Promise<CampusTransfer> {
+    const [created] = await db.insert(campusTransfers).values(transfer).returning();
+    return created;
+  }
+
+  async getPendingTransfers(): Promise<CampusTransfer[]> {
+    return db.select().from(campusTransfers).where(eq(campusTransfers.status, "pending"));
+  }
+
+  async approveTransfer(id: number, approvedBy: string): Promise<CampusTransfer> {
+    const transfer = await db.select().from(campusTransfers).where(eq(campusTransfers.id, id)).then(t => t[0]);
+    if (!transfer) throw new Error("Transfer not found");
+    
+    // Update member's campus
+    await this.assignMemberToCampus({
+      userId: transfer.userId,
+      campusId: transfer.toCampusId,
+      branchId: transfer.toBranchId || undefined,
+    });
+    
+    // Update transfer status
+    const [updated] = await db
+      .update(campusTransfers)
+      .set({ status: "approved", approvedBy, approvedAt: new Date() })
+      .where(eq(campusTransfers.id, id))
+      .returning();
+    
+    return updated;
+  }
+
+  async rejectTransfer(id: number, approvedBy: string): Promise<CampusTransfer> {
+    const [updated] = await db
+      .update(campusTransfers)
+      .set({ status: "rejected", approvedBy, approvedAt: new Date() })
+      .where(eq(campusTransfers.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Campus Events
+  async addEventToCampus(event: InsertCampusEvent): Promise<CampusEvent> {
+    const [created] = await db.insert(campusEvents).values(event).returning();
+    return created;
+  }
+
+  async getCampusEvents(campusId: number): Promise<CampusEvent[]> {
+    return db.select().from(campusEvents).where(eq(campusEvents.campusId, campusId));
+  }
+
+  // Campus Reports
+  async generateCampusReport(report: InsertCampusReport): Promise<CampusReport> {
+    const [created] = await db.insert(campusReports).values(report).returning();
+    return created;
+  }
+
+  async getCampusReports(campusId: number): Promise<CampusReport[]> {
+    return db.select().from(campusReports).where(eq(campusReports.campusId, campusId)).orderBy(desc(campusReports.generatedAt));
+  }
+
+  async getCampusStats(campusId: number): Promise<any> {
+    const members = await this.getCampusMembers(campusId);
+    const branches = await this.getBranchesByCampus(campusId);
+    const transfers = await db.select().from(campusTransfers).where(eq(campusTransfers.toCampusId, campusId));
+    
+    return {
+      totalMembers: members.length,
+      totalBranches: branches.length,
+      pendingTransfers: transfers.filter(t => t.status === "pending").length,
     };
   }
 }
