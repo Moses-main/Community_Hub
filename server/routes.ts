@@ -2016,6 +2016,292 @@ export async function registerRoutes(
     }
   });
 
+  // === PRIVACY, SAFETY & MODERATION CONTROLS ===
+
+  // Get privacy settings
+  app.get("/api/privacy", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const settings = await storage.getPrivacySettings(userId);
+      res.json(settings || { userId, profileVisibility: "members", showEmail: false, showPhone: false, showBirthday: true, showSocialLinks: true, allowMessages: true, allowGroupInvites: true });
+    } catch (err) {
+      console.error("Error fetching privacy settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update privacy settings
+  app.put("/api/privacy", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const settings = await storage.updatePrivacySettings(userId, req.body);
+      res.json(settings);
+    } catch (err) {
+      console.error("Error updating privacy settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Block user
+  app.post("/api/users/:id/block", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const blockerId = req.user!.id;
+      const blockedId = req.params.id;
+      const { reason } = req.body;
+      const block = await storage.blockUser(blockerId, blockedId, reason);
+      res.json(block);
+    } catch (err) {
+      console.error("Error blocking user:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Unblock user
+  app.delete("/api/users/:id/block", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const blockerId = req.user!.id;
+      const blockedId = req.params.id;
+      await storage.unblockUser(blockerId, blockedId);
+      res.json({ message: "User unblocked" });
+    } catch (err) {
+      console.error("Error unblocking user:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get blocked users
+  app.get("/api/users/blocks", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const blockerId = req.user!.id;
+      const blocks = await storage.getBlockedUsers(blockerId);
+      res.json(blocks);
+    } catch (err) {
+      console.error("Error fetching blocked users:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Report user/content
+  app.post("/api/reports", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const reporterId = req.user!.id;
+      const { reportedUserId, reportedContentId, reportedContentType, categoryId, reason, description } = req.body;
+      const report = await storage.createReport({ reporterId, reportedUserId, reportedContentId, reportedContentType, categoryId, reason, description });
+      res.json(report);
+    } catch (err) {
+      console.error("Error creating report:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get reports (admin)
+  app.get("/api/reports", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const status = req.query.status as string;
+      const reports = status ? await storage.getReportsByStatus(status) : await db.select().from(userReports).orderBy(desc(userReports.createdAt));
+      res.json(reports);
+    } catch (err) {
+      console.error("Error fetching reports:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Resolve report (admin)
+  app.post("/api/reports/:id/resolve", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const resolvedBy = req.user!.id;
+      const { action, notes } = req.body;
+      const report = await storage.resolveReport(id, resolvedBy, action, notes);
+      res.json(report);
+    } catch (err) {
+      console.error("Error resolving report:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get report categories
+  app.get("/api/reports/categories", async (req, res) => {
+    try {
+      const categories = await storage.getReportCategories();
+      res.json(categories);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Moderation queue (admin)
+  app.get("/api/moderation/queue", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const queue = await storage.getPendingModeration();
+      res.json(queue);
+    } catch (err) {
+      console.error("Error fetching moderation queue:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Moderate content (admin)
+  app.post("/api/moderation/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const reviewedBy = req.user!.id;
+      const { action, notes } = req.body;
+      const result = await storage.moderateContent(id, reviewedBy, action, notes);
+      res.json(result);
+    } catch (err) {
+      console.error("Error moderating content:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get moderation stats (admin)
+  app.get("/api/moderation/stats", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getModerationStats();
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching moderation stats:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get login history
+  app.get("/api/auth/login-history", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const history = await storage.getLoginHistory(userId);
+      res.json(history);
+    } catch (err) {
+      console.error("Error fetching login history:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user sessions
+  app.get("/api/auth/sessions", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const sessions = await storage.getUserSessions(userId);
+      res.json(sessions);
+    } catch (err) {
+      console.error("Error fetching sessions:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Revoke session
+  app.delete("/api/auth/sessions/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.revokeSession(id);
+      res.json({ message: "Session revoked" });
+    } catch (err) {
+      console.error("Error revoking session:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Revoke all sessions
+  app.delete("/api/auth/sessions", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      await storage.revokeAllSessions(userId);
+      res.json({ message: "All sessions revoked" });
+    } catch (err) {
+      console.error("Error revoking sessions:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // 2FA management
+  app.get("/api/auth/2fa", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const settings = await storage.get2FASettings(userId);
+      res.json(settings ? { enabled: settings.enabled } : { enabled: false });
+    } catch (err) {
+      console.error("Error fetching 2FA settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Enable 2FA (simplified - would need TOTP library in production)
+  app.post("/api/auth/2fa/enable", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      // In production, this would use TOTP
+      const secret = `secret_${Date.now()}`;
+      const backupCodes = Array.from({ length: 8 }, () => Math.random().toString(36).substring(2, 10).toUpperCase());
+      const result = await storage.enable2FA(userId, secret, backupCodes);
+      res.json({ enabled: true, backupCodes });
+    } catch (err) {
+      console.error("Error enabling 2FA:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Disable 2FA
+  app.post("/api/auth/2fa/disable", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      await storage.disable2FA(userId);
+      res.json({ enabled: false });
+    } catch (err) {
+      console.error("Error disabling 2FA:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Data export request
+  app.post("/api/privacy/export", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const request = await storage.requestDataExport(userId);
+      res.json(request);
+    } catch (err) {
+      console.error("Error requesting data export:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get export status
+  app.get("/api/privacy/export", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const request = await storage.getExportRequest(userId);
+      res.json(request || { status: "none" });
+    } catch (err) {
+      console.error("Error fetching export status:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Request data deletion
+  app.post("/api/privacy/delete", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const request = await storage.requestDataDeletion(userId);
+      res.json(request);
+    } catch (err) {
+      console.error("Error requesting data deletion:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Cancel data deletion
+  app.delete("/api/privacy/delete", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      await storage.cancelDataDeletion(userId);
+      res.json({ message: "Deletion request cancelled" });
+    } catch (err) {
+      console.error("Error cancelling deletion:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Prayer Requests
   app.get(api.prayer.list.path, async (req, res) => {
     const requests = await storage.getPrayerRequests();

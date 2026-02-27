@@ -20,6 +20,8 @@ import {
   sermonEmbeddings, sermonViews, userSermonPreferences, sermonRecommendations,
   chatConversations, chatMessages, chatbotIntents, chatbotPreferences, chatbotAnalytics,
   campuses, branches, campusMembers, campusEvents, campusTransfers, campusReports,
+  privacySettings, reportCategories, userReports, moderationQueue, userBlocks, userHiddenContent,
+  userSessions, loginHistory, user2FA, dataExportRequests, dataDeletionRequests,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -81,7 +83,18 @@ import {
   type CampusMember, type InsertCampusMember,
   type CampusEvent, type InsertCampusEvent,
   type CampusTransfer, type InsertCampusTransfer,
-  type CampusReport, type InsertCampusReport
+  type CampusReport, type InsertCampusReport,
+  type PrivacySetting, type InsertPrivacySetting,
+  type ReportCategory, type InsertReportCategory,
+  type UserReport, type InsertUserReport,
+  type ModerationQueue, type InsertModerationQueue,
+  type UserBlock, type InsertUserBlock,
+  type UserHiddenContent, type InsertUserHiddenContent,
+  type UserSession, type InsertUserSession,
+  type LoginHistory, type InsertLoginHistory,
+  type User2FA, type InsertUser2FA,
+  type DataExportRequest, type InsertDataExportRequest,
+  type DataDeletionRequest, type InsertDataDeletionRequest
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -3469,6 +3482,182 @@ export class DatabaseStorage implements IStorage {
       totalMembers: members.length,
       totalBranches: branches.length,
       pendingTransfers: transfers.filter(t => t.status === "pending").length,
+    };
+  }
+
+  // === PRIVACY, SAFETY & MODERATION CONTROLS ===
+
+  // Privacy Settings
+  async getPrivacySettings(userId: string): Promise<PrivacySetting | undefined> {
+    const [settings] = await db.select().from(privacySettings).where(eq(privacySettings.userId, userId));
+    return settings;
+  }
+
+  async updatePrivacySettings(userId: string, updates: Partial<PrivacySetting>): Promise<PrivacySetting> {
+    const existing = await this.getPrivacySettings(userId);
+    if (existing) {
+      const [updated] = await db
+        .update(privacySettings)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(privacySettings.userId, userId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(privacySettings)
+      .values({ userId, ...updates })
+      .returning();
+    return created;
+  }
+
+  // User Blocks
+  async blockUser(blockerId: string, blockedId: string, reason?: string): Promise<UserBlock> {
+    const [created] = await db.insert(userBlocks).values({ blockerId, blockedId, reason }).onConflictDoNothing().returning();
+    return created;
+  }
+
+  async unblockUser(blockerId: string, blockedId: string): Promise<void> {
+    await db.delete(userBlocks).where(and(eq(userBlocks.blockerId, blockerId), eq(userBlocks.blockedId, blockedId)));
+  }
+
+  async getBlockedUsers(blockerId: string): Promise<UserBlock[]> {
+    return db.select().from(userBlocks).where(eq(userBlocks.blockerId, blockerId));
+  }
+
+  async isUserBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+    const [block] = await db.select().from(userBlocks).where(and(eq(userBlocks.blockerId, blockerId), eq(userBlocks.blockedId, blockedId)));
+    return !!block;
+  }
+
+  // User Reports
+  async createReport(report: InsertUserReport): Promise<UserReport> {
+    const [created] = await db.insert(userReports).values(report).returning();
+    return created;
+  }
+
+  async getReportsByStatus(status: string): Promise<UserReport[]> {
+    return db.select().from(userReports).where(eq(userReports.status, status)).orderBy(desc(userReports.createdAt));
+  }
+
+  async getReportsByUser(userId: string): Promise<UserReport[]> {
+    return db.select().from(userReports).where(eq(userReports.reportedUserId, userId)).orderBy(desc(userReports.createdAt));
+  }
+
+  async resolveReport(id: number, resolvedBy: string, action: string, notes?: string): Promise<UserReport> {
+    const [updated] = await db
+      .update(userReports)
+      .set({ status: "resolved", resolvedBy, resolvedAt: new Date(), resolutionNotes: notes })
+      .where(eq(userReports.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Report Categories
+  async getReportCategories(): Promise<ReportCategory[]> {
+    return db.select().from(reportCategories).where(eq(reportCategories.isActive, true));
+  }
+
+  // Moderation Queue
+  async addToModerationQueue(item: InsertModerationQueue): Promise<ModerationQueue> {
+    const [created] = await db.insert(moderationQueue).values(item).returning();
+    return created;
+  }
+
+  async getPendingModeration(): Promise<ModerationQueue[]> {
+    return db.select().from(moderationQueue).where(eq(moderationQueue.status, "pending")).orderBy(desc(moderationQueue.createdAt));
+  }
+
+  async moderateContent(id: number, reviewedBy: string, action: string, notes?: string): Promise<ModerationQueue> {
+    const [updated] = await db
+      .update(moderationQueue)
+      .set({ status: "reviewed", reviewedBy, reviewedAt: new Date(), action, actionNotes: notes })
+      .where(eq(moderationQueue.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Login History
+  async recordLoginHistory(login: InsertLoginHistory): Promise<LoginHistory> {
+    const [created] = await db.insert(loginHistory).values(login).returning();
+    return created;
+  }
+
+  async getLoginHistory(userId: string, limit = 20): Promise<LoginHistory[]> {
+    return db.select().from(loginHistory).where(eq(loginHistory.userId, userId)).orderBy(desc(loginHistory.createdAt)).limit(limit);
+  }
+
+  // User Sessions
+  async createSession(session: InsertUserSession): Promise<UserSession> {
+    const [created] = await db.insert(userSessions).values(session).returning();
+    return created;
+  }
+
+  async getUserSessions(userId: string): Promise<UserSession[]> {
+    return db.select().from(userSessions).where(eq(userSessions.userId, userId));
+  }
+
+  async revokeSession(id: number): Promise<void> {
+    await db.delete(userSessions).where(eq(userSessions.id, id));
+  }
+
+  async revokeAllSessions(userId: string): Promise<void> {
+    await db.delete(userSessions).where(eq(userSessions.userId, userId));
+  }
+
+  // 2FA
+  async enable2FA(userId: string, secret: string, backupCodes: string[]): Promise<User2FA> {
+    const [created] = await db.insert(user2FA).values({ userId, secret, enabled: true, backupCodes }).onConflictDoUpdate({
+      target: user2FA.userId,
+      set: { secret, enabled: true, backupCodes, updatedAt: new Date() },
+    }).returning();
+    return created;
+  }
+
+  async disable2FA(userId: string): Promise<void> {
+    await db.delete(user2FA).where(eq(user2FA.userId, userId));
+  }
+
+  async get2FASettings(userId: string): Promise<User2FA | undefined> {
+    const [settings] = await db.select().from(user2FA).where(eq(user2FA.userId, userId));
+    return settings;
+  }
+
+  // Data Export
+  async requestDataExport(userId: string): Promise<DataExportRequest> {
+    const [created] = await db.insert(dataExportRequests).values({ userId }).returning();
+    return created;
+  }
+
+  async getExportRequest(userId: string): Promise<DataExportRequest | undefined> {
+    const [request] = await db.select().from(dataExportRequests).where(eq(dataExportRequests.userId, userId)).orderBy(desc(dataExportRequests.createdAt)).limit(1);
+    return request;
+  }
+
+  // Data Deletion
+  async requestDataDeletion(userId: string): Promise<DataDeletionRequest> {
+    const scheduledDate = new Date();
+    scheduledDate.setDate(scheduledDate.getDate() + 30); // 30 days notice
+    const [created] = await db.insert(dataDeletionRequests).values({ userId, scheduledDeletion: scheduledDate.toISOString().split('T')[0] }).returning();
+    return created;
+  }
+
+  async getDeletionRequest(userId: string): Promise<DataDeletionRequest | undefined> {
+    const [request] = await db.select().from(dataDeletionRequests).where(eq(dataDeletionRequests.userId, userId)).orderBy(desc(dataDeletionRequests.createdAt)).limit(1);
+    return request;
+  }
+
+  async cancelDataDeletion(userId: string): Promise<void> {
+    await db.delete(dataDeletionRequests).where(and(eq(dataDeletionRequests.userId, userId), eq(dataDeletionRequests.status, "pending")));
+  }
+
+  // Moderation Stats
+  async getModerationStats(): Promise<any> {
+    const pending = await this.getPendingModeration();
+    const pendingReports = await this.getReportsByStatus("pending");
+    return {
+      pendingModeration: pending.length,
+      pendingReports: pendingReports.length,
+      reportCategories: await this.getReportCategories(),
     };
   }
 }
