@@ -1677,3 +1677,90 @@ export type InsertCounselingFollowup = z.infer<typeof insertCounselingFollowupSc
 export const insertPastoralVisitSchema = createInsertSchema(pastoralVisits).omit({ id: true, createdAt: true });
 export type PastoralVisit = typeof pastoralVisits.$inferSelect;
 export type InsertPastoralVisit = z.infer<typeof insertPastoralVisitSchema>;
+
+// === AI SERMON SEARCH & SMART RECOMMENDATIONS ===
+
+export const sermonEmbeddings = pgTable("sermon_embeddings", {
+  id: serial("id").primaryKey(),
+  sermonId: integer("sermon_id").references(() => sermons.id).notNull(),
+  summary: text("summary"),
+  keyTopics: jsonb("key_topics").$type<string[]>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const sermonViews = pgTable("sermon_views", {
+  id: serial("id").primaryKey(),
+  sermonId: integer("sermon_id").references(() => sermons.id).notNull(),
+  userId: uuid("user_id").references(() => users.id),
+  watchDuration: integer("watch_duration").default(0),
+  completed: boolean("completed").default(false),
+  viewedAt: timestamp("viewed_at").defaultNow(),
+});
+
+export const userSermonPreferences = pgTable("user_sermon_preferences", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  favoriteSpeakers: jsonb("favorite_speakers").$type<string[]>(),
+  favoriteTopics: jsonb("favorite_topics").$type<string[]>(),
+  favoriteSeries: jsonb("favorite_series").$type<string[]>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const sermonRecommendations = pgTable("sermon_recommendations", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id),
+  recommendedSermons: jsonb("recommended_sermons").$type<number[]>(),
+  basedOn: text("based_on"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const sermonEmbeddingRelations = relations(sermonEmbeddings, ({ one }) => ({
+  sermon: one(sermons, {
+    fields: [sermonEmbeddings.sermonId],
+    references: [sermons.id],
+  }),
+}));
+
+export const sermonViewRelations = relations(sermonViews, ({ one }) => ({
+  sermon: one(sermons, {
+    fields: [sermonViews.sermonId],
+    references: [sermons.id],
+  }),
+  user: one(users, {
+    fields: [sermonViews.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userSermonPreferenceRelations = relations(userSermonPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userSermonPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+export const sermonRecommendationRelations = relations(sermonRecommendations, ({ one }) => ({
+  user: one(users, {
+    fields: [sermonRecommendations.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertSermonEmbeddingSchema = createInsertSchema(sermonEmbeddings).omit({ id: true, createdAt: true });
+export type SermonEmbedding = typeof sermonEmbeddings.$inferSelect;
+export type InsertSermonEmbedding = z.infer<typeof insertSermonEmbeddingSchema>;
+
+export const insertSermonViewSchema = createInsertSchema(sermonViews).omit({ id: true, viewedAt: true });
+export type SermonView = typeof sermonViews.$inferSelect;
+export type InsertSermonView = z.infer<typeof insertSermonViewSchema>;
+
+export const insertUserSermonPreferenceSchema = createInsertSchema(userSermonPreferences).omit({ id: true, createdAt: true, updatedAt: true });
+export type UserSermonPreference = typeof userSermonPreferences.$inferSelect;
+export type InsertUserSermonPreference = z.infer<typeof insertUserSermonPreferenceSchema>;
+
+export const insertSermonRecommendationSchema = createInsertSchema(sermonRecommendations).omit({ id: true, createdAt: true });
+export type SermonRecommendation = typeof sermonRecommendations.$inferSelect;
+export type InsertSermonRecommendation = z.infer<typeof insertSermonRecommendationSchema>;

@@ -1435,6 +1435,129 @@ export async function registerRoutes(
     }
   });
 
+  // === AI SERMON SEARCH & RECOMMENDATIONS ===
+
+  // Record sermon view
+  app.post("/api/sermons/:id/view", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const sermonId = Number(req.params.id);
+      const userId = req.user!.id;
+      const { watchDuration, completed } = req.body;
+      
+      const view = await storage.recordSermonView(sermonId, userId, watchDuration || 0, completed || false);
+      res.json(view);
+    } catch (err) {
+      console.error("Error recording sermon view:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's sermon views
+  app.get("/api/sermons/views/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const views = await storage.getUserSermonViews(userId);
+      res.json(views);
+    } catch (err) {
+      console.error("Error fetching sermon views:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get popular sermons
+  app.get("/api/sermons/popular", async (req, res) => {
+    try {
+      const sermons = await storage.getPopularSermons(10);
+      res.json(sermons);
+    } catch (err) {
+      console.error("Error fetching popular sermons:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get/update user sermon preferences
+  app.get("/api/sermons/preferences", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const prefs = await storage.getUserSermonPreferences(userId);
+      res.json(prefs || { userId, favoriteSpeakers: [], favoriteTopics: [], favoriteSeries: [] });
+    } catch (err) {
+      console.error("Error fetching preferences:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/sermons/preferences", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { favoriteSpeakers, favoriteTopics, favoriteSeries } = req.body;
+      
+      const prefs = await storage.updateUserSermonPreferences(userId, {
+        favoriteSpeakers,
+        favoriteTopics,
+        favoriteSeries,
+      });
+      res.json(prefs);
+    } catch (err) {
+      console.error("Error updating preferences:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get personalized recommendations
+  app.get("/api/sermons/recommendations/personal", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const sermons = await storage.getSermonRecommendations(userId, 10);
+      res.json(sermons);
+    } catch (err) {
+      console.error("Error fetching recommendations:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Search sermons (AI-powered)
+  app.get("/api/sermons/search/ai", async (req, res) => {
+    try {
+      const { q, limit = 20 } = req.query;
+      const searchQuery = q as string;
+      
+      if (!searchQuery) {
+        return res.status(400).json({ message: "Search query required" });
+      }
+      
+      const sermons = await storage.searchSermons(searchQuery, parseInt(limit as string) || 20);
+      res.json(sermons);
+    } catch (err) {
+      console.error("Error searching sermons:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get related sermons (using storage method)
+  app.get("/api/sermons/:id/related-ai", async (req, res) => {
+    try {
+      const sermonId = Number(req.params.id);
+      const sermons = await storage.getRelatedSermons(sermonId, 5);
+      res.json(sermons);
+    } catch (err) {
+      console.error("Error fetching related sermons:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Generate AI summary (using storage method)
+  app.get("/api/sermons/:id/ai-summary", async (req, res) => {
+    try {
+      const sermonId = Number(req.params.id);
+      const summary = await storage.generateSermonSummary(sermonId);
+      res.json({ summary, sermonId });
+    } catch (err) {
+      console.error("Error generating summary:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Prayer Requests
   app.get(api.prayer.list.path, async (req, res) => {
     const requests = await storage.getPrayerRequests();
