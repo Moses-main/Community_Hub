@@ -2046,3 +2046,237 @@ export type InsertCampusTransfer = z.infer<typeof insertCampusTransferSchema>;
 export const insertCampusReportSchema = createInsertSchema(campusReports).omit({ id: true, generatedAt: true });
 export type CampusReport = typeof campusReports.$inferSelect;
 export type InsertCampusReport = z.infer<typeof insertCampusReportSchema>;
+
+// === PRIVACY, SAFETY & MODERATION CONTROLS ===
+
+export const privacySettings = pgTable("privacy_settings", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  profileVisibility: varchar("profile_visibility", { length: 50 }).default("members"),
+  showEmail: boolean("show_email").default(false),
+  showPhone: boolean("show_phone").default(false),
+  showBirthday: boolean("show_birthday").default(true),
+  showSocialLinks: boolean("show_social_links").default(true),
+  allowMessages: boolean("allow_messages").default(true),
+  allowGroupInvites: boolean("allow_group_invites").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const reportCategories = pgTable("report_categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  severityLevel: integer("severity_level").default(1),
+  isActive: boolean("is_active").default(true),
+});
+
+export const userReports = pgTable("user_reports", {
+  id: serial("id").primaryKey(),
+  reporterId: uuid("reporter_id").references(() => users.id).notNull(),
+  reportedUserId: uuid("reported_user_id").references(() => users.id),
+  reportedContentId: integer("reported_content_id"),
+  reportedContentType: varchar("reported_content_type", { length: 50 }),
+  categoryId: integer("category_id").references(() => reportCategories.id),
+  reason: text("reason").notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).default("pending"),
+  resolvedBy: uuid("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const moderationQueue = pgTable("moderation_queue", {
+  id: serial("id").primaryKey(),
+  contentType: varchar("content_type", { length: 50 }).notNull(),
+  contentId: integer("content_id").notNull(),
+  contentData: jsonb("content_data").$type<Record<string, any>>(),
+  flaggedBy: uuid("flagged_by").references(() => users.id),
+  flagReason: varchar("flag_reason", { length: 255 }),
+  status: varchar("status", { length: 50 }).default("pending"),
+  reviewedBy: uuid("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  action: varchar("action", { length: 50 }),
+  actionNotes: text("action_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userBlocks = pgTable("user_blocks", {
+  id: serial("id").primaryKey(),
+  blockerId: uuid("blocker_id").references(() => users.id).notNull(),
+  blockedId: uuid("blocked_id").references(() => users.id).notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userHiddenContent = pgTable("user_hidden_content", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  contentType: varchar("content_type", { length: 50 }).notNull(),
+  contentId: integer("content_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userSessions = pgTable("user_sessions", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  sessionToken: varchar("session_token", { length: 255 }).notNull(),
+  deviceInfo: varchar("device_info", { length: 500 }),
+  ipAddress: varchar("ip_address", { length: 50 }),
+  lastActive: timestamp("last_active").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const loginHistory = pgTable("login_history", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  ipAddress: varchar("ip_address", { length: 50 }),
+  deviceInfo: varchar("device_info", { length: 500 }),
+  location: varchar("location", { length: 255 }),
+  success: boolean("success").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const user2FA = pgTable("user_2fa", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  secret: varchar("secret", { length: 255 }).notNull(),
+  enabled: boolean("enabled").default(false),
+  backupCodes: jsonb("backup_codes").$type<string[]>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const dataExportRequests = pgTable("data_export_requests", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  status: varchar("status", { length: 50 }).default("pending"),
+  exportData: jsonb("export_data").$type<string[]>(),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const dataDeletionRequests = pgTable("data_deletion_requests", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  status: varchar("status", { length: 50 }).default("pending"),
+  scheduledDeletion: date("scheduled_deletion"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const privacySettingRelations = relations(privacySettings, ({ one }) => ({
+  user: one(users, {
+    fields: [privacySettings.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userReportRelations = relations(userReports, ({ one }) => ({
+  reporter: one(users, {
+    fields: [userReports.reporterId],
+    references: [users.id],
+  }),
+  reportedUser: one(users, {
+    fields: [userReports.reportedUserId],
+    references: [users.id],
+  }),
+  category: one(reportCategories, {
+    fields: [userReports.categoryId],
+    references: [reportCategories.id],
+  }),
+}));
+
+export const userBlockRelations = relations(userBlocks, ({ one }) => ({
+  blocker: one(users, {
+    fields: [userBlocks.blockerId],
+    references: [users.id],
+  }),
+  blocked: one(users, {
+    fields: [userBlocks.blockedId],
+    references: [users.id],
+  }),
+}));
+
+export const userSessionRelations = relations(userSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSessions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const loginHistoryRelations = relations(loginHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [loginHistory.userId],
+    references: [users.id],
+  }),
+}));
+
+export const user2FARelations = relations(user2FA, ({ one }) => ({
+  user: one(users, {
+    fields: [user2FA.userId],
+    references: [users.id],
+  }),
+}));
+
+export const dataExportRequestRelations = relations(dataExportRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [dataExportRequests.userId],
+    references: [users.id],
+  }),
+}));
+
+export const dataDeletionRequestRelations = relations(dataDeletionRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [dataDeletionRequests.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertPrivacySettingSchema = createInsertSchema(privacySettings).omit({ id: true, createdAt: true, updatedAt: true });
+export type PrivacySetting = typeof privacySettings.$inferSelect;
+export type InsertPrivacySetting = z.infer<typeof insertPrivacySettingSchema>;
+
+export const insertReportCategorySchema = createInsertSchema(reportCategories).omit({ id: true });
+export type ReportCategory = typeof reportCategories.$inferSelect;
+export type InsertReportCategory = z.infer<typeof insertReportCategorySchema>;
+
+export const insertUserReportSchema = createInsertSchema(userReports).omit({ id: true, resolvedAt: true, createdAt: true });
+export type UserReport = typeof userReports.$inferSelect;
+export type InsertUserReport = z.infer<typeof insertUserReportSchema>;
+
+export const insertModerationQueueSchema = createInsertSchema(moderationQueue).omit({ id: true, reviewedAt: true, createdAt: true });
+export type ModerationQueue = typeof moderationQueue.$inferSelect;
+export type InsertModerationQueue = z.infer<typeof insertModerationQueueSchema>;
+
+export const insertUserBlockSchema = createInsertSchema(userBlocks).omit({ id: true, createdAt: true });
+export type UserBlock = typeof userBlocks.$inferSelect;
+export type InsertUserBlock = z.infer<typeof insertUserBlockSchema>;
+
+export const insertUserHiddenContentSchema = createInsertSchema(userHiddenContent).omit({ id: true, createdAt: true });
+export type UserHiddenContent = typeof userHiddenContent.$inferSelect;
+export type InsertUserHiddenContent = z.infer<typeof insertUserHiddenContentSchema>;
+
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({ id: true, lastActive: true, createdAt: true });
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+
+export const insertLoginHistorySchema = createInsertSchema(loginHistory).omit({ id: true, createdAt: true });
+export type LoginHistory = typeof loginHistory.$inferSelect;
+export type InsertLoginHistory = z.infer<typeof insertLoginHistorySchema>;
+
+export const insertUser2FASchema = createInsertSchema(user2FA).omit({ id: true, createdAt: true, updatedAt: true });
+export type User2FA = typeof user2FA.$inferSelect;
+export type InsertUser2FA = z.infer<typeof insertUser2FASchema>;
+
+export const insertDataExportRequestSchema = createInsertSchema(dataExportRequests).omit({ id: true, processedAt: true, createdAt: true });
+export type DataExportRequest = typeof dataExportRequests.$inferSelect;
+export type InsertDataExportRequest = z.infer<typeof insertDataExportRequestSchema>;
+
+export const insertDataDeletionRequestSchema = createInsertSchema(dataDeletionRequests).omit({ id: true, processedAt: true, createdAt: true });
+export type DataDeletionRequest = typeof dataDeletionRequests.$inferSelect;
+export type InsertDataDeletionRequest = z.infer<typeof insertDataDeletionRequestSchema>;
