@@ -17,6 +17,7 @@ import {
   posts, postLikes, postComments, commentLikes, postShares, userConnections, hashtags, postHashtags,
   userEngagementMetrics, spiritualHealthScores, discipleshipAnalytics, groupAnalytics, analyticsReports,
   counselingRequests, counselingNotes, counselingFollowups, pastoralVisits,
+  sermonEmbeddings, sermonViews, userSermonPreferences, sermonRecommendations,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -63,7 +64,11 @@ import {
   type CounselingRequest, type InsertCounselingRequest,
   type CounselingNote, type InsertCounselingNote,
   type CounselingFollowup, type InsertCounselingFollowup,
-  type PastoralVisit, type InsertPastoralVisit
+  type PastoralVisit, type InsertPastoralVisit,
+  type SermonEmbedding, type InsertSermonEmbedding,
+  type SermonView, type InsertSermonView,
+  type UserSermonPreference, type InsertUserSermonPreference,
+  type SermonRecommendation, type InsertSermonRecommendation
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -2880,6 +2885,189 @@ export class DatabaseStorage implements IStorage {
       pendingFollowups: pendingFollowups.length,
       visitsThisMonth: visitsThisMonth.length,
     };
+  }
+
+  // === AI SERMON SEARCH & SMART RECOMMENDATIONS ===
+
+  // Sermon Views (tracking)
+  async recordSermonView(sermonId: number, userId: string, watchDuration: number = 0, completed: boolean = false): Promise<SermonView> {
+    const [view] = await db.insert(sermonViews).values({
+      sermonId,
+      userId,
+      watchDuration,
+      completed,
+    }).returning();
+    return view;
+  }
+
+  async updateSermonView(id: number, updates: Partial<SermonView>): Promise<SermonView> {
+    const [updated] = await db
+      .update(sermonViews)
+      .set(updates)
+      .where(eq(sermonViews.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getUserSermonViews(userId: string, limit = 20): Promise<SermonView[]> {
+    return db.select().from(sermonViews)
+      .where(eq(sermonViews.userId, userId))
+      .orderBy(desc(sermonViews.viewedAt))
+      .limit(limit);
+  }
+
+  async getPopularSermons(limit = 10): Promise<any[]> {
+    const views = await db.select().from(sermonViews);
+    const sermonCounts = views.reduce((acc, v) => {
+      acc[v.sermonId] = (acc[v.sermonId] || 0) + 1;
+      return acc;
+    }, {} as Record<number, number>);
+    
+    const sortedSermons = Object.entries(sermonCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, limit)
+      .map(([sermonId]) => Number(sermonId));
+    
+    if (sortedSermons.length === 0) return [];
+    
+    return sortedSermons.map(id => this.getSermon(id)).filter(Boolean);
+  }
+
+  // User Sermon Preferences
+  async getUserSermonPreferences(userId: string): Promise<UserSermonPreference | undefined> {
+    const [pref] = await db.select().from(userSermonPreferences).where(eq(userSermonPreferences.userId, userId));
+    return pref;
+  }
+
+  async updateUserSermonPreferences(userId: string, updates: { favoriteSpeakers?: string[]; favoriteTopics?: string[]; favoriteSeries?: string[] }): Promise<UserSermonPreference> {
+    const existing = await this.getUserSermonPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(userSermonPreferences)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(userSermonPreferences.userId, userId))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db
+      .insert(userSermonPreferences)
+      .values({ userId, ...updates })
+      .returning();
+    return created;
+  }
+
+  // Smart Recommendations
+  async getSermonRecommendations(userId: string, limit = 10): Promise<Sermon[]> {
+    // Check cache first
+    const [cached] = await db.select().from(sermonRecommendations)
+      .where(eq(sermonRecommendations.userId, userId));
+    
+    if (cached && cached.recommendedSermons && cached.recommendedSermons.length > 0) {
+      const recSermons = await Promise.all(
+        cached.recommendedSermons.map(id => this.getSermon(id))
+      );
+      return recSermons.filter(Boolean) as Sermon[];
+    }
+    
+    // Generate recommendations based on preferences and views
+    const prefs = await this.getUserSermonPreferences(userId);
+    const views = await this.getUserSermonViews(userId);
+    
+    // Get viewed sermon IDs
+    const viewedIds = new Set(views.map(v => v.sermonId));
+    
+    // Get all sermons
+    const allSermons = await this.getSermons();
+    
+    // Score sermons based on user preferences
+    const scored = allSermons
+      .filter(s => !viewedIds.has(s.id))
+      .map(sermon => {
+        let score = 0;
+        
+        // Boost by preferences
+        if (prefs?.favoriteSpeakers?.includes(sermon.speaker)) score += 5;
+        if (prefs?.favoriteSeries === sermon.series) score += 3;
+        if (prefs?.favoriteTopics?.some(t => sermon.topic?.toLowerCase().includes(t.toLowerCase()))) score += 4;
+        
+        // Boost by popularity
+        const viewCount = views.filter(v => v.sermonId === sermon.id).length;
+        score += viewCount;
+        
+        // Boost recent sermons
+        const daysSince = Math.floor((Date.now() - new Date(sermon.date).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSince < 30) score += 2;
+        if (daysSince < 7) score += 3;
+        
+        return { sermon, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(({ sermon }) => sermon);
+    
+    // Cache recommendations
+    if (scored.length > 0) {
+      await db.insert(sermonRecommendations).values({
+        userId,
+        recommendedSermons: scored.map(s => s.id),
+        basedOn: prefs ? 'preferences' : 'popularity',
+      }).onConflictDoUpdate({
+        target: sermonRecommendations.userId,
+        set: { recommendedSermons: scored.map(s => s.id), basedOn: prefs ? 'preferences' : 'popularity', createdAt: new Date() },
+      });
+    }
+    
+    return scored;
+  }
+
+  // AI Search (keyword-based for now)
+  async searchSermons(query: string, limit = 20): Promise<Sermon[]> {
+    const searchTerm = `%${query.toLowerCase()}%`;
+    const allSermons = await this.getSermons();
+    
+    return allSermons.filter(s => 
+      s.title.toLowerCase().includes(query.toLowerCase()) ||
+      s.speaker.toLowerCase().includes(query.toLowerCase()) ||
+      s.topic?.toLowerCase().includes(query.toLowerCase()) ||
+      s.description?.toLowerCase().includes(query.toLowerCase()) ||
+      s.series?.toLowerCase().includes(query.toLowerCase())
+    ).slice(0, limit);
+  }
+
+  // Generate sermon summary (placeholder for AI)
+  async generateSermonSummary(sermonId: number): Promise<string> {
+    const sermon = await this.getSermon(sermonId);
+    if (!sermon) return '';
+    
+    // In production, this would call an AI service
+    // For now, return a basic summary
+    return `A sermon titled "${sermon.title}" by ${sermon.speaker} on ${new Date(sermon.date).toLocaleDateString()}. ${sermon.topic ? `Topic: ${sermon.topic}.` : ''} ${sermon.description?.substring(0, 200) || ''}`;
+  }
+
+  // Get related sermons
+  async getRelatedSermons(sermonId: number, limit = 5): Promise<Sermon[]> {
+    const sermon = await this.getSermon(sermonId);
+    if (!sermon) return [];
+    
+    const allSermons = await this.getSermons();
+    
+    return allSermons
+      .filter(s => s.id !== sermonId)
+      .map(s => {
+        let score = 0;
+        if (s.speaker === sermon.speaker) score += 5;
+        if (s.series === sermon.series) score += 4;
+        if (s.topic === sermon.topic) score += 3;
+        
+        // Add to results with score
+        return { sermon: s, score };
+      })
+      .filter(r => r.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(({ sermon }) => sermon);
   }
 }
 
