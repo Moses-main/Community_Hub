@@ -1,5 +1,5 @@
 export * from "./models/auth";
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, uuid, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, uuid, date, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./models/auth";
@@ -1764,3 +1764,113 @@ export type InsertUserSermonPreference = z.infer<typeof insertUserSermonPreferen
 export const insertSermonRecommendationSchema = createInsertSchema(sermonRecommendations).omit({ id: true, createdAt: true });
 export type SermonRecommendation = typeof sermonRecommendations.$inferSelect;
 export type InsertSermonRecommendation = z.infer<typeof insertSermonRecommendationSchema>;
+
+// === AI CHURCH ASSISTANT (CHATBOT) ===
+
+export const chatConversations = pgTable("chat_conversations", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
+  title: varchar("title", { length: 255 }),
+  status: varchar("status", { length: 50 }).default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => chatConversations.id).notNull(),
+  role: varchar("role", { length: 20 }).notNull(),
+  content: text("content").notNull(),
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const chatbotIntents = pgTable("chatbot_intents", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  patterns: jsonb("patterns").$type<string[]>(),
+  responses: jsonb("responses").$type<string[]>().notNull(),
+  category: varchar("category", { length: 100 }),
+  keywords: jsonb("keywords").$type<string[]>(),
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const chatbotPreferences = pgTable("chatbot_preferences", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  language: varchar("language", { length: 10 }).default("en"),
+  notificationEnabled: boolean("notification_enabled").default(true),
+  digestPreference: varchar("digest_preference", { length: 50 }).default("daily"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const chatbotAnalytics = pgTable("chatbot_analytics", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => chatConversations.id),
+  userId: uuid("user_id").references(() => users.id),
+  intent: varchar("intent", { length: 255 }),
+  responseTimeMs: integer("response_time_ms"),
+  feedback: varchar("feedback", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const chatConversationRelations = relations(chatConversations, ({ one, many }) => ({
+  user: one(users, {
+    fields: [chatConversations.userId],
+    references: [users.id],
+  }),
+  messages: many(chatMessages),
+}));
+
+export const chatMessageRelations = relations(chatMessages, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatMessages.conversationId],
+    references: [chatConversations.id],
+  }),
+}));
+
+export const chatbotIntentRelations = relations(chatbotIntents, () => ({}));
+
+export const chatbotPreferenceRelations = relations(chatbotPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [chatbotPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+export const chatbotAnalyticRelations = relations(chatbotAnalytics, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatbotAnalytics.conversationId],
+    references: [chatConversations.id],
+  }),
+  user: one(users, {
+    fields: [chatbotAnalytics.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({ id: true, createdAt: true, updatedAt: true });
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true });
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+
+export const insertChatbotIntentSchema = createInsertSchema(chatbotIntents).omit({ id: true, createdAt: true });
+export type ChatbotIntent = typeof chatbotIntents.$inferSelect;
+export type InsertChatbotIntent = z.infer<typeof insertChatbotIntentSchema>;
+
+export const insertChatbotPreferenceSchema = createInsertSchema(chatbotPreferences).omit({ id: true, createdAt: true, updatedAt: true });
+export type ChatbotPreference = typeof chatbotPreferences.$inferSelect;
+export type InsertChatbotPreference = z.infer<typeof insertChatbotPreferenceSchema>;
+
+export const insertChatbotAnalyticSchema = createInsertSchema(chatbotAnalytics).omit({ id: true, createdAt: true });
+export type ChatbotAnalytic = typeof chatbotAnalytics.$inferSelect;
+export type InsertChatbotAnalytic = z.infer<typeof insertChatbotAnalyticSchema>;
