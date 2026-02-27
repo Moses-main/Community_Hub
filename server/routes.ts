@@ -1793,6 +1793,229 @@ export async function registerRoutes(
     }
   });
 
+  // === MULTI-CAMPUS & BRANCH MANAGEMENT ===
+
+  // Get all campuses
+  app.get("/api/campuses", async (req, res) => {
+    try {
+      const includeInactive = req.query.includeInactive === 'true';
+      const campuses = await storage.getCampuses(includeInactive);
+      res.json(campuses);
+    } catch (err) {
+      console.error("Error fetching campuses:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get campus by ID
+  app.get("/api/campuses/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const campus = await storage.getCampus(id);
+      if (!campus) {
+        return res.status(404).json({ message: "Campus not found" });
+      }
+      res.json(campus);
+    } catch (err) {
+      console.error("Error fetching campus:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create campus (admin)
+  app.post("/api/campuses", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, code, address, city, state, country, phone, email, website, pastorId, isHeadquarters, timezone, logoUrl } = req.body;
+      const campus = await storage.createCampus({
+        name, code, address, city, state, country, phone, email, website, pastorId, isHeadquarters: isHeadquarters || false, timezone, logoUrl,
+      });
+      res.json(campus);
+    } catch (err) {
+      console.error("Error creating campus:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update campus (admin)
+  app.put("/api/campuses/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const campus = await storage.updateCampus(id, req.body);
+      res.json(campus);
+    } catch (err) {
+      console.error("Error updating campus:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete campus (admin)
+  app.delete("/api/campuses/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteCampus(id);
+      res.json({ message: "Campus deleted" });
+    } catch (err) {
+      console.error("Error deleting campus:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get branches by campus
+  app.get("/api/campuses/:id/branches", async (req, res) => {
+    try {
+      const campusId = Number(req.params.id);
+      const includeInactive = req.query.includeInactive === 'true';
+      const branches = await storage.getBranchesByCampus(campusId, includeInactive);
+      res.json(branches);
+    } catch (err) {
+      console.error("Error fetching branches:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create branch (admin)
+  app.post("/api/branches", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { campusId, name, code, address, city, state, leaderId, leaderName, leaderPhone } = req.body;
+      const branch = await storage.createBranch({ campusId, name, code, address, city, state, leaderId, leaderName, leaderPhone });
+      res.json(branch);
+    } catch (err) {
+      console.error("Error creating branch:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update branch (admin)
+  app.put("/api/branches/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const branch = await storage.updateBranch(id, req.body);
+      res.json(branch);
+    } catch (err) {
+      console.error("Error updating branch:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete branch (admin)
+  app.delete("/api/branches/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteBranch(id);
+      res.json({ message: "Branch deleted" });
+    } catch (err) {
+      console.error("Error deleting branch:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's campus/branch
+  app.get("/api/my-campuses", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const member = await storage.getCampusMember(userId);
+      res.json(member);
+    } catch (err) {
+      console.error("Error fetching user campus:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get campus members
+  app.get("/api/campuses/:id/members", isAuthenticated, async (req, res) => {
+    try {
+      const campusId = Number(req.params.id);
+      const members = await storage.getCampusMembers(campusId);
+      res.json(members);
+    } catch (err) {
+      console.error("Error fetching campus members:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Assign member to campus (admin)
+  app.post("/api/campuses/:id/members", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const campusId = Number(req.params.id);
+      const { userId, branchId, membershipType } = req.body;
+      const member = await storage.assignMemberToCampus({ userId, campusId, branchId, membershipType });
+      res.json(member);
+    } catch (err) {
+      console.error("Error assigning member:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Request campus transfer
+  app.post("/api/campuses/transfer", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { toCampusId, toBranchId, notes } = req.body;
+      const currentMember = await storage.getCampusMember(userId);
+      const transfer = await storage.createTransfer({
+        userId,
+        fromCampusId: currentMember?.campusId,
+        fromBranchId: currentMember?.branchId,
+        toCampusId,
+        toBranchId,
+        notes,
+      });
+      res.json(transfer);
+    } catch (err) {
+      console.error("Error creating transfer:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get pending transfers (admin)
+  app.get("/api/campuses/transfers", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const transfers = await storage.getPendingTransfers();
+      res.json(transfers);
+    } catch (err) {
+      console.error("Error fetching transfers:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Approve transfer (admin)
+  app.post("/api/campuses/transfers/:id/approve", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const approvedBy = req.user!.id;
+      const transfer = await storage.approveTransfer(id, approvedBy);
+      res.json(transfer);
+    } catch (err) {
+      console.error("Error approving transfer:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Reject transfer (admin)
+  app.post("/api/campuses/transfers/:id/reject", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const approvedBy = req.user!.id;
+      const transfer = await storage.rejectTransfer(id, approvedBy);
+      res.json(transfer);
+    } catch (err) {
+      console.error("Error rejecting transfer:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get campus statistics (admin)
+  app.get("/api/campuses/:id/stats", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const campusId = Number(req.params.id);
+      const stats = await storage.getCampusStats(campusId);
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching campus stats:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Prayer Requests
   app.get(api.prayer.list.path, async (req, res) => {
     const requests = await storage.getPrayerRequests();

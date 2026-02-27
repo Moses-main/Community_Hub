@@ -1874,3 +1874,175 @@ export type InsertChatbotPreference = z.infer<typeof insertChatbotPreferenceSche
 export const insertChatbotAnalyticSchema = createInsertSchema(chatbotAnalytics).omit({ id: true, createdAt: true });
 export type ChatbotAnalytic = typeof chatbotAnalytics.$inferSelect;
 export type InsertChatbotAnalytic = z.infer<typeof insertChatbotAnalyticSchema>;
+
+// === MULTI-CAMPUS & BRANCH MANAGEMENT ===
+
+export const campuses = pgTable("campuses", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("Nigeria"),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  pastorId: uuid("pastor_id").references(() => users.id),
+  isHeadquarters: boolean("is_headquarters").default(false),
+  isActive: boolean("is_active").default(true),
+  timezone: varchar("timezone", { length: 50 }).default("Africa/Lagos"),
+  logoUrl: varchar("logo_url", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const branches = pgTable("branches", {
+  id: serial("id").primaryKey(),
+  campusId: integer("campus_id").references(() => campuses.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  leaderId: uuid("leader_id").references(() => users.id),
+  leaderName: varchar("leader_name", { length: 255 }),
+  leaderPhone: varchar("leader_phone", { length: 50 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const campusMembers = pgTable("campus_members", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  campusId: integer("campus_id").references(() => campuses.id).notNull(),
+  branchId: integer("branch_id").references(() => branches.id),
+  membershipType: varchar("membership_type", { length: 50 }).default("member"),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+});
+
+export const campusEvents = pgTable("campus_events", {
+  id: serial("id").primaryKey(),
+  campusId: integer("campus_id").references(() => campuses.id).notNull(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  isPrimary: boolean("is_primary").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const campusTransfers = pgTable("campus_transfers", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  fromCampusId: integer("from_campus_id").references(() => campuses.id),
+  toCampusId: integer("to_campus_id").references(() => campuses.id).notNull(),
+  fromBranchId: integer("from_branch_id").references(() => branches.id),
+  toBranchId: integer("to_branch_id").references(() => branches.id),
+  status: varchar("status", { length: 50 }).default("pending"),
+  approvedBy: uuid("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const campusReports = pgTable("campus_reports", {
+  id: serial("id").primaryKey(),
+  campusId: integer("campus_id").references(() => campuses.id).notNull(),
+  reportType: varchar("report_type", { length: 100 }).notNull(),
+  data: jsonb("data").$type<Record<string, any>>(),
+  generatedBy: uuid("generated_by").references(() => users.id),
+  generatedAt: timestamp("generated_at").defaultNow(),
+});
+
+// Relations
+export const campusRelations = relations(campuses, ({ one, many }) => ({
+  pastor: one(users, {
+    fields: [campuses.pastorId],
+    references: [users.id],
+  }),
+  branches: many(branches),
+  members: many(campusMembers),
+}));
+
+export const branchRelations = relations(branches, ({ one, many }) => ({
+  campus: one(campuses, {
+    fields: [branches.campusId],
+    references: [campuses.id],
+  }),
+  leader: one(users, {
+    fields: [branches.leaderId],
+    references: [users.id],
+  }),
+}));
+
+export const campusMemberRelations = relations(campusMembers, ({ one }) => ({
+  user: one(users, {
+    fields: [campusMembers.userId],
+    references: [users.id],
+  }),
+  campus: one(campuses, {
+    fields: [campusMembers.campusId],
+    references: [campuses.id],
+  }),
+  branch: one(branches, {
+    fields: [campusMembers.branchId],
+    references: [branches.id],
+  }),
+}));
+
+export const campusEventRelations = relations(campusEvents, ({ one }) => ({
+  campus: one(campuses, {
+    fields: [campusEvents.campusId],
+    references: [campuses.id],
+  }),
+  event: one(events, {
+    fields: [campusEvents.eventId],
+    references: [events.id],
+  }),
+}));
+
+export const campusTransferRelations = relations(campusTransfers, ({ one }) => ({
+  user: one(users, {
+    fields: [campusTransfers.userId],
+    references: [users.id],
+  }),
+  fromCampus: one(campuses, {
+    fields: [campusTransfers.fromCampusId],
+    references: [campuses.id],
+  }),
+  toCampus: one(campuses, {
+    fields: [campusTransfers.toCampusId],
+    references: [campuses.id],
+  }),
+}));
+
+export const campusReportRelations = relations(campusReports, ({ one }) => ({
+  campus: one(campuses, {
+    fields: [campusReports.campusId],
+    references: [campuses.id],
+  }),
+}));
+
+// Insert schemas
+export const insertCampusSchema = createInsertSchema(campuses).omit({ id: true, createdAt: true, updatedAt: true });
+export type Campus = typeof campuses.$inferSelect;
+export type InsertCampus = z.infer<typeof insertCampusSchema>;
+
+export const insertBranchSchema = createInsertSchema(branches).omit({ id: true, createdAt: true, updatedAt: true });
+export type Branch = typeof branches.$inferSelect;
+export type InsertBranch = z.infer<typeof insertBranchSchema>;
+
+export const insertCampusMemberSchema = createInsertSchema(campusMembers).omit({ id: true, assignedAt: true });
+export type CampusMember = typeof campusMembers.$inferSelect;
+export type InsertCampusMember = z.infer<typeof insertCampusMemberSchema>;
+
+export const insertCampusEventSchema = createInsertSchema(campusEvents).omit({ id: true, createdAt: true });
+export type CampusEvent = typeof campusEvents.$inferSelect;
+export type InsertCampusEvent = z.infer<typeof insertCampusEventSchema>;
+
+export const insertCampusTransferSchema = createInsertSchema(campusTransfers).omit({ id: true, approvedAt: true, createdAt: true });
+export type CampusTransfer = typeof campusTransfers.$inferSelect;
+export type InsertCampusTransfer = z.infer<typeof insertCampusTransferSchema>;
+
+export const insertCampusReportSchema = createInsertSchema(campusReports).omit({ id: true, generatedAt: true });
+export type CampusReport = typeof campusReports.$inferSelect;
+export type InsertCampusReport = z.infer<typeof insertCampusReportSchema>;
