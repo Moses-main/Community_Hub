@@ -25,6 +25,7 @@ interface AuthenticatedRequest extends Request {
     firstName?: string;
     lastName?: string;
     isAdmin?: boolean;
+    role?: string;
   };
 }
 
@@ -72,7 +73,8 @@ const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) =
       email: user.email!,
       firstName: user.firstName || undefined,
       lastName: user.lastName || undefined,
-      isAdmin: user.email === 'admin@wccrm.com' // Simple admin check
+      isAdmin: user.email === 'admin@wccrm.com', // Simple admin check
+      role: user.role || undefined
     };
     
     next();
@@ -86,6 +88,14 @@ const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) =
 const isAdmin = async (req: AuthenticatedRequest, res: any, next: any) => {
   if (!req.user?.isAdmin) {
     return res.status(403).json({ message: "Admin access required" });
+  }
+  next();
+};
+
+// Pastor middleware (admin or pastor role)
+const isPastor = async (req: AuthenticatedRequest, res: any, next: any) => {
+  if (!req.user?.isAdmin && req.user?.role !== 'PASTOR' && req.user?.role !== 'PASTORS_WIFE') {
+    return res.status(403).json({ message: "Pastor access required" });
   }
   next();
 };
@@ -4636,6 +4646,253 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       res.json({ message: "Reflection deleted" });
     } catch (err) {
       console.error("Error deleting reflection:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Pastoral Care & Counseling System ===
+
+  // Get counseling requests (user sees their own, admin sees all)
+  app.get("/api/counseling/requests", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const filters: { status?: string; assignedTo?: string; userId?: string } = {};
+      if (req.query.status) filters.status = String(req.query.status);
+      
+      // Regular users see only their own requests
+      if (!req.user.isAdmin) {
+        filters.userId = req.user.id;
+      } else if (req.query.assignedTo) {
+        filters.assignedTo = String(req.query.assignedTo);
+      }
+      
+      const requests = await storage.getCounselingRequests(filters);
+      res.json(requests);
+    } catch (err) {
+      console.error("Error fetching counseling requests:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single counseling request
+  app.get("/api/counseling/requests/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const request = await storage.getCounselingRequest(Number(req.params.id));
+      if (!request) return res.status(404).json({ message: "Request not found" });
+      
+      // Check access
+      if (!req.user.isAdmin && request.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(request);
+    } catch (err) {
+      console.error("Error fetching counseling request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create counseling request
+  app.post("/api/counseling/requests", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const { requestType, urgency, subject, description } = req.body;
+      
+      const request = await storage.createCounselingRequest({
+        userId: req.user.id,
+        requestType,
+        urgency: urgency || 'normal',
+        subject,
+        description,
+      });
+      
+      res.json(request);
+    } catch (err) {
+      console.error("Error creating counseling request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update counseling request (admin only)
+  app.patch("/api/counseling/requests/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, assignedTo } = req.body;
+      const updates: any = {};
+      
+      if (status) updates.status = status;
+      if (assignedTo) {
+        updates.assignedTo = assignedTo;
+        updates.assignedAt = new Date();
+        updates.status = 'assigned';
+      }
+      
+      const request = await storage.updateCounselingRequest(Number(req.params.id), updates);
+      res.json(request);
+    } catch (err) {
+      console.error("Error updating counseling request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Assign counseling request (pastor/admin)
+  app.post("/api/counseling/requests/:id/assign", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { assignedTo } = req.body;
+      if (!assignedTo) return res.status(400).json({ message: "Assignee required" });
+      
+      const request = await storage.assignCounselingRequest(Number(req.params.id), assignedTo);
+      res.json(request);
+    } catch (err) {
+      console.error("Error assigning counseling request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Complete counseling request
+  app.post("/api/counseling/requests/:id/complete", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const request = await storage.completeCounselingRequest(Number(req.params.id));
+      res.json(request);
+    } catch (err) {
+      console.error("Error completing counseling request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get counseling notes
+  app.get("/api/counseling/requests/:id/notes", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const request = await storage.getCounselingRequest(Number(req.params.id));
+      if (!request) return res.status(404).json({ message: "Request not found" });
+      
+      // Only assigned pastor or admin can see notes
+      if (!req.user.isAdmin && request.assignedTo !== req.user.id && request.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const notes = await storage.getCounselingNotes(Number(req.params.id));
+      res.json(notes);
+    } catch (err) {
+      console.error("Error fetching counseling notes:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Add counseling note (assigned pastor or admin)
+  app.post("/api/counseling/requests/:id/notes", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const request = await storage.getCounselingRequest(Number(req.params.id));
+      if (!request) return res.status(404).json({ message: "Request not found" });
+      
+      // Only assigned pastor, admin, or the requester can add notes
+      if (!req.user.isAdmin && request.assignedTo !== req.user.id && request.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { content, isInternal } = req.body;
+      const note = await storage.createCounselingNote({
+        requestId: Number(req.params.id),
+        authorId: req.user.id,
+        content,
+        isInternal: isInternal !== false,
+      });
+      
+      res.json(note);
+    } catch (err) {
+      console.error("Error creating counseling note:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get counseling follow-ups
+  app.get("/api/counseling/followups", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const followups = await storage.getPendingFollowups();
+      res.json(followups);
+    } catch (err) {
+      console.error("Error fetching follow-ups:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create follow-up reminder
+  app.post("/api/counseling/requests/:id/followups", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { scheduledDate, notes } = req.body;
+      const followup = await storage.createCounselingFollowup({
+        requestId: Number(req.params.id),
+        scheduledDate,
+        notes,
+      });
+      res.json(followup);
+    } catch (err) {
+      console.error("Error creating follow-up:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Complete follow-up
+  app.post("/api/counseling/followups/:id/complete", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { notes } = req.body;
+      const followup = await storage.completeCounselingFollowup(Number(req.params.id), notes);
+      res.json(followup);
+    } catch (err) {
+      console.error("Error completing follow-up:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Pastoral visits
+  app.get("/api/counseling/visits", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const filters: { visitorId?: string; visitedUserId?: string } = {};
+      if (req.query.visitedUserId) filters.visitedUserId = String(req.query.visitedUserId);
+      
+      const visits = await storage.getPastoralVisits(filters);
+      res.json(visits);
+    } catch (err) {
+      console.error("Error fetching visits:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/counseling/visits", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const { requestId, visitedUserId, visitDate, location, notes, followUpNeeded } = req.body;
+      const visit = await storage.createPastoralVisit({
+        requestId,
+        visitorId: req.user.id,
+        visitedUserId,
+        visitDate,
+        location,
+        notes,
+        followUpNeeded: followUpNeeded || false,
+      });
+      res.json(visit);
+    } catch (err) {
+      console.error("Error creating visit:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Pastoral statistics (admin only)
+  app.get("/api/counseling/stats", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const stats = await storage.getPastoralStats();
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching pastoral stats:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });

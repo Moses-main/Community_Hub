@@ -16,6 +16,7 @@ import {
   supportedLanguages,
   posts, postLikes, postComments, commentLikes, postShares, userConnections, hashtags, postHashtags,
   userEngagementMetrics, spiritualHealthScores, discipleshipAnalytics, groupAnalytics, analyticsReports,
+  counselingRequests, counselingNotes, counselingFollowups, pastoralVisits,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -58,7 +59,11 @@ import {
   type SpiritualHealthScore, type InsertSpiritualHealthScore,
   type DiscipleshipAnalytics, type InsertDiscipleshipAnalytics,
   type GroupAnalytics, type InsertGroupAnalytics,
-  type AnalyticsReport, type InsertAnalyticsReport
+  type AnalyticsReport, type InsertAnalyticsReport,
+  type CounselingRequest, type InsertCounselingRequest,
+  type CounselingNote, type InsertCounselingNote,
+  type CounselingFollowup, type InsertCounselingFollowup,
+  type PastoralVisit, type InsertPastoralVisit
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -2746,6 +2751,135 @@ export class DatabaseStorage implements IStorage {
       
       return { weekStart: week, averageScore, improving, declining };
     });
+  }
+
+  // === PASTORAL CARE & COUNSELING SYSTEM ===
+
+  // Counseling Requests
+  async getCounselingRequests(filters?: { status?: string; assignedTo?: string; userId?: string }): Promise<CounselingRequest[]> {
+    let conditions = [];
+    if (filters?.status) conditions.push(eq(counselingRequests.status, filters.status));
+    if (filters?.assignedTo) conditions.push(eq(counselingRequests.assignedTo, filters.assignedTo));
+    if (filters?.userId) conditions.push(eq(counselingRequests.userId, filters.userId));
+    
+    return db.select().from(counselingRequests)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(counselingRequests.createdAt));
+  }
+
+  async getCounselingRequest(id: number): Promise<CounselingRequest | undefined> {
+    const [request] = await db.select().from(counselingRequests).where(eq(counselingRequests.id, id));
+    return request;
+  }
+
+  async createCounselingRequest(request: InsertCounselingRequest): Promise<CounselingRequest> {
+    const [created] = await db.insert(counselingRequests).values(request).returning();
+    return created;
+  }
+
+  async updateCounselingRequest(id: number, updates: Partial<CounselingRequest>): Promise<CounselingRequest> {
+    const [updated] = await db
+      .update(counselingRequests)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(counselingRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async assignCounselingRequest(id: number, assignedTo: string): Promise<CounselingRequest> {
+    return this.updateCounselingRequest(id, {
+      assignedTo,
+      assignedAt: new Date(),
+      status: 'assigned'
+    });
+  }
+
+  async completeCounselingRequest(id: number): Promise<CounselingRequest> {
+    return this.updateCounselingRequest(id, {
+      status: 'completed',
+      completedAt: new Date()
+    });
+  }
+
+  // Counseling Notes
+  async getCounselingNotes(requestId: number): Promise<CounselingNote[]> {
+    return db.select().from(counselingNotes)
+      .where(eq(counselingNotes.requestId, requestId))
+      .orderBy(desc(counselingNotes.createdAt));
+  }
+
+  async createCounselingNote(note: InsertCounselingNote): Promise<CounselingNote> {
+    const [created] = await db.insert(counselingNotes).values(note).returning();
+    return created;
+  }
+
+  // Counseling Follow-ups
+  async getCounselingFollowups(requestId: number): Promise<CounselingFollowup[]> {
+    return db.select().from(counselingFollowups)
+      .where(eq(counselingFollowups.requestId, requestId))
+      .orderBy(asc(counselingFollowups.scheduledDate));
+  }
+
+  async getPendingFollowups(): Promise<CounselingFollowup[]> {
+    return db.select().from(counselingFollowups)
+      .where(eq(counselingFollowups.completed, false))
+      .orderBy(asc(counselingFollowups.scheduledDate));
+  }
+
+  async createCounselingFollowup(followup: InsertCounselingFollowup): Promise<CounselingFollowup> {
+    const [created] = await db.insert(counselingFollowups).values(followup).returning();
+    return created;
+  }
+
+  async completeCounselingFollowup(id: number, notes?: string): Promise<CounselingFollowup> {
+    const [updated] = await db
+      .update(counselingFollowups)
+      .set({ completed: true, completedAt: new Date(), notes })
+      .where(eq(counselingFollowups.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Pastoral Visits
+  async getPastoralVisits(filters?: { visitorId?: string; visitedUserId?: string }): Promise<PastoralVisit[]> {
+    let conditions = [];
+    if (filters?.visitorId) conditions.push(eq(pastoralVisits.visitorId, filters.visitorId));
+    if (filters?.visitedUserId) conditions.push(eq(pastoralVisits.visitedUserId, filters.visitedUserId));
+    
+    return db.select().from(pastoralVisits)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(pastoralVisits.visitDate));
+  }
+
+  async createPastoralVisit(visit: InsertPastoralVisit): Promise<PastoralVisit> {
+    const [created] = await db.insert(pastoralVisits).values(visit).returning();
+    return created;
+  }
+
+  // Get pastoral statistics
+  async getPastoralStats(): Promise<{
+    totalRequests: number;
+    pendingRequests: number;
+    inProgressRequests: number;
+    completedRequests: number;
+    pendingFollowups: number;
+    visitsThisMonth: number;
+  }> {
+    const allRequests = await db.select().from(counselingRequests);
+    const pendingFollowups = await this.getPendingFollowups();
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    const visitsThisMonth = await db.select().from(pastoralVisits)
+      .where(gte(pastoralVisits.visitDate, startOfMonth.toISOString().split('T')[0]));
+
+    return {
+      totalRequests: allRequests.length,
+      pendingRequests: allRequests.filter(r => r.status === 'pending').length,
+      inProgressRequests: allRequests.filter(r => r.status === 'assigned' || r.status === 'in_progress').length,
+      completedRequests: allRequests.filter(r => r.status === 'completed').length,
+      pendingFollowups: pendingFollowups.length,
+      visitsThisMonth: visitsThisMonth.length,
+    };
   }
 }
 
