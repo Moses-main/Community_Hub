@@ -15,6 +15,7 @@ import {
   sermonClips,
   supportedLanguages,
   posts, postLikes, postComments, commentLikes, postShares, userConnections, hashtags, postHashtags,
+  userEngagementMetrics, spiritualHealthScores, discipleshipAnalytics, groupAnalytics, analyticsReports,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -52,7 +53,12 @@ import {
   type CommentLike, type InsertCommentLike,
   type PostShare, type InsertPostShare,
   type UserConnection, type InsertUserConnection,
-  type Hashtag, type InsertHashtag
+  type Hashtag, type InsertHashtag,
+  type UserEngagementMetrics, type InsertUserEngagementMetrics,
+  type SpiritualHealthScore, type InsertSpiritualHealthScore,
+  type DiscipleshipAnalytics, type InsertDiscipleshipAnalytics,
+  type GroupAnalytics, type InsertGroupAnalytics,
+  type AnalyticsReport, type InsertAnalyticsReport
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -2448,6 +2454,298 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(posts.isPinned), desc(posts.createdAt))
       .limit(limit)
       .offset(offset);
+  }
+
+  // === SPIRITUAL HEALTH & ENGAGEMENT ANALYTICS ===
+
+  // User Engagement Metrics
+  async getUserEngagementMetrics(userId: string, startDate?: Date, endDate?: Date): Promise<UserEngagementMetrics[]> {
+    let conditions: any[] = [eq(userEngagementMetrics.userId, userId)];
+    if (startDate) {
+      conditions.push(gte(userEngagementMetrics.date, startDate.toISOString().split('T')[0]));
+    }
+    if (endDate) {
+      conditions.push(lte(userEngagementMetrics.date, endDate.toISOString().split('T')[0]));
+    }
+    return db.select().from(userEngagementMetrics)
+      .where(and(...conditions))
+      .orderBy(desc(userEngagementMetrics.date));
+  }
+
+  async getAllEngagementMetrics(startDate?: Date, endDate?: Date): Promise<UserEngagementMetrics[]> {
+    let conditions: any[] = [];
+    if (startDate) {
+      conditions.push(gte(userEngagementMetrics.date, startDate.toISOString().split('T')[0]));
+    }
+    if (endDate) {
+      conditions.push(lte(userEngagementMetrics.date, endDate.toISOString().split('T')[0]));
+    }
+    return db.select().from(userEngagementMetrics)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(userEngagementMetrics.date));
+  }
+
+  async upsertUserEngagementMetrics(metrics: InsertUserEngagementMetrics): Promise<UserEngagementMetrics> {
+    const existingDate = metrics.date || new Date().toISOString().split('T')[0];
+    const [existing] = await db.select().from(userEngagementMetrics).where(
+      and(eq(userEngagementMetrics.userId, metrics.userId), eq(userEngagementMetrics.date, existingDate))
+    );
+    
+    if (existing) {
+      const [updated] = await db
+        .update(userEngagementMetrics)
+        .set({
+          sermonsWatched: (existing.sermonsWatched || 0) + (metrics.sermonsWatched || 0),
+          prayersSubmitted: (existing.prayersSubmitted || 0) + (metrics.prayersSubmitted || 0),
+          eventsAttended: (existing.eventsAttended || 0) + (metrics.eventsAttended || 0),
+          devotionalsRead: (existing.devotionalsRead || 0) + (metrics.devotionalsRead || 0),
+          groupMessages: (existing.groupMessages || 0) + (metrics.groupMessages || 0),
+          loginCount: (existing.loginCount || 0) + (metrics.loginCount || 0),
+          totalSessionTime: (existing.totalSessionTime || 0) + (metrics.totalSessionTime || 0),
+        })
+        .where(eq(userEngagementMetrics.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db.insert(userEngagementMetrics).values(metrics).returning();
+    return created;
+  }
+
+  // Spiritual Health Scores
+  async getSpiritualHealthScores(userId: string): Promise<SpiritualHealthScore[]> {
+    return db.select().from(spiritualHealthScores)
+      .where(eq(spiritualHealthScores.userId, userId))
+      .orderBy(desc(spiritualHealthScores.weekStart));
+  }
+
+  async calculateSpiritualHealthScore(userId: string, weekStart: Date): Promise<SpiritualHealthScore> {
+    // Get engagement data for the week
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    const weekEndStr = weekEnd.toISOString().split('T')[0];
+    
+    const metrics = await this.getUserEngagementMetrics(userId, weekStart, weekEnd);
+    
+    // Calculate scores (simplified algorithm)
+    const totalMetrics = metrics.reduce((acc, m) => ({
+      sermons: acc.sermons + (m.sermonsWatched || 0),
+      prayers: acc.prayers + (m.prayersSubmitted || 0),
+      events: acc.events + (m.eventsAttended || 0),
+      devotionals: acc.devotionals + (m.devotionalsRead || 0),
+      messages: acc.messages + (m.groupMessages || 0),
+    }), { sermons: 0, prayers: 0, events: 0, devotionals: 0, messages: 0 });
+    
+    // Attendance score (based on events)
+    const attendanceScore = Math.min(100, totalMetrics.events * 25);
+    // Engagement score (based on interactions)
+    const engagementScore = Math.min(100, Math.round((totalMetrics.sermons * 10 + totalMetrics.prayers * 5 + totalMetrics.devotionals * 8 + totalMetrics.messages * 2) / 2));
+    // Growth score (based on consistency)
+    const growthScore = Math.min(100, Math.round((metrics.length / 7) * 100));
+    // Overall score
+    const overallScore = Math.round((attendanceScore + engagementScore + growthScore) / 3);
+    
+    const [score] = await db
+      .insert(spiritualHealthScores)
+      .values({
+        userId,
+        weekStart: weekStartStr,
+        attendanceScore,
+        engagementScore,
+        growthScore,
+        overallScore,
+      })
+      .onConflictDoUpdate({
+        target: [spiritualHealthScores.userId, spiritualHealthScores.weekStart],
+        set: { attendanceScore, engagementScore, growthScore, overallScore, calculatedAt: new Date() },
+      })
+      .returning();
+    
+    return score;
+  }
+
+  // Discipleship Analytics
+  async getDiscipleshipAnalytics(trackId?: number, weeks = 4): Promise<DiscipleshipAnalytics[]> {
+    if (trackId) {
+      return db.select().from(discipleshipAnalytics)
+        .where(eq(discipleshipAnalytics.trackId, trackId))
+        .orderBy(desc(discipleshipAnalytics.weekStart))
+        .limit(weeks);
+    }
+    return db.select().from(discipleshipAnalytics)
+      .orderBy(desc(discipleshipAnalytics.weekStart))
+      .limit(weeks * 10);
+  }
+
+  async calculateDiscipleshipAnalytics(trackId: number, weekStart: Date): Promise<DiscipleshipAnalytics> {
+    const track = await this.getDiscipleshipTrack(trackId);
+    if (!track) throw new Error("Track not found");
+    
+    // Get all users enrolled in this track
+    const allProgress = await db.select().from(userProgress).where(eq(userProgress.trackId, trackId));
+    
+    const activeLearners = allProgress.filter(p => !p.completed).length;
+    const completedCount = allProgress.filter(p => p.completed).length;
+    
+    // Get quiz scores
+    const quizzesForTrack = await db.select().from(quizzes).where(eq(quizzes.lessonId, trackId));
+    const quizIds = quizzesForTrack.map(q => q.id);
+    
+    let quizScores: number[] = [];
+    if (quizIds.length > 0) {
+      const progressWithQuizzes = allProgress.filter(p => p.quizScore !== null);
+      quizScores = progressWithQuizzes.map(p => p.quizScore!);
+    }
+    
+    const quizAverageScore = quizScores.length > 0 
+      ? Math.round(quizScores.reduce((a, b) => a + b, 0) / quizScores.length)
+      : null;
+    
+    const [analytics] = await db
+      .insert(discipleshipAnalytics)
+      .values({
+        trackId,
+        weekStart: weekStart.toISOString().split('T')[0],
+        totalEnrolled: allProgress.length,
+        activeLearners,
+        completedCount,
+        quizAverageScore,
+      })
+      .onConflictDoUpdate({
+        target: [discipleshipAnalytics.trackId, discipleshipAnalytics.weekStart],
+        set: { totalEnrolled: allProgress.length, activeLearners, completedCount, quizAverageScore },
+      })
+      .returning();
+    
+    return analytics;
+  }
+
+  // Group Analytics
+  async getGroupAnalytics(groupId?: number, weeks = 4): Promise<GroupAnalytics[]> {
+    if (groupId) {
+      return db.select().from(groupAnalytics)
+        .where(eq(groupAnalytics.groupId, groupId))
+        .orderBy(desc(groupAnalytics.weekStart))
+        .limit(weeks);
+    }
+    return db.select().from(groupAnalytics)
+      .orderBy(desc(groupAnalytics.weekStart))
+      .limit(weeks * 10);
+  }
+
+  async calculateGroupAnalytics(groupId: number, weekStart: Date): Promise<GroupAnalytics> {
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    
+    const members = await this.getGroupMembers(groupId);
+    const messages = await this.getGroupMessages(groupId);
+    const weekMessages = messages.filter(m => {
+      const msgDate = new Date(m.createdAt || '');
+      return msgDate >= weekStart && msgDate < weekEnd;
+    });
+    
+    const activeMembers = members.filter(m => {
+      const memberMessages = weekMessages.filter(msg => msg.userId === m.userId);
+      return memberMessages.length > 0;
+    }).length;
+    
+    const [analytics] = await db
+      .insert(groupAnalytics)
+      .values({
+        groupId,
+        weekStart: weekStartStr,
+        activeMembers,
+        messagesCount: weekMessages.length,
+      })
+      .onConflictDoUpdate({
+        target: [groupAnalytics.groupId, groupAnalytics.weekStart],
+        set: { activeMembers, messagesCount: weekMessages.length },
+      })
+      .returning();
+    
+    return analytics;
+  }
+
+  // Analytics Reports
+  async getAnalyticsReports(reportType?: string): Promise<AnalyticsReport[]> {
+    if (reportType) {
+      return db.select().from(analyticsReports)
+        .where(eq(analyticsReports.reportType, reportType))
+        .orderBy(desc(analyticsReports.createdAt));
+    }
+    return db.select().from(analyticsReports).orderBy(desc(analyticsReports.createdAt));
+  }
+
+  async createAnalyticsReport(report: InsertAnalyticsReport): Promise<AnalyticsReport> {
+    const [created] = await db.insert(analyticsReports).values(report).returning();
+    return created;
+  }
+
+  async deleteAnalyticsReport(id: number): Promise<void> {
+    await db.delete(analyticsReports).where(eq(analyticsReports.id, id));
+  }
+
+  // Dashboard Analytics Summary
+  async getEngagementSummary(startDate: Date, endDate: Date): Promise<{
+    totalSermonsWatched: number;
+    totalPrayersSubmitted: number;
+    totalEventsAttended: number;
+    totalDevotionalsRead: number;
+    uniqueActiveUsers: number;
+  }> {
+    const metrics = await this.getAllEngagementMetrics(startDate, endDate);
+    
+    return {
+      totalSermonsWatched: metrics.reduce((sum, m) => sum + (m.sermonsWatched || 0), 0),
+      totalPrayersSubmitted: metrics.reduce((sum, m) => sum + (m.prayersSubmitted || 0), 0),
+      totalEventsAttended: metrics.reduce((sum, m) => sum + (m.eventsAttended || 0), 0),
+      totalDevotionalsRead: metrics.reduce((sum, m) => sum + (m.devotionalsRead || 0), 0),
+      uniqueActiveUsers: new Set(metrics.map(m => m.userId)).size,
+    };
+  }
+
+  // Get spiritual health trends for all users
+  async getSpiritualHealthTrends(weeks = 4): Promise<{
+    weekStart: string;
+    averageScore: number;
+    improving: number;
+    declining: number;
+  }[]> {
+    const scores = await db.select().from(spiritualHealthScores)
+      .orderBy(desc(spiritualHealthScores.weekStart))
+      .limit(weeks);
+    
+    const byWeek: Record<string, SpiritualHealthScore[]> = {};
+    scores.forEach(s => {
+      const weekKey = String(s.weekStart);
+      if (!byWeek[weekKey]) byWeek[weekKey] = [];
+      byWeek[weekKey].push(s);
+    });
+    
+    return Object.entries(byWeek).map(([week, weekScores]) => {
+      const averageScore = Math.round(weekScores.reduce((sum, s) => sum + (s.overallScore || 0), 0) / weekScores.length);
+      
+      // Calculate trend
+      const previousWeekDate = new Date(week);
+      previousWeekDate.setDate(previousWeekDate.getDate() - 7);
+      const prevWeekStr = previousWeekDate.toISOString().split('T')[0];
+      const prevScores = scores.filter(s => String(s.weekStart) === prevWeekStr);
+      
+      let improving = 0, declining = 0;
+      if (prevScores.length > 0) {
+        weekScores.forEach(s => {
+          const prev = prevScores.find(p => p.userId === s.userId);
+          if (prev) {
+            if ((s.overallScore || 0) > (prev.overallScore || 0)) improving++;
+            else if ((s.overallScore || 0) < (prev.overallScore || 0)) declining++;
+          }
+        });
+      }
+      
+      return { weekStart: week, averageScore, improving, declining };
+    });
   }
 }
 

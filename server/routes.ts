@@ -2260,6 +2260,215 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // === SPIRITUAL HEALTH & ENGAGEMENT ANALYTICS ===
+
+  // Get user engagement metrics (personal)
+  app.get("/api/analytics/engagement", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { startDate, endDate } = req.query;
+      
+      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : new Date();
+      
+      const metrics = await storage.getUserEngagementMetrics(req.user.id, start, end);
+      res.json(metrics);
+    } catch (err) {
+      console.error("Error fetching engagement metrics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Record engagement activity
+  app.post("/api/analytics/engagement", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { sermonsWatched, prayersSubmitted, eventsAttended, devotionalsRead, groupMessages, sessionTime } = req.body;
+      
+      const metrics = await storage.upsertUserEngagementMetrics({
+        userId: req.user.id,
+        date: new Date().toISOString().split('T')[0],
+        sermonsWatched: sermonsWatched || 0,
+        prayersSubmitted: prayersSubmitted || 0,
+        eventsAttended: eventsAttended || 0,
+        devotionalsRead: devotionalsRead || 0,
+        groupMessages: groupMessages || 0,
+        totalSessionTime: sessionTime || 0,
+        loginCount: 1,
+      });
+      
+      res.json(metrics);
+    } catch (err) {
+      console.error("Error recording engagement:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get spiritual health scores (personal)
+  app.get("/api/analytics/spiritual-health", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const scores = await storage.getSpiritualHealthScores(req.user.id);
+      res.json(scores);
+    } catch (err) {
+      console.error("Error fetching spiritual health scores:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Calculate spiritual health score for current week
+  app.post("/api/analytics/spiritual-health/calculate", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const score = await storage.calculateSpiritualHealthScore(req.user.id, weekStart);
+      res.json(score);
+    } catch (err) {
+      console.error("Error calculating spiritual health score:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get engagement summary (admin only)
+  app.get("/api/analytics/engagement-summary", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      const now = new Date();
+      const start = startDate ? new Date(startDate as string) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : now;
+      
+      const summary = await storage.getEngagementSummary(start, end);
+      res.json(summary);
+    } catch (err) {
+      console.error("Error fetching engagement summary:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get spiritual health trends (admin only)
+  app.get("/api/analytics/spiritual-health-trends", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { weeks } = req.query;
+      const trends = await storage.getSpiritualHealthTrends(weeks ? parseInt(weeks as string) : 4);
+      res.json(trends);
+    } catch (err) {
+      console.error("Error fetching spiritual health trends:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get discipleship analytics (admin only)
+  app.get("/api/analytics/discipleship", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const trackId = req.query.trackId;
+      const weeks = req.query.weeks;
+      const trackIdNum = trackId ? parseInt(String(trackId)) : undefined;
+      const weeksNum = weeks ? parseInt(String(weeks)) : 4;
+      const analytics = await storage.getDiscipleshipAnalytics(trackIdNum, weeksNum);
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error fetching discipleship analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Calculate discipleship analytics (admin only)
+  app.post("/api/analytics/discipleship/calculate", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { trackId, weekStart } = req.body;
+      
+      if (!trackId || !weekStart) {
+        return res.status(400).json({ message: "Track ID and week start date are required" });
+      }
+      
+      const analytics = await storage.calculateDiscipleshipAnalytics(trackId, new Date(weekStart));
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error calculating discipleship analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get group analytics (admin only)
+  app.get("/api/analytics/groups", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const groupId = req.query.groupId;
+      const weeks = req.query.weeks;
+      const analytics = await storage.getGroupAnalytics(groupId ? parseInt(String(groupId)) : undefined, weeks ? parseInt(String(weeks)) : 4);
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error fetching group analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Calculate group analytics (admin only)
+  app.post("/api/analytics/groups/calculate", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { groupId, weekStart } = req.body;
+      
+      if (!groupId || !weekStart) {
+        return res.status(400).json({ message: "Group ID and week start date are required" });
+      }
+      
+      const analytics = await storage.calculateGroupAnalytics(groupId, new Date(weekStart));
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error calculating group analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get/create analytics reports (admin only)
+  app.get("/api/analytics/reports", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const reportType = req.query.reportType;
+      const reports = await storage.getAnalyticsReports(reportType ? String(reportType) : undefined);
+      res.json(reports);
+    } catch (err) {
+      console.error("Error fetching analytics reports:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/analytics/reports", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { name, reportType, filters } = req.body;
+      
+      const report = await storage.createAnalyticsReport({
+        name,
+        reportType,
+        filters: filters || {},
+        generatedBy: req.user.id,
+      });
+      
+      res.json(report);
+    } catch (err) {
+      console.error("Error creating analytics report:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/analytics/reports/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = typeof idParam === 'string' ? parseInt(idParam) : parseInt(idParam[0]);
+      await storage.deleteAnalyticsReport(id);
+      res.json({ message: "Report deleted" });
+    } catch (err) {
+      console.error("Error deleting analytics report:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get all attendance records for a service (admin only)
   app.get("/api/attendance/service", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
     try {
