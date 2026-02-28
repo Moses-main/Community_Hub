@@ -22,6 +22,7 @@ import {
   campuses, branches, campusMembers, campusEvents, campusTransfers, campusReports,
   privacySettings, reportCategories, userReports, moderationQueue, userBlocks, userHiddenContent,
   userSessions, loginHistory, user2FA, dataExportRequests, dataDeletionRequests,
+  externalApiKeys, webhooks, webhookDeliveries, externalIntegrations, oauthApps, oauthCodes, oauthTokens, apiRateLimits, apiCallLogs, integrationSyncJobs,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -94,7 +95,17 @@ import {
   type LoginHistory, type InsertLoginHistory,
   type User2FA, type InsertUser2FA,
   type DataExportRequest, type InsertDataExportRequest,
-  type DataDeletionRequest, type InsertDataDeletionRequest
+  type DataDeletionRequest, type InsertDataDeletionRequest,
+  type Organization, type InsertOrganization,
+  type OrganizationTheme, type InsertOrganizationTheme,
+  type CustomPage, type InsertCustomPage,
+  type CustomMenuItem, type InsertCustomMenuItem,
+  type EmailTemplate, type InsertEmailTemplate,
+  type CustomField, type InsertCustomField,
+  type OrganizationMember, type InsertOrganizationMember,
+  type OrganizationSetting, type InsertOrganizationSetting,
+  type CustomDomain, type InsertCustomDomain,
+  type OrganizationAnalytic, type InsertOrganizationAnalytic
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -3659,6 +3670,213 @@ export class DatabaseStorage implements IStorage {
       pendingReports: pendingReports.length,
       reportCategories: await this.getReportCategories(),
     };
+  }
+
+  // === WHITE-LABEL CHURCH PLATFORM ===
+
+  // Organizations
+  async createOrganization(org: InsertOrganization): Promise<Organization> {
+    const [created] = await db.insert(organizations).values(org).returning();
+    return created;
+  }
+
+  async getOrganization(id: number): Promise<Organization | undefined> {
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    return org;
+  }
+
+  async getOrganizationBySlug(slug: string): Promise<Organization | undefined> {
+    const [org] = await db.select().from(organizations).where(eq(organizations.slug, slug));
+    return org;
+  }
+
+  async getOrganizations(includeInactive = false): Promise<Organization[]> {
+    if (includeInactive) {
+      return db.select().from(organizations).orderBy(asc(organizations.name));
+    }
+    return db.select().from(organizations).where(eq(organizations.isActive, true)).orderBy(asc(organizations.name));
+  }
+
+  async updateOrganization(id: number, updates: Partial<Organization>): Promise<Organization> {
+    const [updated] = await db
+      .update(organizations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(organizations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteOrganization(id: number): Promise<void> {
+    await db.delete(organizations).where(eq(organizations.id, id));
+  }
+
+  // Organization Themes
+  async createTheme(theme: InsertOrganizationTheme): Promise<OrganizationTheme> {
+    const [created] = await db.insert(organizationThemes).values(theme).returning();
+    return created;
+  }
+
+  async getOrganizationThemes(orgId: number): Promise<OrganizationTheme[]> {
+    return db.select().from(organizationThemes).where(eq(organizationThemes.organizationId, orgId));
+  }
+
+  async getDefaultTheme(orgId: number): Promise<OrganizationTheme | undefined> {
+    const [theme] = await db.select().from(organizationThemes).where(and(eq(organizationThemes.organizationId, orgId), eq(organizationThemes.isDefault, true)));
+    return theme;
+  }
+
+  // Custom Pages
+  async createCustomPage(page: InsertCustomPage): Promise<CustomPage> {
+    const [created] = await db.insert(customPages).values(page).returning();
+    return created;
+  }
+
+  async getCustomPage(id: number): Promise<CustomPage | undefined> {
+    const [page] = await db.select().from(customPages).where(eq(customPages.id, id));
+    return page;
+  }
+
+  async getOrganizationPages(orgId: number): Promise<CustomPage[]> {
+    return db.select().from(customPages).where(and(eq(customPages.organizationId, orgId), eq(customPages.isPublished, true))).orderBy(asc(customPages.orderIndex));
+  }
+
+  async updateCustomPage(id: number, updates: Partial<CustomPage>): Promise<CustomPage> {
+    const [updated] = await db
+      .update(customPages)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(customPages.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCustomPage(id: number): Promise<void> {
+    await db.delete(customPages).where(eq(customPages.id, id));
+  }
+
+  // Custom Menu Items
+  async createMenuItem(item: InsertCustomMenuItem): Promise<CustomMenuItem> {
+    const [created] = await db.insert(customMenuItems).values(item).returning();
+    return created;
+  }
+
+  async getMenuItems(orgId: number, location: string): Promise<CustomMenuItem[]> {
+    return db.select().from(customMenuItems).where(and(eq(customMenuItems.organizationId, orgId), eq(customMenuItems.menuLocation, location), eq(customMenuItems.isVisible, true))).orderBy(asc(customMenuItems.orderIndex));
+  }
+
+  async updateMenuItem(id: number, updates: Partial<CustomMenuItem>): Promise<CustomMenuItem> {
+    const [updated] = await db
+      .update(customMenuItems)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(customMenuItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteMenuItem(id: number): Promise<void> {
+    await db.delete(customMenuItems).where(eq(customMenuItems.id, id));
+  }
+
+  // Email Templates
+  async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
+    const [created] = await db.insert(emailTemplates).values(template).returning();
+    return created;
+  }
+
+  async getOrganizationEmailTemplates(orgId: number): Promise<EmailTemplate[]> {
+    return db.select().from(emailTemplates).where(and(eq(emailTemplates.organizationId, orgId), eq(emailTemplates.isActive, true)));
+  }
+
+  async updateEmailTemplate(id: number, updates: Partial<EmailTemplate>): Promise<EmailTemplate> {
+    const [updated] = await db
+      .update(emailTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(emailTemplates.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Custom Fields
+  async createCustomField(field: InsertCustomField): Promise<CustomField> {
+    const [created] = await db.insert(customFields).values(field).returning();
+    return created;
+  }
+
+  async getCustomFields(orgId: number, entityType: string): Promise<CustomField[]> {
+    return db.select().from(customFields).where(and(eq(customFields.organizationId, orgId), eq(customFields.entityType, entityType), eq(customFields.isActive, true))).orderBy(asc(customFields.orderIndex));
+  }
+
+  async deleteCustomField(id: number): Promise<void> {
+    await db.delete(customFields).where(eq(customFields.id, id));
+  }
+
+  // Organization Members
+  async addOrganizationMember(member: InsertOrganizationMember): Promise<OrganizationMember> {
+    const [created] = await db.insert(organizationMembers).values(member).onConflictDoUpdate({
+      target: [organizationMembers.organizationId, organizationMembers.userId],
+      set: { role: member.role, status: member.status },
+    }).returning();
+    return created;
+  }
+
+  async getOrganizationMembers(orgId: number): Promise<OrganizationMember[]> {
+    return db.select().from(organizationMembers).where(eq(organizationMembers.organizationId, orgId));
+  }
+
+  // Organization Settings
+  async getOrganizationSettings(orgId: number): Promise<OrganizationSetting | undefined> {
+    const [settings] = await db.select().from(organizationSettings).where(eq(organizationSettings.organizationId, orgId));
+    return settings;
+  }
+
+  async updateOrganizationSettings(orgId: number, settings: Record<string, any>): Promise<OrganizationSetting> {
+    const existing = await this.getOrganizationSettings(orgId);
+    if (existing) {
+      const [updated] = await db
+        .update(organizationSettings)
+        .set({ settings, updatedAt: new Date() })
+        .where(eq(organizationSettings.organizationId, orgId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(organizationSettings)
+      .values({ organizationId: orgId, settings })
+      .returning();
+    return created;
+  }
+
+  // Custom Domains
+  async addCustomDomain(domain: InsertCustomDomain): Promise<CustomDomain> {
+    const [created] = await db.insert(customDomains).values(domain).returning();
+    return created;
+  }
+
+  async getCustomDomain(domain: string): Promise<CustomDomain | undefined> {
+    const [d] = await db.select().from(customDomains).where(eq(customDomains.domain, domain));
+    return d;
+  }
+
+  async verifyCustomDomain(id: number): Promise<CustomDomain> {
+    const [updated] = await db
+      .update(customDomains)
+      .set({ isVerified: true, updatedAt: new Date() })
+      .where(eq(customDomains.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Organization Analytics
+  async recordOrganizationMetric(metric: InsertOrganizationAnalytic): Promise<OrganizationAnalytic> {
+    const [recorded] = await db.insert(organizationAnalytics).values(metric).returning();
+    return recorded;
+  }
+
+  async getOrganizationMetrics(orgId: number, metricType?: string): Promise<OrganizationAnalytic[]> {
+    const conditions = [eq(organizationAnalytics.organizationId, orgId)];
+    if (metricType) {
+      conditions.push(eq(organizationAnalytics.metricType, metricType));
+    }
+    return db.select().from(organizationAnalytics).where(and(...conditions)).orderBy(desc(organizationAnalytics.recordedAt));
   }
 }
 

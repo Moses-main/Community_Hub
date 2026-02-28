@@ -2302,6 +2302,349 @@ export async function registerRoutes(
     }
   });
 
+  // === WHITE-LABEL CHURCH PLATFORM ===
+
+  // Get all organizations
+  app.get("/api/organizations", async (req, res) => {
+    try {
+      const includeInactive = req.query.includeInactive === 'true';
+      const orgs = await storage.getOrganizations(includeInactive);
+      res.json(orgs);
+    } catch (err) {
+      console.error("Error fetching organizations:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get organization by ID or slug
+  app.get("/api/organizations/:id", async (req, res) => {
+    try {
+      const idOrSlug = req.params.id;
+      const id = parseInt(idOrSlug);
+      let org = isNaN(id) ? await storage.getOrganizationBySlug(idOrSlug) : await storage.getOrganization(id);
+      if (!org) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      res.json(org);
+    } catch (err) {
+      console.error("Error fetching organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create organization (admin)
+  app.post("/api/organizations", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, slug, domain, primaryColor, secondaryColor, accentColor, contactEmail, contactPhone, address, city, state, country, timezone, plan } = req.body;
+      const org = await storage.createOrganization({
+        name, slug, domain, primaryColor, secondaryColor, accentColor, contactEmail, contactPhone, address, city, state, country, timezone, plan
+      });
+      
+      // Create default theme and settings
+      await storage.createTheme({ organizationId: org.id, name: 'Default', isDefault: true, config: { primaryColor, secondaryColor, accentColor } });
+      await storage.updateOrganizationSettings(org.id, { allowCustomDomain: true, allowCustomTheme: true, enableCustomPages: true });
+      
+      res.json(org);
+    } catch (err) {
+      console.error("Error creating organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update organization (admin)
+  app.put("/api/organizations/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const org = await storage.updateOrganization(id, req.body);
+      res.json(org);
+    } catch (err) {
+      console.error("Error updating organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete organization (admin)
+  app.delete("/api/organizations/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteOrganization(id);
+      res.json({ message: "Organization deleted" });
+    } catch (err) {
+      console.error("Error deleting organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get organization themes
+  app.get("/api/organizations/:id/themes", async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const themes = await storage.getOrganizationThemes(orgId);
+      res.json(themes);
+    } catch (err) {
+      console.error("Error fetching themes:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create theme (admin)
+  app.post("/api/organizations/:id/themes", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { name, isDefault, config } = req.body;
+      const theme = await storage.createTheme({ organizationId: orgId, name, isDefault: isDefault || false, config });
+      res.json(theme);
+    } catch (err) {
+      console.error("Error creating theme:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get custom pages
+  app.get("/api/organizations/:id/pages", async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const pages = await storage.getOrganizationPages(orgId);
+      res.json(pages);
+    } catch (err) {
+      console.error("Error fetching pages:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create custom page (admin)
+  app.post("/api/organizations/:id/pages", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { title, slug, content, metaTitle, metaDescription, isPublished, showInNav, orderIndex } = req.body;
+      const page = await storage.createCustomPage({ organizationId: orgId, title, slug, content, metaTitle, metaDescription, isPublished: isPublished || false, showInNav: showInNav || false, orderIndex: orderIndex || 0 });
+      res.json(page);
+    } catch (err) {
+      console.error("Error creating page:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update custom page (admin)
+  app.put("/api/pages/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const page = await storage.updateCustomPage(id, req.body);
+      res.json(page);
+    } catch (err) {
+      console.error("Error updating page:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete custom page (admin)
+  app.delete("/api/pages/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteCustomPage(id);
+      res.json({ message: "Page deleted" });
+    } catch (err) {
+      console.error("Error deleting page:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get menu items
+  app.get("/api/organizations/:id/menu", async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const location = (req.query.location as string) || 'header';
+      const items = await storage.getMenuItems(orgId, location);
+      res.json(items);
+    } catch (err) {
+      console.error("Error fetching menu:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create menu item (admin)
+  app.post("/api/organizations/:id/menu", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { menuLocation, label, url, pageId, icon, orderIndex, isVisible } = req.body;
+      const item = await storage.createMenuItem({ organizationId: orgId, menuLocation, label, url, pageId, icon, orderIndex: orderIndex || 0, isVisible: isVisible !== false });
+      res.json(item);
+    } catch (err) {
+      console.error("Error creating menu item:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update menu item (admin)
+  app.put("/api/menu/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const item = await storage.updateMenuItem(id, req.body);
+      res.json(item);
+    } catch (err) {
+      console.error("Error updating menu item:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete menu item (admin)
+  app.delete("/api/menu/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteMenuItem(id);
+      res.json({ message: "Menu item deleted" });
+    } catch (err) {
+      console.error("Error deleting menu item:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get email templates (admin)
+  app.get("/api/organizations/:id/emails", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const templates = await storage.getOrganizationEmailTemplates(orgId);
+      res.json(templates);
+    } catch (err) {
+      console.error("Error fetching email templates:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create email template (admin)
+  app.post("/api/organizations/:id/emails", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { name, subject, body, type, isActive } = req.body;
+      const template = await storage.createEmailTemplate({ organizationId: orgId, name, subject, body, type, isActive: isActive !== false });
+      res.json(template);
+    } catch (err) {
+      console.error("Error creating email template:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get custom fields
+  app.get("/api/organizations/:id/fields/:entity", async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const entityType = req.params.entity;
+      const fields = await storage.getCustomFields(orgId, entityType);
+      res.json(fields);
+    } catch (err) {
+      console.error("Error fetching custom fields:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create custom field (admin)
+  app.post("/api/organizations/:id/fields", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { entityType, name, fieldType, label, placeholder, isRequired, options, orderIndex, isActive } = req.body;
+      const field = await storage.createCustomField({ organizationId: orgId, entityType, name, fieldType, label, placeholder, isRequired: isRequired || false, options, orderIndex: orderIndex || 0, isActive: isActive !== false });
+      res.json(field);
+    } catch (err) {
+      console.error("Error creating custom field:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete custom field (admin)
+  app.delete("/api/fields/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteCustomField(id);
+      res.json({ message: "Field deleted" });
+    } catch (err) {
+      console.error("Error deleting custom field:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get organization settings
+  app.get("/api/organizations/:id/settings", async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const settings = await storage.getOrganizationSettings(orgId);
+      res.json(settings || { organizationId: orgId, settings: {}, features: {} });
+    } catch (err) {
+      console.error("Error fetching settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update organization settings (admin)
+  app.put("/api/organizations/:id/settings", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const settings = await storage.updateOrganizationSettings(orgId, req.body);
+      res.json(settings);
+    } catch (err) {
+      console.error("Error updating settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Add custom domain (admin)
+  app.post("/api/organizations/:id/domains", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { domain } = req.body;
+      const verificationCode = Math.random().toString(36).substring(2, 15);
+      const customDomain = await storage.addCustomDomain({ organizationId: orgId, domain, verificationCode });
+      res.json({ ...customDomain, verificationCode });
+    } catch (err) {
+      console.error("Error adding custom domain:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Verify custom domain (admin)
+  app.post("/api/domains/verify", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { domain, verificationCode } = req.body;
+      const existing = await storage.getCustomDomain(domain);
+      if (!existing) {
+        return res.status(404).json({ message: "Domain not found" });
+      }
+      if (existing.verificationCode !== verificationCode) {
+        return res.status(400).json({ message: "Invalid verification code" });
+      }
+      const verified = await storage.verifyCustomDomain(existing.id);
+      res.json(verified);
+    } catch (err) {
+      console.error("Error verifying domain:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Record organization analytics
+  app.post("/api/organizations/:id/analytics", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { metricType, metricValue, metadata } = req.body;
+      const analytic = await storage.recordOrganizationMetric({ organizationId: orgId, metricType, metricValue, metadata });
+      res.json(analytic);
+    } catch (err) {
+      console.error("Error recording analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get organization analytics
+  app.get("/api/organizations/:id/analytics", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const metricType = req.query.type as string;
+      const analytics = await storage.getOrganizationMetrics(orgId, metricType);
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error fetching analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Prayer Requests
   app.get(api.prayer.list.path, async (req, res) => {
     const requests = await storage.getPrayerRequests();
