@@ -2,8 +2,8 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage, type ISermonFilter } from "./storage";
 import { db } from "./db";
-import { supportedLanguages, groupJoinRequests, groupActivityLogs, volunteerSkills, volunteerBadges, volunteerOpportunities } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { supportedLanguages, groupJoinRequests, groupActivityLogs, volunteerSkills, volunteerBadges, volunteerOpportunities, userReports } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -1645,7 +1645,7 @@ export async function registerRoutes(
         conversationId: convId,
         role: "assistant",
         content: botResponse.response,
-        metadata: { intentId: botResponse.intentId, intentName: botResponse.intentName },
+        metadata: { intentId: botResponse.intentId ?? null, intentName: botResponse.intentName ?? null },
       });
       
       // Update conversation
@@ -2048,7 +2048,7 @@ export async function registerRoutes(
       const blockerId = req.user!.id;
       const blockedId = req.params.id;
       const { reason } = req.body;
-      const block = await storage.blockUser(blockerId, blockedId, reason);
+      const block = await storage.blockUser(blockerId, blockedId, Array.isArray(reason) ? reason[0] : reason);
       res.json(block);
     } catch (err) {
       console.error("Error blocking user:", err);
@@ -4989,7 +4989,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   app.post("/api/webhooks", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.user) return res.status(401).json({ message: "Unauthorized" });
-      const { url, events, secret } = req.body;
+      const { name, url, events, secret } = req.body;
       
       if (!url || !events || !Array.isArray(events)) {
         return res.status(400).json({ message: "URL and events array are required" });
@@ -4997,6 +4997,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       
       const webhook = await storage.createWebhook({
         userId: req.user!.id,
+        name: name || "Untitled Webhook",
         url,
         events,
         secret: secret || crypto.randomBytes(32).toString("hex"),

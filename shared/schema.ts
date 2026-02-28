@@ -1,5 +1,5 @@
 export * from "./models/auth";
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, uuid, date, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, uuid, date, varchar, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./models/auth";
@@ -791,7 +791,7 @@ export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 
 // === Webhooks for External Integrations ===
 
-export const webhooks = pgTable("webhooks", {
+export const apiWebhooks = pgTable("api_webhooks", {
   id: serial("id").primaryKey(),
   userId: uuid("user_id").references(() => users.id).notNull(),
   url: text("url").notNull(),
@@ -802,16 +802,16 @@ export const webhooks = pgTable("webhooks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const webhookRelations = relations(webhooks, ({ one }) => ({
+export const apiWebhookRelations = relations(apiWebhooks, ({ one }) => ({
   user: one(users, {
-    fields: [webhooks.userId],
+    fields: [apiWebhooks.userId],
     references: [users.id],
   }),
 }));
 
-export const insertWebhookSchema = createInsertSchema(webhooks).omit({ id: true, createdAt: true });
-export type Webhook = typeof webhooks.$inferSelect;
-export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+export const insertApiWebhookSchema = createInsertSchema(apiWebhooks).omit({ id: true, createdAt: true });
+export type ApiWebhook = typeof apiWebhooks.$inferSelect;
+export type InsertApiWebhook = z.infer<typeof insertApiWebhookSchema>;
 
 // === MULTI-LANGUAGE & LOCALIZATION ===
 
@@ -2049,7 +2049,7 @@ export type InsertCampusReport = z.infer<typeof insertCampusReportSchema>;
 
 // === PRIVACY, SAFETY & MODERATION CONTROLS ===
 
-export const privacySettings = pgTable("privacy_settings", {
+export const userPrivacySettings = pgTable("privacy_settings", {
   id: serial("id").primaryKey(),
   userId: uuid("user_id").references(() => users.id).notNull().unique(),
   profileVisibility: varchar("profile_visibility", { length: 50 }).default("members"),
@@ -2298,7 +2298,7 @@ export const externalApiKeys = pgTable("external_api_keys", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const webhooks = pgTable("webhooks", {
+export const webhooks = pgTable("webhooks_v2", {
   id: serial("id").primaryKey(),
   userId: uuid("user_id").references(() => users.id).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -2413,7 +2413,7 @@ export const externalApiKeyRelations = relations(externalApiKeys, ({ one, many }
   callLogs: many(apiCallLogs),
 }));
 
-export const webhookRelations = relations(webhooks, ({ one, many }) => ({
+export const webhookV2Relations = relations(webhooks, ({ one, many }) => ({
   user: one(users, {
     fields: [webhooks.userId],
     references: [users.id],
