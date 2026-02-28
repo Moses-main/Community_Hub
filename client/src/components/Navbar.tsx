@@ -11,9 +11,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, ChevronDown, LogOut, LayoutDashboard, CalendarCheck, QrCode, Shield, Bell, Music, Mic, Users, Heart, BookOpen, Video, X, MessageCircle } from "lucide-react";
+import { Menu, ChevronDown, LogOut, LayoutDashboard, CalendarCheck, QrCode, Shield, Bell, Music, Mic, Users, Heart, BookOpen, Video, X, MessageCircle, Compass, Search, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export function Navbar() {
   const [location] = useLocation();
@@ -22,6 +23,9 @@ export function Navbar() {
   const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const [communityOpen, setCommunityOpen] = useState(false);
+  const [discoverOpen, setDiscoverOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -41,16 +45,20 @@ export function Navbar() {
     { href: "/give", label: t("give") },
   ];
 
+  const discoverLinks = [
+    { href: "/members", label: t("members") || "Members", icon: Users },
+    { href: "/groups", label: t("groups"), icon: Compass },
+  ];
+
   const mediaLinks = [
     { href: "/sermons", label: t("sermons"), icon: Mic },
     { href: "/music", label: t("music"), icon: Music },
     { href: "/bible", label: t("bible"), icon: BookOpen },
-    { href: "/discipleship", label: t("discipleship"), icon: BookOpen },
+    { href: "/discipleship", label: t("discipleship"), icon: Sparkles },
   ];
 
   const communityLinks = [
     { href: "/feed", label: t("feed") || "Feed", icon: MessageCircle },
-    { href: "/groups", label: t("groups"), icon: Users },
     { href: "/house-cells", label: t("houseCells"), icon: Heart },
   ];
 
@@ -118,6 +126,26 @@ export function Navbar() {
             <div className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               <div className="bg-white border border-slate-100 shadow-xl rounded-xl py-2 w-52 overflow-hidden">
                 {communityLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="flex items-center gap-3 px-4 py-2.5 text-[15px] text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                  >
+                    <link.icon className="w-4 h-4" />
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="relative group">
+            <button className="px-4 py-2.5 text-[15px] font-medium text-slate-600 hover:text-indigo-600 hover:bg-slate-50 rounded-lg flex items-center gap-1.5 transition-all duration-200">
+              Discover <ChevronDown className="w-4 h-4" />
+            </button>
+            <div className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="bg-white border border-slate-100 shadow-xl rounded-xl py-2 w-52 overflow-hidden">
+                {discoverLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
@@ -270,7 +298,7 @@ export function Navbar() {
                       key={link.href}
                       href={link.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-4 py-3 rounded-xl text-[15px] font-medium transition-colors ${
+                      className={`block px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
                         isActive(link.href)
                           ? "bg-indigo-50 text-indigo-700"
                           : "text-slate-600 hover:bg-slate-50"
@@ -280,43 +308,77 @@ export function Navbar() {
                     </Link>
                   ))}
                   
-                  <div className="pt-4 mt-2">
-                    <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Media</p>
-                    {mediaLinks.map((link) => (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-colors ${
-                          isActive(link.href)
-                            ? "bg-indigo-50 text-indigo-700"
-                            : "text-slate-600 hover:bg-slate-50"
-                        }`}
-                      >
-                        <link.icon className="w-5 h-5" />
-                        {link.label}
-                      </Link>
-                    ))}
-                  </div>
+                  <Collapsible open={mediaOpen} onOpenChange={setMediaOpen} className="pt-4 mt-2">
+                    <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 min-h-[48px] rounded-xl text-[15px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Media</span>
+                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${mediaOpen ? 'rotate-180' : ''}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-1 mt-1">
+                      {mediaLinks.map((link) => (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
+                            isActive(link.href)
+                              ? "bg-indigo-50 text-indigo-700"
+                              : "text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          <link.icon className="w-5 h-5" />
+                          {link.label}
+                        </Link>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
 
-                  <div className="pt-4 mt-2">
-                    <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Community</p>
-                    {communityLinks.map((link) => (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-colors ${
-                          isActive(link.href)
-                            ? "bg-indigo-50 text-indigo-700"
-                            : "text-slate-600 hover:bg-slate-50"
-                        }`}
-                      >
-                        <link.icon className="w-5 h-5" />
-                        {link.label}
-                      </Link>
-                    ))}
-                  </div>
+                  <Collapsible open={communityOpen} onOpenChange={setCommunityOpen} className="pt-2 mt-2">
+                    <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 min-h-[48px] rounded-xl text-[15px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Community</span>
+                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${communityOpen ? 'rotate-180' : ''}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-1 mt-1">
+                      {communityLinks.map((link) => (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
+                            isActive(link.href)
+                              ? "bg-indigo-50 text-indigo-700"
+                              : "text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          <link.icon className="w-5 h-5" />
+                          {link.label}
+                        </Link>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Collapsible open={discoverOpen} onOpenChange={setDiscoverOpen} className="pt-2 mt-2">
+                    <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 min-h-[48px] rounded-xl text-[15px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Discover</span>
+                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${discoverOpen ? 'rotate-180' : ''}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-1 mt-1">
+                      {discoverLinks.map((link) => (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
+                            isActive(link.href)
+                              ? "bg-indigo-50 text-indigo-700"
+                              : "text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          <link.icon className="w-5 h-5" />
+                          {link.label}
+                        </Link>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
                   
                   {user && (
                     <>
@@ -325,7 +387,7 @@ export function Navbar() {
                         <Link
                           href={user.isAdmin ? "/admin" : "/dashboard"}
                           onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-colors ${
+                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
                             isActive("/dashboard") || isActive("/admin")
                               ? "bg-indigo-50 text-indigo-700"
                               : "text-slate-600 hover:bg-slate-50"
@@ -337,7 +399,7 @@ export function Navbar() {
                         <Link
                           href="/attendance"
                           onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-colors ${
+                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
                             isActive("/attendance")
                               ? "bg-indigo-50 text-indigo-700"
                               : "text-slate-600 hover:bg-slate-50"
@@ -349,7 +411,7 @@ export function Navbar() {
                         <Link
                           href="/attendance/scan"
                           onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-colors ${
+                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
                             isActive("/attendance/scan")
                               ? "bg-indigo-50 text-indigo-700"
                               : "text-slate-600 hover:bg-slate-50"
@@ -361,7 +423,7 @@ export function Navbar() {
                         <Link
                           href="/messages"
                           onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-colors ${
+                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
                             isActive("/messages")
                               ? "bg-indigo-50 text-indigo-700"
                               : "text-slate-600 hover:bg-slate-50"
@@ -375,7 +437,7 @@ export function Navbar() {
                             setMobileMenuOpen(false);
                             logout();
                           }}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-colors text-red-600 hover:bg-red-50 w-full"
+                          className="flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors text-red-600 hover:bg-red-50 w-full"
                         >
                           <LogOut className="w-5 h-5" />
                           Sign out
