@@ -2280,3 +2280,219 @@ export type InsertDataExportRequest = z.infer<typeof insertDataExportRequestSche
 export const insertDataDeletionRequestSchema = createInsertSchema(dataDeletionRequests).omit({ id: true, processedAt: true, createdAt: true });
 export type DataDeletionRequest = typeof dataDeletionRequests.$inferSelect;
 export type InsertDataDeletionRequest = z.infer<typeof insertDataDeletionRequestSchema>;
+
+// === API & EXTERNAL INTEGRATIONS ===
+
+export const externalApiKeys = pgTable("external_api_keys", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  keyPrefix: varchar("key_prefix", { length: 20 }).notNull(),
+  hashedKey: varchar("hashed_key", { length: 255 }).notNull(),
+  permissions: jsonb("permissions").$type<string[]>().default([]),
+  rateLimit: integer("rate_limit").default(1000),
+  lastUsedAt: timestamp("last_used_at"),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const webhooks = pgTable("webhooks", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  url: varchar("url", { length: 500 }).notNull(),
+  events: jsonb("events").$type<string[]>().notNull(),
+  secret: varchar("secret", { length: 255 }),
+  isActive: boolean("is_active").default(true),
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  failureCount: integer("failure_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const webhookDeliveries = pgTable("webhook_deliveries", {
+  id: serial("id").primaryKey(),
+  webhookId: integer("webhook_id").references(() => webhooks.id).notNull(),
+  eventType: varchar("event_type", { length: 100 }).notNull(),
+  payload: jsonb("payload").$type<Record<string, any>>(),
+  responseStatus: integer("response_status"),
+  responseBody: text("response_body"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const externalIntegrations = pgTable("external_integrations", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 100 }).notNull(),
+  status: varchar("status", { length: 50 }).default("disconnected"),
+  config: jsonb("config").$type<Record<string, any>>(),
+  credentials: jsonb("credentials").$type<Record<string, any>>(),
+  lastSyncAt: timestamp("last_sync_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const oauthApps = pgTable("oauth_apps", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  clientId: varchar("client_id", { length: 255 }).notNull().unique(),
+  clientSecret: varchar("client_secret", { length: 255 }),
+  redirectUris: jsonb("redirect_uris").$type<string[]>(),
+  scopes: jsonb("scopes").$type<string[]>().default([]),
+  isPublic: boolean("is_public").default(false),
+  ownerId: uuid("owner_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const oauthCodes = pgTable("oauth_codes", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 255 }).notNull().unique(),
+  clientId: varchar("client_id", { length: 255 }).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  redirectUri: varchar("redirect_uri", { length: 500 }).notNull(),
+  scope: jsonb("scope").$type<string[]>(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const oauthTokens = pgTable("oauth_tokens", {
+  id: serial("id").primaryKey(),
+  accessToken: varchar("access_token", { length: 255 }).notNull().unique(),
+  refreshToken: varchar("refresh_token", { length: 255 }),
+  clientId: varchar("client_id", { length: 255 }).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  scope: jsonb("scope").$type<string[]>(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const apiRateLimits = pgTable("api_rate_limits", {
+  id: serial("id").primaryKey(),
+  apiKeyId: integer("api_key_id").references(() => externalApiKeys.id),
+  endpoint: varchar("endpoint", { length: 255 }),
+  ipAddress: varchar("ip_address", { length: 50 }),
+  requestCount: integer("request_count").default(1),
+  windowStart: timestamp("window_start").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const apiCallLogs = pgTable("api_call_logs", {
+  id: serial("id").primaryKey(),
+  apiKeyId: integer("api_key_id").references(() => externalApiKeys.id),
+  method: varchar("method", { length: 10 }).notNull(),
+  path: varchar("path", { length: 500 }).notNull(),
+  statusCode: integer("status_code"),
+  responseTimeMs: integer("response_time_ms"),
+  ipAddress: varchar("ip_address", { length: 50 }),
+  userAgent: varchar("user_agent", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const integrationSyncJobs = pgTable("integration_sync_jobs", {
+  id: serial("id").primaryKey(),
+  integrationId: integer("integration_id").references(() => externalIntegrations.id).notNull(),
+  status: varchar("status", { length: 50 }).default("pending"),
+  recordsProcessed: integer("records_processed").default(0),
+  recordsFailed: integer("records_failed").default(0),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const externalApiKeyRelations = relations(externalApiKeys, ({ one, many }) => ({
+  user: one(users, {
+    fields: [externalApiKeys.userId],
+    references: [users.id],
+  }),
+  rateLimits: many(apiRateLimits),
+  callLogs: many(apiCallLogs),
+}));
+
+export const webhookRelations = relations(webhooks, ({ one, many }) => ({
+  user: one(users, {
+    fields: [webhooks.userId],
+    references: [users.id],
+  }),
+  deliveries: many(webhookDeliveries),
+}));
+
+export const webhookDeliveryRelations = relations(webhookDeliveries, ({ one }) => ({
+  webhook: one(webhooks, {
+    fields: [webhookDeliveries.webhookId],
+    references: [webhooks.id],
+  }),
+}));
+
+export const oauthAppRelations = relations(oauthApps, ({ one }) => ({
+  owner: one(users, {
+    fields: [oauthApps.ownerId],
+    references: [users.id],
+  }),
+}));
+
+export const oauthCodeRelations = relations(oauthCodes, ({ one }) => ({
+  user: one(users, {
+    fields: [oauthCodes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const oauthTokenRelations = relations(oauthTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [oauthTokens.userId],
+    references: [users.id],
+  }),
+}));
+
+export const integrationSyncJobRelations = relations(integrationSyncJobs, ({ one }) => ({
+  integration: one(externalIntegrations, {
+    fields: [integrationSyncJobs.integrationId],
+    references: [externalIntegrations.id],
+  }),
+}));
+
+// Insert schemas
+export const insertExternalApiKeySchema = createInsertSchema(externalApiKeys).omit({ id: true, createdAt: true, updatedAt: true });
+export type ExternalApiKey = typeof externalApiKeys.$inferSelect;
+export type InsertExternalApiKey = z.infer<typeof insertExternalApiKeySchema>;
+
+export const insertWebhookSchema = createInsertSchema(webhooks).omit({ id: true, createdAt: true, updatedAt: true });
+export type Webhook = typeof webhooks.$inferSelect;
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+
+export const insertWebhookDeliverySchema = createInsertSchema(webhookDeliveries).omit({ id: true, createdAt: true });
+export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
+export type InsertWebhookDelivery = z.infer<typeof insertWebhookDeliverySchema>;
+
+export const insertExternalIntegrationSchema = createInsertSchema(externalIntegrations).omit({ id: true, createdAt: true, updatedAt: true });
+export type ExternalIntegration = typeof externalIntegrations.$inferSelect;
+export type InsertExternalIntegration = z.infer<typeof insertExternalIntegrationSchema>;
+
+export const insertOauthAppSchema = createInsertSchema(oauthApps).omit({ id: true, createdAt: true });
+export type OauthApp = typeof oauthApps.$inferSelect;
+export type InsertOauthApp = z.infer<typeof insertOauthAppSchema>;
+
+export const insertOauthCodeSchema = createInsertSchema(oauthCodes).omit({ id: true, createdAt: true });
+export type OauthCode = typeof oauthCodes.$inferSelect;
+export type InsertOauthCode = z.infer<typeof insertOauthCodeSchema>;
+
+export const insertOauthTokenSchema = createInsertSchema(oauthTokens).omit({ id: true, createdAt: true });
+export type OauthToken = typeof oauthTokens.$inferSelect;
+export type InsertOauthToken = z.infer<typeof insertOauthTokenSchema>;
+
+export const insertApiRateLimitSchema = createInsertSchema(apiRateLimits).omit({ id: true, createdAt: true });
+export type ApiRateLimit = typeof apiRateLimits.$inferSelect;
+export type InsertApiRateLimit = z.infer<typeof insertApiRateLimitSchema>;
+
+export const insertApiCallLogSchema = createInsertSchema(apiCallLogs).omit({ id: true, createdAt: true });
+export type ApiCallLog = typeof apiCallLogs.$inferSelect;
+export type InsertApiCallLog = z.infer<typeof insertApiCallLogSchema>;
+
+export const insertIntegrationSyncJobSchema = createInsertSchema(integrationSyncJobs).omit({ id: true, createdAt: true });
+export type IntegrationSyncJob = typeof integrationSyncJobs.$inferSelect;
+export type InsertIntegrationSyncJob = z.infer<typeof insertIntegrationSyncJobSchema>;
