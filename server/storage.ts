@@ -1763,17 +1763,17 @@ export class DatabaseStorage implements IStorage {
 
   // Webhooks
   async getWebhooks(userId: string): Promise<Webhook[]> {
-    return db.select().from(webhooks).where(eq(webhooks.userId, userId));
+    return db.select().from(webhooks).where(eq(webhooks.userId, userId)) as any;
   }
 
   async getWebhook(id: number): Promise<Webhook | undefined> {
     const [webhook] = await db.select().from(webhooks).where(eq(webhooks.id, id));
-    return webhook;
+    return webhook as any;
   }
 
   async createWebhook(webhookData: InsertWebhook): Promise<Webhook> {
-    const [created] = await db.insert(webhooks).values(webhookData).returning();
-    return created;
+    const [created] = await db.insert(webhooks).values(webhookData as any).returning();
+    return created as any;
   }
 
   async updateWebhook(id: number, updates: Partial<Webhook>): Promise<Webhook> {
@@ -1894,26 +1894,6 @@ export class DatabaseStorage implements IStorage {
   async awardBadge(userId: string, badgeId: number): Promise<UserBadge> {
     const [awarded] = await db.insert(userBadges).values({ userId, badgeId }).returning();
     return awarded;
-  }
-
-  // Privacy & Moderation
-  async getPrivacySettings(userId: string): Promise<PrivacySettings | undefined> {
-    const [settings] = await db.select().from(privacySettings).where(eq(privacySettings.userId, userId));
-    return settings;
-  }
-
-  async createOrUpdatePrivacySettings(settings: InsertPrivacySettings): Promise<PrivacySettings> {
-    const existing = await this.getPrivacySettings(settings.userId);
-    if (existing) {
-      const [updated] = await db
-        .update(privacySettings)
-        .set({ ...settings, updatedAt: new Date() })
-        .where(eq(privacySettings.userId, settings.userId))
-        .returning();
-      return updated;
-    }
-    const [created] = await db.insert(privacySettings).values(settings).returning();
-    return created;
   }
 
   async getContentFlags(contentType?: string, status?: string): Promise<ContentFlag[]> {
