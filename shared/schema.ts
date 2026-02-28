@@ -2496,3 +2496,221 @@ export type InsertApiCallLog = z.infer<typeof insertApiCallLogSchema>;
 export const insertIntegrationSyncJobSchema = createInsertSchema(integrationSyncJobs).omit({ id: true, createdAt: true });
 export type IntegrationSyncJob = typeof integrationSyncJobs.$inferSelect;
 export type InsertIntegrationSyncJob = z.infer<typeof insertIntegrationSyncJobSchema>;
+
+// === WHITE-LABEL CHURCH PLATFORM ===
+
+export const organizations = pgTable("organizations", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  domain: varchar("domain", { length: 255 }),
+  logoUrl: varchar("logo_url", { length: 500 }),
+  faviconUrl: varchar("favicon_url", { length: 500 }),
+  primaryColor: varchar("primary_color", { length: 20 }).default("#1a73e8"),
+  secondaryColor: varchar("secondary_color", { length: 20 }).default("#34a853"),
+  accentColor: varchar("accent_color", { length: 20 }).default("#fbbc04"),
+  backgroundColor: varchar("background_color", { length: 20 }).default("#ffffff"),
+  textColor: varchar("text_color", { length: 20 }).default("#202124"),
+  contactEmail: varchar("contact_email", { length: 255 }),
+  contactPhone: varchar("contact_phone", { length: 50 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("Nigeria"),
+  timezone: varchar("timezone", { length: 50 }).default("Africa/Lagos"),
+  isActive: boolean("is_active").default(true),
+  isVerified: boolean("is_verified").default(false),
+  plan: varchar("plan", { length: 50 }).default("free"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizationThemes = pgTable("organization_themes", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  isDefault: boolean("is_default").default(false),
+  config: jsonb("config").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const customPages = pgTable("custom_pages", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull(),
+  content: text("content"),
+  metaTitle: varchar("meta_title", { length: 255 }),
+  metaDescription: text("meta_description"),
+  isPublished: boolean("is_published").default(false),
+  showInNav: boolean("show_in_nav").default(false),
+  orderIndex: integer("order_index").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const customMenuItems = pgTable("custom_menu_items", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  menuLocation: varchar("menu_location", { length: 50 }).notNull(),
+  label: varchar("label", { length: 100 }).notNull(),
+  url: varchar("url", { length: 500 }),
+  pageId: integer("page_id").references(() => customPages.id),
+  icon: varchar("icon", { length: 100 }),
+  orderIndex: integer("order_index").default(0),
+  isVisible: boolean("is_visible").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  body: text("body").notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const customFields = pgTable("custom_fields", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  entityType: varchar("entity_type", { length: 50 }).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  fieldType: varchar("field_type", { length: 50 }).notNull(),
+  label: varchar("label", { length: 255 }).notNull(),
+  placeholder: varchar("placeholder", { length: 255 }),
+  isRequired: boolean("is_required").default(false),
+  options: jsonb("options").$type<string[]>(),
+  orderIndex: integer("order_index").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizationMembers = pgTable("organization_members", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  role: varchar("role", { length: 50 }).default("member"),
+  status: varchar("status", { length: 50 }).default("active"),
+  invitedBy: uuid("invited_by"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const organizationSettings = pgTable("organization_settings", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull().unique(),
+  settings: jsonb("settings").$type<Record<string, any>>(),
+  features: jsonb("features").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const customDomains = pgTable("custom_domains", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  domain: varchar("domain", { length: 255 }).notNull().unique(),
+  sslEnabled: boolean("ssl_enabled").default(false),
+  sslCert: varchar("ssl_cert", { length: 500 }),
+  sslKey: varchar("ssl_key", { length: 500 }),
+  isVerified: boolean("is_verified").default(false),
+  verificationCode: varchar("verification_code", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizationAnalytics = pgTable("organization_analytics", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  metricType: varchar("metric_type", { length: 100 }).notNull(),
+  metricValue: real("metric_value").notNull(),
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
+// Relations
+export const organizationRelations = relations(organizations, ({ one, many }) => ({
+  themes: many(organizationThemes),
+  pages: many(customPages),
+  members: many(organizationMembers),
+  settings: one(organizationSettings),
+  customDomains: many(customDomains),
+}));
+
+export const organizationThemeRelations = relations(organizationThemes, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationThemes.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const customPageRelations = relations(customPages, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [customPages.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const organizationMemberRelations = relations(organizationMembers, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationMembers.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [organizationMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const organizationSettingRelations = relations(organizationSettings, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationSettings.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+// Insert schemas
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true, updatedAt: true });
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+
+export const insertOrganizationThemeSchema = createInsertSchema(organizationThemes).omit({ id: true, createdAt: true, updatedAt: true });
+export type OrganizationTheme = typeof organizationThemes.$inferSelect;
+export type InsertOrganizationTheme = z.infer<typeof insertOrganizationThemeSchema>;
+
+export const insertCustomPageSchema = createInsertSchema(customPages).omit({ id: true, createdAt: true, updatedAt: true });
+export type CustomPage = typeof customPages.$inferSelect;
+export type InsertCustomPage = z.infer<typeof insertCustomPageSchema>;
+
+export const insertCustomMenuItemSchema = createInsertSchema(customMenuItems).omit({ id: true, createdAt: true, updatedAt: true });
+export type CustomMenuItem = typeof customMenuItems.$inferSelect;
+export type InsertCustomMenuItem = z.infer<typeof insertCustomMenuItemSchema>;
+
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+
+export const insertCustomFieldSchema = createInsertSchema(customFields).omit({ id: true, createdAt: true, updatedAt: true });
+export type CustomField = typeof customFields.$inferSelect;
+export type InsertCustomField = z.infer<typeof insertCustomFieldSchema>;
+
+export const insertOrganizationMemberSchema = createInsertSchema(organizationMembers).omit({ id: true, joinedAt: true });
+export type OrganizationMember = typeof organizationMembers.$inferSelect;
+export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
+
+export const insertOrganizationSettingSchema = createInsertSchema(organizationSettings).omit({ id: true, createdAt: true, updatedAt: true });
+export type OrganizationSetting = typeof organizationSettings.$inferSelect;
+export type InsertOrganizationSetting = z.infer<typeof insertOrganizationSettingSchema>;
+
+export const insertCustomDomainSchema = createInsertSchema(customDomains).omit({ id: true, createdAt: true, updatedAt: true });
+export type CustomDomain = typeof customDomains.$inferSelect;
+export type InsertCustomDomain = z.infer<typeof insertCustomDomainSchema>;
+
+export const insertOrganizationAnalyticSchema = createInsertSchema(organizationAnalytics).omit({ id: true, recordedAt: true });
+export type OrganizationAnalytic = typeof organizationAnalytics.$inferSelect;
+export type InsertOrganizationAnalytic = z.infer<typeof insertOrganizationAnalyticSchema>;
