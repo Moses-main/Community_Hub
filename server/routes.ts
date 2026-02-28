@@ -1645,8 +1645,8 @@ export async function registerRoutes(
         conversationId: convId,
         role: "assistant",
         content: botResponse.response,
-        metadata: { intentId: botResponse.intentId ?? null, intentName: botResponse.intentName ?? null },
-      });
+        metadata: botResponse.intentName ? { intentId: botResponse.intentId, intentName: botResponse.intentName } : undefined,
+      } as any);
       
       // Update conversation
       await storage.updateChatConversation(convId, { status: "active" });
@@ -2048,7 +2048,8 @@ export async function registerRoutes(
       const blockerId = req.user!.id;
       const blockedId = req.params.id;
       const { reason } = req.body;
-      const block = await storage.blockUser(blockerId, blockedId, Array.isArray(reason) ? reason[0] : reason);
+      const reasonStr = typeof reason === 'string' ? reason : (Array.isArray(reason) ? reason[0] : undefined);
+      const block = await storage.blockUser(blockerId, blockedId, reasonStr);
       res.json(block);
     } catch (err) {
       console.error("Error blocking user:", err);
@@ -2061,7 +2062,7 @@ export async function registerRoutes(
     try {
       const blockerId = req.user!.id;
       const blockedId = req.params.id;
-      await storage.unblockUser(blockerId, blockedId);
+      await storage.unblockUser(blockerId, blockedId as string);
       res.json({ message: "User unblocked" });
     } catch (err) {
       console.error("Error unblocking user:", err);
