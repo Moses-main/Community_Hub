@@ -165,7 +165,7 @@ export default function GroupsPage() {
           <p className="text-gray-600 mt-1">Connect with community groups</p>
         </div>
         
-        {user && (
+        {user?.isAdmin && (
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90">
