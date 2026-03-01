@@ -1108,6 +1108,102 @@ export async function registerRoutes(
     }
   });
 
+  // Get event categories
+  app.get("/api/event-categories", async (req, res) => {
+    try {
+      const categories = await storage.getEventCategories();
+      res.json(categories);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get calendar download links for an event
+  app.get("/api/events/:id/calendar-links", async (req, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const { generateAllCalendarLinks } = await import("./services/event-calendar.js");
+      const links = generateAllCalendarLinks(event);
+      res.json(links);
+    } catch (err) {
+      console.error("Error generating calendar links:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Submit event feedback
+  app.post("/api/events/:id/feedback", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const userId = req.user!.id;
+      const { rating, comment, wouldRecommend } = req.body;
+
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      if (!event.allowFeedback) {
+        return res.status(400).json({ message: "Feedback is not allowed for this event" });
+      }
+
+      const feedback = await storage.createEventFeedback({
+        eventId,
+        userId,
+        rating,
+        comment,
+        wouldRecommend,
+      });
+
+      res.json(feedback);
+    } catch (err) {
+      console.error("Error submitting feedback:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get event feedback
+  app.get("/api/events/:id/feedback", async (req, res) => {
+    try {
+      const eventId = Number(req.params.id);
+      const feedback = await storage.getEventFeedback(eventId);
+      res.json(feedback);
+    } catch (err) {
+      console.error("Error fetching feedback:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get events by category
+  app.get("/api/events/category/:category", async (req, res) => {
+    try {
+      const category = req.params.category;
+      const events = await storage.getEventsByCategory(category);
+      res.json(events);
+    } catch (err) {
+      console.error("Error fetching events by category:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get events by tag
+  app.get("/api/events/tag/:tag", async (req, res) => {
+    try {
+      const tag = req.params.tag;
+      const events = await storage.getEventsByTag(tag);
+      res.json(events);
+    } catch (err) {
+      console.error("Error fetching events by tag:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Sermons
   app.get(api.sermons.list.path, async (req, res) => {
     const { speaker, series, status, search } = req.query;

@@ -1,5 +1,5 @@
 import { 
-  users, branding, events, sermons, prayerRequests, donations, eventRsvps,
+  users, branding, events, sermons, prayerRequests, donations, eventRsvps, eventCategories, eventFeedback,
   attendance, attendanceLinks, attendanceSettings, memberMessages, fundraisingCampaigns,
   dailyDevotionals, bibleReadingPlans, bibleReadingProgress,
   music, musicGenres, musicPlaylists, playlistMusic,
@@ -25,7 +25,7 @@ import {
   externalApiKeys, webhookDeliveries, externalIntegrations, oauthApps, oauthCodes, oauthTokens, apiRateLimits, apiCallLogs, integrationSyncJobs,
   organizations, organizationThemes, customPages, customMenuItems, emailTemplates, customFields, 
   organizationMembers, organizationSettings, customDomains, organizationAnalytics,
-  type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
+  type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type EventCategory, type EventFeedback, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
   type Attendance, type AttendanceLink, type AttendanceSettings, type MemberMessage,
@@ -174,6 +174,23 @@ export interface IStorage {
   getUserRsvps(userId: string): Promise<EventRsvp[]>;
   getEventRsvps(eventId: number): Promise<EventRsvp[]>;
   markAddedToCalendar(eventId: number, userId: string): Promise<EventRsvp>;
+
+  // Event Categories
+  getEventCategories(): Promise<EventCategory[]>;
+
+  // Event Feedback
+  createEventFeedback(feedback: {
+    eventId: number;
+    userId: string;
+    rating?: number;
+    comment?: string;
+    wouldRecommend?: boolean;
+  }): Promise<EventFeedback>;
+  getEventFeedback(eventId: number): Promise<EventFeedback[]>;
+
+  // Events by category/tag
+  getEventsByCategory(category: string): Promise<Event[]>;
+  getEventsByTag(tag: string): Promise<Event[]>;
 
   // Attendance
   createAttendance(attendance: InsertAttendance): Promise<Attendance>;
@@ -727,6 +744,36 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.userId, userId)))
       .returning();
     return rsvp;
+  }
+
+  // Event Categories
+  async getEventCategories(): Promise<EventCategory[]> {
+    return await db.select().from(eventCategories).orderBy(eventCategories.name);
+  }
+
+  // Event Feedback
+  async createEventFeedback(feedback: {
+    eventId: number;
+    userId: string;
+    rating?: number;
+    comment?: string;
+    wouldRecommend?: boolean;
+  }): Promise<EventFeedback> {
+    const [result] = await db.insert(eventFeedback).values(feedback).returning();
+    return result;
+  }
+
+  async getEventFeedback(eventId: number): Promise<EventFeedback[]> {
+    return await db.select().from(eventFeedback).where(eq(eventFeedback.eventId, eventId));
+  }
+
+  // Events by category/tag
+  async getEventsByCategory(category: string): Promise<Event[]> {
+    return await db.select().from(events).where(eq(events.category, category)).orderBy(events.date);
+  }
+
+  async getEventsByTag(tag: string): Promise<Event[]> {
+    return await db.select().from(events).where(sql`${events.tags} @> ${JSON.stringify([tag])}`).orderBy(events.date);
   }
 
   // Attendance

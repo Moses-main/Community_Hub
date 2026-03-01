@@ -35,10 +35,20 @@ export const events = pgTable("events", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   date: timestamp("date").notNull(),
+  endDate: timestamp("end_date"),
   location: text("location").notNull(),
   imageUrl: text("image_url"),
   creatorId: uuid("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+  isRecurring: boolean("is_recurring").default(false),
+  recurrenceRule: varchar("recurrence_rule", { length: 50 }),
+  recurrenceEndDate: timestamp("recurrence_end_date"),
+  category: varchar("category", { length: 100 }),
+  tags: text("tags").array(),
+  allowFeedback: boolean("allow_feedback").default(true),
+  isVirtual: boolean("is_virtual").default(false),
+  virtualLink: varchar("virtual_link", { length: 500 }),
+  capacity: integer("capacity"),
 });
 
 export const eventRsvps = pgTable("event_rsvps", {
@@ -46,6 +56,26 @@ export const eventRsvps = pgTable("event_rsvps", {
   eventId: integer("event_id").references(() => events.id).notNull(),
   userId: uuid("user_id").references(() => users.id).notNull(),
   addedToCalendar: boolean("added_to_calendar").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  attended: boolean("attended").default(false),
+  checkedInAt: timestamp("checked_in_at"),
+});
+
+export const eventCategories = pgTable("event_categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  color: varchar("color", { length: 20 }).default("#3B82F6"),
+  icon: varchar("icon", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const eventFeedback = pgTable("event_feedback", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").references(() => events.id),
+  userId: uuid("user_id").references(() => users.id),
+  rating: integer("rating"),
+  comment: text("comment"),
+  wouldRecommend: boolean("would_recommend"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -200,6 +230,17 @@ export const eventRsvpsRelations = relations(eventRsvps, ({ one }) => ({
   }),
 }));
 
+export const eventFeedbackRelations = relations(eventFeedback, ({ one }) => ({
+  event: one(events, {
+    fields: [eventFeedback.eventId],
+    references: [events.id],
+  }),
+  user: one(users, {
+    fields: [eventFeedback.userId],
+    references: [users.id],
+  }),
+}));
+
 // === BASE SCHEMAS ===
 export const insertBrandingSchema = createInsertSchema(branding).omit({ id: true });
 
@@ -208,11 +249,23 @@ export const insertEventSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   date: z.string().datetime(),
+  endDate: z.string().datetime().optional(),
   location: z.string().min(1),
   imageUrl: z.string().optional(),
+  isRecurring: z.boolean().optional(),
+  recurrenceRule: z.string().optional(),
+  recurrenceEndDate: z.string().datetime().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  allowFeedback: z.boolean().optional(),
+  isVirtual: z.boolean().optional(),
+  virtualLink: z.string().optional(),
+  capacity: z.number().optional(),
 }).transform(data => ({
   ...data,
   date: new Date(data.date),
+  endDate: data.endDate ? new Date(data.endDate) : undefined,
+  recurrenceEndDate: data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : undefined,
 }));
 
 // Custom sermon schema that accepts string dates and converts to Date
@@ -260,6 +313,9 @@ export type InsertEventRsvp = z.infer<typeof insertEventRsvpSchema>;
 export type InsertFundraisingCampaign = z.infer<typeof insertFundraisingCampaignSchema>;
 export type InsertDailyDevotional = typeof dailyDevotionals.$inferInsert;
 export type InsertBibleReadingPlan = typeof bibleReadingPlans.$inferInsert;
+export type EventCategory = typeof eventCategories.$inferSelect;
+export type EventFeedback = typeof eventFeedback.$inferSelect;
+export type InsertEventFeedback = typeof eventFeedback.$inferInsert;
 
 // Request types
 export type CreateEventRequest = InsertEvent;

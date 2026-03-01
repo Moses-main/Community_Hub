@@ -9,9 +9,9 @@ export function Footer() {
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-5">
               <img 
-                src="/church_logo.jpeg" 
+                src="/chub-logo.svg" 
                 alt="CHub" 
-                className="h-10 w-auto object-contain"
+                className="h-10 w-auto"
               />
               <span className="font-semibold text-slate-900 text-lg">
                 CHub

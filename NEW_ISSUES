@@ -1,0 +1,102 @@
+# New Feature Requests
+
+## 1. Multi-Language Support with Language Detection
+Add automatic language detection based on user's browser settings and allow users to switch languages manually. Include translations for more languages beyond English (Spanish, French, Portuguese, Swahili, etc.).
+
+## 2. Push Notifications System
+Implement web push notifications for:
+- New events and sermon announcements
+- Prayer request updates
+- Live stream alerts
+- Attendance reminders
+- Group/message notifications
+
+## 3. Mobile App Wrapper (PWA Enhancements)
+- Add offline support for devotionals and Bible reading
+- Add "Add to Home Screen" prompt
+- Implement background sync for when connection is restored
+- Add app install banner with custom branding
+
+## 4. Advanced Member Directory with Search & Filters
+- Advanced search by name, role, house cell, parish
+- Filter by membership date range
+- Member profile cards with quick actions
+- Export members to CSV/PDF
+- Member activity timeline
+
+## 5. Automated Email & SMS Notifications
+- Welcome emails for new members
+- Event reminder emails/SMS
+- Birthday and anniversary celebrations
+- Weekly devotional digest
+- Attendance follow-up emails
+
+## 6. Financial Dashboard & Reports
+- Tithes and offerings tracking
+- Generate income/expense reports
+- Receipt generation for donations
+- Goal tracking for fundraising campaigns
+- Export financial reports to PDF/Excel
+
+## 7. Prayer Wall Feature
+- Public prayer wall where members can post prayer requests
+- Allow anonymous prayer requests
+- Prayer countdown/completion tracking
+- Prayer warrior assignment system
+- Weekly prayer digest emails
+
+## 8. Event Calendar Integration
+- Sync with Google Calendar, Outlook, Apple Calendar
+- Add to calendar buttons on all events
+- Recurring event support
+- Event categories and tags
+- Event feedback/rating system
+
+## 9. Small Group Management System
+- Create and manage Bible study groups
+- Group hierarchy (zones, sectors, cells)
+- Group leader assignment and training tracking
+- Group meeting scheduler
+- Group resources sharing
+
+## 10. Content Management System (CMS) for Pages
+- Customizable landing pages
+- About Us, Contact, FAQ pages
+- Staff/leadership team page
+- Photo gallery management
+- Announcement banners
+
+## 11. Attendance Heatmaps & Analytics
+- Visual attendance heatmaps by service/time
+- Member engagement scoring
+- At-risk member identification
+- Attendance prediction alerts
+- Trend analysis charts
+
+## 12. Online Giving & Payments Integration
+- Recurring giving setup
+- Multiple payment methods (card, bank transfer, USSD)
+- Giving goals and campaigns
+- Tax receipt generation
+- Giving history and statements
+
+## 13. Member Check-in Kiosk Mode
+- Dedicated kiosk interface for church entrances
+- QR code scanning for quick check-in
+- Guest registration form
+- Family/household check-in
+- Temperature check integration option
+
+## 14. Chat & Messaging System
+- Direct messaging between members
+- Group chats for ministries
+- Broadcast messages from admins
+- Read receipts and typing indicators
+- Message templates
+
+## 15. Resource Library
+- Sermon notes and transcripts
+- Teaching materials download
+- Church policies and documents
+- Video and audio archives
+- Searchable content database

@@ -75,9 +75,9 @@ export function Navbar() {
       <div className="max-w-8xl mx-auto px-6 h-16 md:h-18 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
           <img 
-            src="/church_logo.jpeg" 
+            src="/chub-logo.svg" 
             alt="CHub" 
-            className="h-9 md:h-10 w-auto rounded-full object-contain"
+            className="h-9 md:h-10 w-auto"
           />
           <span className="hidden sm:block text-base font-semibold text-slate-900">
             CHub
@@ -279,9 +279,9 @@ export function Navbar() {
                 <div className="flex items-center justify-between p-5 border-b border-slate-100">
                   <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
                     <img 
-                      src="/church_logo.jpeg" 
+                      src="/chub-logo.svg" 
                       alt="CHub" 
-                      className="h-8 w-auto rounded-full object-contain"
+                      className="h-8 w-auto"
                     />
                     <span className="font-semibold text-slate-900">
                       CHub

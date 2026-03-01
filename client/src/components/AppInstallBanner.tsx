@@ -58,9 +58,9 @@ export function AppInstallBanner() {
       <div className="flex items-center justify-between gap-4 max-w-md mx-auto">
         <div className="flex items-center gap-3">
           <img 
-            src="/church_logo.jpeg" 
+            src="/chub-logo.svg" 
             alt="CHub" 
-            className="w-10 h-10 rounded-lg object-contain"
+            className="w-10 h-10"
           />
           <div>
             <p className="font-medium text-sm text-slate-900">Install CHub</p>
