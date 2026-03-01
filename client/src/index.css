@@ -1,69 +1,57 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-    --font-display: "DM Sans", sans-serif;
-    --font-body: "Inter", sans-serif;
-    --font-stylish: "Playfair Display", serif;
+    --font-body: "Manrope", "Inter", sans-serif;
 
-    /* Clean White Background - SaaS Style like Copperx */
-    
-    /* Background & Foreground - Pure white */
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
 
-    /* Primary - Dark Blue */
-    --primary: 220 50% 35%;
+    --primary: 250 65% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 220 50% 95%;
+    --primary-light: 250 65% 95%;
     
-    /* Secondary */
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
 
-    /* Accent */
-    --accent: 220 50% 35%;
+    --accent: 250 65% 58%;
     --accent-foreground: 0 0% 100%;
     
-    /* Success, Warning, Error */
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
     --error: 0 84% 60%;
 
-    /* Borders - Subtle gray */
-    --border: 214 14% 86%;
+    --border: 214 14% 90%;
     --input: 214 14% 90%;
-    --ring: 220 50% 35%;
+    --ring: 250 65% 58%;
 
-    /* Cards */
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     
-    /* Radius */
     --radius: 0.75rem;
 }
 
 .dark {
-    --background: 222 47% 8%;
+    --background: 222 47% 6%;
     --foreground: 210 40% 98%;
 
-    --primary: 220 50% 55%;
+    --primary: 250 65% 70%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 33% 12%;
+    --secondary: 217 33% 10%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 217 33% 12%;
     --muted-foreground: 215 16% 65%;
 
-    --border: 217 25% 20%;
-    --input: 217 25% 20%;
-    --ring: 220 50% 55%;
+    --border: 217 25% 18%;
+    --input: 217 25% 18%;
+    --ring: 250 65% 70%;
     
-    --card: 222 47% 10%;
+    --card: 222 47% 8%;
     --card-foreground: 210 40% 98%;
 }
 
@@ -84,14 +72,9 @@
         box-sizing: border-box;
         font-size: 14px;
     }
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-        font-family: var(--font-display);
-        @apply tracking-tight font-bold;
+    h1, h2, h3, h4, h5, h6 {
+        font-family: var(--font-body);
+        @apply tracking-tight font-semibold;
     }
 
     h1 { font-size: 1.5rem; }
@@ -125,7 +108,6 @@
         p, span, a, li { font-size: 1rem; }
     }
 
-    /* Ensure proper full-width layout */
     #root {
         width: 100%;
         min-height: 100vh;
@@ -133,13 +115,12 @@
         flex-direction: column;
     }
 
-    /* Container utilities */
     .container {
         width: 100%;
         max-width: 1280px;
         margin: 0 auto;
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
 
     @media (min-width: 640px) {
@@ -157,103 +138,22 @@
     }
 }
 
-/* Glass morphism utilities */
-.glass {
-    @apply bg-white/80 dark:bg-black/50 backdrop-blur-md border border-white/20 shadow-xl;
-}
+@layer utilities {
+    .shadow-soft {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+    
+    .shadow-soft-md {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
+    }
+    
+    .shadow-soft-lg {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04), 0 16px 48px rgba(0, 0, 0, 0.04);
+    }
 
-.glass-light {
-    @apply bg-white/60 backdrop-blur-sm border border-white/30;
-}
-
-/* Gradient backgrounds */
-.bg-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(220 50% 25%) 100%);
-}
-
-.bg-gradient-warm {
-    background: linear-gradient(135deg, #fdf4ff 0%, #fef3c7 100%);
-}
-
-.bg-gradient-mesh {
-    background-color: #ffffff;
-    background-image: 
-        radial-gradient(at 40% 20%, hsla(220,50%,35%,0.1) 0px, transparent 50%),
-        radial-gradient(at 80% 0%, hsla(38,92%,50%,0.1) 0px, transparent 50%),
-        radial-gradient(at 0% 50%, hsla(220,50%,35%,0.1) 0px, transparent 50%),
-        radial-gradient(at 80% 50%, hsla(38,92%,50%,0.05) 0px, transparent 50%),
-        radial-gradient(at 0% 100%, hsla(220,50%,35%,0.1) 0px, transparent 50%);
-}
-
-/* Hero gradient */
-.hero-gradient {
-    background: linear-gradient(
-        135deg,
-        hsl(220 50% 35%) 0%,
-        hsl(220 50% 25%) 50%,
-        hsl(38 92% 50%) 100%
-    );
-}
-
-.hero-pattern {
-    background-color: hsl(var(--primary));
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-
-/* Text gradients */
-.text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-amber-500;
-}
-
-.text-gradient-primary {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70;
-}
-
-/* Card hover effects */
-.card-hover {
-    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
-}
-
-/* Button shine effect */
-.btn-shine {
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-shine::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -100%;
-    width: 50%;
-    height: 200%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255,255,255,0.2),
-        transparent
-    );
-    transform: skewX(-25deg);
-    transition: left 0.5s;
-}
-
-.btn-shine:hover::after {
-    left: 150%;
-}
-
-/* Section spacing */
-.section-py {
-    @apply py-16 md:py-24 lg:py-32;
-}
-
-/* Focus ring */
-.focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
-}
-
-/* Stylish font utility */
-.font-stylish {
-    font-family: var(--font-stylish);
+    .transition-soft {
+        transition: all 0.2s ease;
+    }
 }
 
 /* Apple-Inspired Design System */
