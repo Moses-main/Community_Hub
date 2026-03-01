@@ -16,6 +16,7 @@ export interface Branding {
   id: number;
   colors: BrandingColors;
   logoUrl: string | null;
+  faviconUrl: string | null;
   fonts: BrandingFonts;
   churchName: string | null;
   churchAddress: string | null;
@@ -27,6 +28,11 @@ export interface Branding {
   churchEmail: string | null;
   churchLatitude: string | null;
   churchLongitude: string | null;
+  serviceTimes: { sunday: string; wednesday: string; friday: string } | null;
+  youtubeUrl: string | null;
+  instagramUrl: string | null;
+  facebookUrl: string | null;
+  twitterUrl: string | null;
 }
 
 export function useBranding() {
