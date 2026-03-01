@@ -7,6 +7,7 @@ import { Layout } from "@/components/Layout";
 import NotFound from "@/pages/not-found";
 import { HelmetProvider } from "react-helmet-async";
 import { AnimatePresence, motion } from "framer-motion";
+import { AppInstallBanner } from "@/components/AppInstallBanner";
 
 // Pages
 import HomePage from "@/pages/HomePage";
@@ -125,6 +126,7 @@ function App() {
       <div className="w-full min-h-screen">
         <QueryClientProvider client={queryClient}>
           <AppContent />
+          <AppInstallBanner />
         </QueryClientProvider>
       </div>
     </HelmetProvider>
