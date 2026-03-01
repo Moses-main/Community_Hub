@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
-import { Video, Film, Download, Trash2, Play, Square, Instagram, Smartphone, Monitor, Scissors, Plus, Clock, Loader2, Upload, Link as LinkIcon, X, AlertCircle } from "lucide-react";
+import { Video, Film, Download, Trash2, Play, Square, Instagram, Smartphone, Monitor, Scissors, Plus, Clock, Loader2, Upload, Link as LinkIcon, X, AlertCircle, Share2, Facebook, Twitter, Youtube, ExternalLink, Copy, Check } from "lucide-react";
 
 interface SermonClip {
   id: number;
@@ -122,6 +122,181 @@ function getYouTubeThumbnail(url: string): string | null {
   return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
 }
 
+function TimelineTracker({ 
+  duration, 
+  startTime, 
+  endTime, 
+  onChange 
+}: { 
+  duration: number; 
+  startTime: number; 
+  endTime: number; 
+  onChange: (start: number, end: number) => void;
+}) {
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState<"start" | "end" | null>(null);
+
+  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!timelineRef.current) return;
+    const rect = timelineRef.current.getBoundingClientRect();
+    const clickPosition = (e.clientX - rect.left) / rect.width;
+    const clickedTime = Math.round(clickPosition * duration);
+    
+    const distToStart = Math.abs(clickedTime - startTime);
+    const distToEnd = Math.abs(clickedTime - endTime);
+    
+    if (distToStart < distToEnd) {
+      onChange(Math.max(0, clickedTime), Math.min(duration, Math.max(clickedTime + 5, endTime)));
+    } else {
+      onChange(Math.max(0, Math.min(clickedTime - 5, startTime)), Math.min(duration, clickedTime));
+    }
+  };
+
+  const startPercent = (startTime / duration) * 100;
+  const endPercent = (endTime / duration) * 100;
+  const selectedWidth = endPercent - startPercent;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-between text-xs text-gray-500">
+        <span>0:00</span>
+        <span>{formatDuration(duration)}</span>
+      </div>
+      
+      <div 
+        ref={timelineRef}
+        className="relative h-16 bg-gray-100 rounded-lg cursor-pointer select-none"
+        onClick={handleTimelineClick}
+      >
+        <div className="absolute inset-y-2 left-2 right-2">
+          <div className="h-full bg-gray-300 rounded-full" />
+        </div>
+        
+        <div 
+          className="absolute inset-y-2 left-2 bg-indigo-200 rounded-full"
+          style={{ 
+            left: `calc(0.5rem + ${startPercent}% * (100% - 1rem) / 100)`,
+            width: `calc(${selectedWidth}% * (100% - 1rem) / 100)`
+          }}
+        />
+        
+        <div 
+          className="absolute top-1/2 -translate-y-1/2 w-4 h-8 bg-indigo-600 rounded cursor-ew-resize z-10 hover:bg-indigo-700 transition-colors"
+          style={{ left: `calc(0.5rem + ${startPercent}% * (100% - 1rem) / 100% - 8px)` }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            setIsDragging("start");
+          }}
+        />
+        
+        <div 
+          className="absolute top-1/2 -translate-y-1/2 w-4 h-8 bg-indigo-600 rounded cursor-ew-resize z-10 hover:bg-indigo-700 transition-colors"
+          style={{ left: `calc(0.5rem + ${endPercent}% * (100% - 1rem) / 100% - 8px)` }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            setIsDragging("end");
+          }}
+        />
+        
+        <div 
+          className="absolute top-1/2 -translate-y-1/2 h-8 bg-indigo-600/30 rounded z-0"
+          style={{ 
+            left: `calc(0.5rem + ${startPercent}% * (100% - 1rem) / 100%)`,
+            right: `calc(0.5rem + ${(100 - endPercent)}% * (100% - 1rem) / 100%)`
+          }}
+        />
+      </div>
+      
+      <div className="flex justify-between text-sm font-medium">
+        <span className="text-indigo-600">Start: {formatTime(startTime)}</span>
+        <span className="text-gray-500">Duration: {formatDuration(endTime - startTime)}</span>
+        <span className="text-indigo-600">End: {formatTime(endTime)}</span>
+      </div>
+    </div>
+  );
+}
+
+function ShareDialog({ clipId, clipTitle, outputUrl }: { clipId: number; clipTitle: string; outputUrl: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+  if (!outputUrl) return null;
+
+  const clipUrl = `${baseUrl}/sermon-clips/${clipId}`;
+  
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(clipUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareToFacebook = () => {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clipUrl)}`, '_blank');
+  };
+
+  const shareToTwitter = () => {
+    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(clipUrl)}&text=${encodeURIComponent(clipTitle)}`, '_blank');
+  };
+
+  const shareToWhatsApp = () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(clipTitle + ' ' + clipUrl)}`, '_blank');
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1">
+          <Share2 className="w-4 h-4" />
+          Share
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Share Clip</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Input value={clipUrl} readOnly className="flex-1" />
+            <Button size="sm" onClick={handleCopyLink} variant="outline">
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-3">
+            <Button variant="outline" className="flex-col gap-2 h-auto py-3" onClick={shareToFacebook}>
+              <Facebook className="w-5 h-5 text-blue-600" />
+              <span className="text-xs">Facebook</span>
+            </Button>
+            <Button variant="outline" className="flex-col gap-2 h-auto py-3" onClick={shareToTwitter}>
+              <Twitter className="w-5 h-5 text-sky-500" />
+              <span className="text-xs">Twitter</span>
+            </Button>
+            <Button variant="outline" className="flex-col gap-2 h-auto py-3" onClick={shareToWhatsApp}>
+              <svg className="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              <span className="text-xs">WhatsApp</span>
+            </Button>
+          </div>
+          
+          {outputUrl && (
+            <div className="pt-2 border-t">
+              <p className="text-sm text-gray-500 mb-2">Download & share directly:</p>
+              <Button asChild className="w-full gap-2">
+                <a href={outputUrl} download target="_blank" rel="noopener noreferrer">
+                  <Download className="w-4 h-4" />
+                  Download Clip
+                </a>
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function SermonClipGeneratorPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -133,7 +308,10 @@ export default function SermonClipGeneratorPage() {
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string>("");
   const [videoDuration, setVideoDuration] = useState<number>(60);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewClip, setPreviewClip] = useState<{ start: number; end: number; url: string } | null>(null);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -153,6 +331,14 @@ export default function SermonClipGeneratorPage() {
       loadClips();
     }
   }, [isAdmin]);
+
+  useEffect(() => {
+    return () => {
+      if (uploadedVideoUrl) {
+        URL.revokeObjectURL(uploadedVideoUrl);
+      }
+    };
+  }, [uploadedVideoUrl]);
 
   async function loadClips() {
     try {
@@ -183,23 +369,11 @@ export default function SermonClipGeneratorPage() {
     }
   }
 
-  function handleStartTimeChange(value: number[]) {
-    const newStart = value[0];
-    const newEnd = Math.max(newStart + 5, formData.endTime);
+  function handleTimelineChange(start: number, end: number) {
     setFormData(prev => ({
       ...prev,
-      startTime: newStart,
-      endTime: Math.min(newEnd, videoDuration)
-    }));
-  }
-
-  function handleEndTimeChange(value: number[]) {
-    const newEnd = value[0];
-    const newStart = Math.min(newEnd - 5, formData.startTime);
-    setFormData(prev => ({
-      ...prev,
-      startTime: Math.max(0, newStart),
-      endTime: newEnd
+      startTime: start,
+      endTime: end
     }));
   }
 
@@ -215,6 +389,26 @@ export default function SermonClipGeneratorPage() {
       
       const objectUrl = URL.createObjectURL(file);
       setUploadedVideoUrl(objectUrl);
+    }
+  }
+
+  function handlePreviewClip() {
+    if (!uploadedVideoUrl) return;
+    setPreviewClip({
+      start: formData.startTime,
+      end: formData.endTime,
+      url: uploadedVideoUrl
+    });
+    setIsPreviewPlaying(true);
+  }
+
+  function handlePreviewEnded() {
+    setIsPreviewPlaying(false);
+  }
+
+  function handlePreviewSeek() {
+    if (previewVideoRef.current && previewClip) {
+      previewVideoRef.current.currentTime = previewClip.start;
     }
   }
 
@@ -353,6 +547,36 @@ export default function SermonClipGeneratorPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {previewClip && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-3xl w-full overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="font-semibold">Preview Clip</h3>
+              <Button variant="ghost" size="sm" onClick={() => {
+                setPreviewClip(null);
+                setIsPreviewPlaying(false);
+              }}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <video
+              ref={previewVideoRef}
+              src={previewClip.url}
+              className="w-full aspect-video bg-black"
+              onLoadedMetadata={handlePreviewSeek}
+              onEnded={handlePreviewEnded}
+              controls={isPreviewPlaying}
+              autoPlay={isPreviewPlaying}
+            />
+            <div className="p-4 border-t bg-gray-50">
+              <p className="text-sm text-gray-600">
+                Preview: {formatTime(previewClip.start)} - {formatTime(previewClip.end)} ({formatDuration(previewClip.end - previewClip.start)})
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Sermon Clip Generator</h1>
@@ -513,36 +737,21 @@ export default function SermonClipGeneratorPage() {
                   </div>
 
                   <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Start: {formatTime(formData.startTime)}</span>
-                        <span>End: {formatTime(formData.endTime)}</span>
+                    <TimelineTracker 
+                      duration={videoDuration}
+                      startTime={formData.startTime}
+                      endTime={formData.endTime}
+                      onChange={handleTimelineChange}
+                    />
+
+                    {uploadedVideoUrl && (
+                      <div className="flex justify-center pt-2">
+                        <Button variant="outline" onClick={handlePreviewClip} className="gap-2">
+                          <Play className="w-4 h-4" />
+                          Preview Clip
+                        </Button>
                       </div>
-                      
-                      <div className="space-y-4">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-gray-500">Start Point</Label>
-                          <Slider
-                            value={[formData.startTime]}
-                            onValueChange={handleStartTimeChange}
-                            max={videoDuration}
-                            step={1}
-                            className="cursor-pointer"
-                          />
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <Label className="text-xs text-gray-500">End Point</Label>
-                          <Slider
-                            value={[formData.endTime]}
-                            onValueChange={handleEndTimeChange}
-                            max={videoDuration}
-                            step={1}
-                            className="cursor-pointer"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -718,12 +927,15 @@ export default function SermonClipGeneratorPage() {
                       <Trash2 className="w-4 h-4" />
                     </Button>
                     {clip.outputUrl && clip.status === "completed" && (
-                      <Button size="sm" className="flex-1 gap-1" asChild>
-                        <a href={clip.outputUrl} download target="_blank" rel="noopener noreferrer">
-                          <Download className="w-4 h-4" />
-                          Download
-                        </a>
-                      </Button>
+                      <>
+                        <Button size="sm" className="flex-1 gap-1" asChild>
+                          <a href={clip.outputUrl} download target="_blank" rel="noopener noreferrer">
+                            <Download className="w-4 h-4" />
+                            Download
+                          </a>
+                        </Button>
+                        <ShareDialog clipId={clip.id} clipTitle={clip.title} outputUrl={clip.outputUrl} />
+                      </>
                     )}
                   </div>
                 </div>
