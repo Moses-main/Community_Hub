@@ -11,6 +11,7 @@ export const branding = pgTable("branding", {
   id: serial("id").primaryKey(),
   colors: jsonb("colors").$type<{ primary: string; secondary: string; accent: string }>().default({ primary: "#000000", secondary: "#ffffff", accent: "#3b82f6" }),
   logoUrl: text("logo_url"),
+  faviconUrl: text("favicon_url"),
   fonts: jsonb("fonts").$type<{ heading: string; body: string }>().default({ heading: "Inter", body: "Inter" }),
   churchName: text("church_name"),
   churchAddress: text("church_address"),
@@ -22,6 +23,11 @@ export const branding = pgTable("branding", {
   churchEmail: text("church_email"),
   churchLatitude: text("church_latitude"),
   churchLongitude: text("church_longitude"),
+  serviceTimes: jsonb("service_times").$type<{ sunday: string; wednesday: string; friday: string }>().default({ sunday: "7:00 AM & 9:00 AM", wednesday: "6:00 PM", friday: "7:00 PM" }),
+  youtubeUrl: text("youtube_url"),
+  instagramUrl: text("instagram_url"),
+  facebookUrl: text("facebook_url"),
+  twitterUrl: text("twitter_url"),
 });
 
 export const events = pgTable("events", {

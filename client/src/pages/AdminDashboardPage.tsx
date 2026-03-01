@@ -45,6 +45,7 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
     headingFont: branding?.fonts?.heading || "Inter",
     bodyFont: branding?.fonts?.body || "Inter",
     logoUrl: branding?.logoUrl || "",
+    faviconUrl: branding?.faviconUrl || "",
     churchName: branding?.churchName || "",
     churchAddress: branding?.churchAddress || "",
     churchCity: branding?.churchCity || "",
@@ -53,6 +54,13 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
     churchZipCode: branding?.churchZipCode || "",
     churchPhone: branding?.churchPhone || "",
     churchEmail: branding?.churchEmail || "",
+    sundayService: branding?.serviceTimes?.sunday || "7:00 AM & 9:00 AM",
+    wednesdayService: branding?.serviceTimes?.wednesday || "6:00 PM",
+    fridayService: branding?.serviceTimes?.friday || "7:00 PM",
+    youtubeUrl: branding?.youtubeUrl || "",
+    instagramUrl: branding?.instagramUrl || "",
+    facebookUrl: branding?.facebookUrl || "",
+    twitterUrl: branding?.twitterUrl || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -68,6 +76,7 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
         body: formData.bodyFont,
       },
       logoUrl: formData.logoUrl || null,
+      faviconUrl: formData.faviconUrl || null,
       churchName: formData.churchName || null,
       churchAddress: formData.churchAddress || null,
       churchCity: formData.churchCity || null,
@@ -76,6 +85,15 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
       churchZipCode: formData.churchZipCode || null,
       churchPhone: formData.churchPhone || null,
       churchEmail: formData.churchEmail || null,
+      serviceTimes: {
+        sunday: formData.sundayService,
+        wednesday: formData.wednesdayService,
+        friday: formData.fridayService,
+      },
+      youtubeUrl: formData.youtubeUrl || null,
+      instagramUrl: formData.instagramUrl || null,
+      facebookUrl: formData.facebookUrl || null,
+      twitterUrl: formData.twitterUrl || null,
     });
   };
 
@@ -155,6 +173,46 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
           <div>
             <Label htmlFor="churchEmail">Email</Label>
             <Input id="churchEmail" type="email" value={formData.churchEmail} onChange={e => setFormData({...formData, churchEmail: e.target.value})} placeholder="church@example.com" />
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t pt-6">
+        <h3 className="font-medium mb-4">Service Times</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="sundayService">Sunday Service</Label>
+            <Input id="sundayService" value={formData.sundayService} onChange={e => setFormData({...formData, sundayService: e.target.value})} placeholder="7:00 AM & 9:00 AM" />
+          </div>
+          <div>
+            <Label htmlFor="wednesdayService">Wednesday Service</Label>
+            <Input id="wednesdayService" value={formData.wednesdayService} onChange={e => setFormData({...formData, wednesdayService: e.target.value})} placeholder="6:00 PM" />
+          </div>
+          <div>
+            <Label htmlFor="fridayService">Friday Service</Label>
+            <Input id="fridayService" value={formData.fridayService} onChange={e => setFormData({...formData, fridayService: e.target.value})} placeholder="7:00 PM" />
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t pt-6">
+        <h3 className="font-medium mb-4">Social Media Links</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="youtubeUrl">YouTube URL</Label>
+            <Input id="youtubeUrl" value={formData.youtubeUrl} onChange={e => setFormData({...formData, youtubeUrl: e.target.value})} placeholder="https://youtube.com/@channel" />
+          </div>
+          <div>
+            <Label htmlFor="instagramUrl">Instagram URL</Label>
+            <Input id="instagramUrl" value={formData.instagramUrl} onChange={e => setFormData({...formData, instagramUrl: e.target.value})} placeholder="https://instagram.com/church" />
+          </div>
+          <div>
+            <Label htmlFor="facebookUrl">Facebook URL</Label>
+            <Input id="facebookUrl" value={formData.facebookUrl} onChange={e => setFormData({...formData, facebookUrl: e.target.value})} placeholder="https://facebook.com/church" />
+          </div>
+          <div>
+            <Label htmlFor="twitterUrl">Twitter/X URL</Label>
+            <Input id="twitterUrl" value={formData.twitterUrl} onChange={e => setFormData({...formData, twitterUrl: e.target.value})} placeholder="https://x.com/church" />
           </div>
         </div>
       </div>
