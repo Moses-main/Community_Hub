@@ -102,8 +102,25 @@ export default function AnalyticsPage() {
           fetch(buildApiUrl(`/api/analytics/prayers?${params}`), { credentials: "include" }),
         ]);
 
-        if (!dashboardRes.ok || !donationRes.ok || !memberRes.ok || !eventRes.ok || !prayerRes.ok) {
-          throw new Error("Failed to fetch analytics data");
+        if (!dashboardRes.ok) {
+          const errorText = await dashboardRes.text();
+          throw new Error(`Dashboard error (${dashboardRes.status}): ${errorText}`);
+        }
+        if (!donationRes.ok) {
+          const errorText = await donationRes.text();
+          throw new Error(`Donations error (${donationRes.status}): ${errorText}`);
+        }
+        if (!memberRes.ok) {
+          const errorText = await memberRes.text();
+          throw new Error(`Members error (${memberRes.status}): ${errorText}`);
+        }
+        if (!eventRes.ok) {
+          const errorText = await eventRes.text();
+          throw new Error(`Events error (${eventRes.status}): ${errorText}`);
+        }
+        if (!prayerRes.ok) {
+          const errorText = await prayerRes.text();
+          throw new Error(`Prayers error (${prayerRes.status}): ${errorText}`);
         }
 
         const [dashboardData, donationData, memberData, eventData, prayerData] = await Promise.all([
@@ -121,7 +138,7 @@ export default function AnalyticsPage() {
         setPrayerStats(prayerData);
       } catch (err: any) {
         console.error("Error fetching analytics:", err);
-        setError(err.message || "Failed to load analytics");
+        setError(err.message || "Failed to load analytics. Make sure you're logged in as admin.");
       } finally {
         setLoading(false);
       }
