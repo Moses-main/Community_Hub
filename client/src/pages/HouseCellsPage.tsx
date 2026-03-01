@@ -91,7 +91,9 @@ export default function HouseCellsPage() {
   const [newCell, setNewCell] = useState({
     name: "",
     description: "",
-    location: "",
+    address: "",
+    leaderName: "",
+    leaderPhone: "",
     meetingDay: "",
     meetingTime: "",
   });
@@ -118,7 +120,7 @@ export default function HouseCellsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["house-cells"] });
       setShowCreateDialog(false);
-      setNewCell({ name: "", description: "", location: "", meetingDay: "", meetingTime: "" });
+      setNewCell({ name: "", description: "", address: "", leaderName: "", leaderPhone: "", meetingDay: "", meetingTime: "" });
       toast({ title: "Success", description: "House cell created successfully!" });
     },
     onError: () => {
@@ -211,12 +213,30 @@ export default function HouseCellsPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="location">Location</Label>
+                  <Label htmlFor="address">Address</Label>
                   <Input
-                    id="location"
-                    value={newCell.location}
-                    onChange={e => setNewCell({ ...newCell, location: e.target.value })}
+                    id="address"
+                    value={newCell.address}
+                    onChange={e => setNewCell({ ...newCell, address: e.target.value })}
                     placeholder="e.g., 123 Church Street"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="leaderName">Leader Name</Label>
+                  <Input
+                    id="leaderName"
+                    value={newCell.leaderName}
+                    onChange={e => setNewCell({ ...newCell, leaderName: e.target.value })}
+                    placeholder="e.g., John Doe"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="leaderPhone">Leader Contact</Label>
+                  <Input
+                    id="leaderPhone"
+                    value={newCell.leaderPhone}
+                    onChange={e => setNewCell({ ...newCell, leaderPhone: e.target.value })}
+                    placeholder="e.g., +2348000000000"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Pin, Trash2, Edit, Send, TrendingUp, UserPlus, UserMinus } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Pin, Trash2, Edit, Send, TrendingUp, UserPlus, UserMinus, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
@@ -55,6 +57,8 @@ export default function SocialFeedPage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [newComment, setNewComment] = useState("");
   const [postType, setPostType] = useState<"TEXT" | "TESTIMONY" | "PRAYER_REQUEST" | "ANNOUNCEMENT">("TEXT");
+  const [sharePost, setSharePost] = useState<{id: number; content: string} | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { data: posts, isLoading: loadingPosts, refetch: refetchPosts } = useQuery<Post[]>({
     queryKey: ["/api/feed"],
@@ -348,10 +352,38 @@ export default function SocialFeedPage() {
                       <MessageCircle className="w-4 h-4 mr-1" />
                       {post.commentsCount}
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-slate-500">
-                      <Share2 className="w-4 h-4 mr-1" />
-                      {post.sharesCount}
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-slate-500" onClick={() => setSharePost({id: post.id, content: post.content})}>
+                          <Share2 className="w-4 h-4 mr-1" />
+                          {post.sharesCount}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Share Post</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-600 line-clamp-3">{post.content}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input 
+                              readOnly 
+                              value={`${typeof window !== "undefined" ? window.location.origin : ""}/feed?post=${post.id}`}
+                              className="flex-1"
+                            />
+                            <Button size="sm" variant="outline" onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/feed?post=${post.id}`);
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                            }}>
+                              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                     
                     {user?.id !== post.userId && (
                       <Button
