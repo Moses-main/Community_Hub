@@ -117,15 +117,22 @@ export default function VolunteerPage() {
   });
 
   const signUpMutation = useMutation({
-    mutationFn: signUp,
+    mutationFn: async (opportunityId: number) => {
+      setSigningUpId(opportunityId);
+      return signUp(opportunityId);
+    },
     onSuccess: () => {
+      setSigningUpId(null);
       queryClient.invalidateQueries({ queryKey: ["volunteer-assignments"] });
       toast({ title: "Success", description: "You've signed up to volunteer!" });
     },
     onError: () => {
+      setSigningUpId(null);
       toast({ title: "Error", description: "Failed to sign up", variant: "destructive" });
     },
   });
+
+  const [signingUpId, setSigningUpId] = useState<number | null>(null);
 
   const isAdmin = user?.isAdmin;
   const activeOpportunities = opportunities?.filter(o => o.isActive && isAfter(parseISO(o.date), new Date())) || [];
@@ -373,10 +380,10 @@ export default function VolunteerPage() {
                       ) : (
                         <Button
                           onClick={() => signUpMutation.mutate(opportunity.id)}
-                          disabled={signUpMutation.isPending}
+                          disabled={signingUpId !== null}
                           className="w-full"
                         >
-                          {signUpMutation.isPending ? "Signing up..." : "Sign Up to Volunteer"}
+                          {signingUpId === opportunity.id ? "Signing up..." : "Sign Up to Volunteer"}
                         </Button>
                       )
                     ) : (
