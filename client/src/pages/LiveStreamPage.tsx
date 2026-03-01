@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Play, Eye, Users, ArrowLeft, StopCircle, Youtube } from "lucide-react";
+import { Play, Eye, Users, ArrowLeft, StopCircle, Youtube, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +29,22 @@ export default function LiveStreamPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const isAdmin = user?.isAdmin;
+  const [hasMarkedAttendance, setHasMarkedAttendance] = useState(false);
+
+  const markAttendanceMutation = useMutation({
+    mutationFn: async (streamId: number) => {
+      const res = await fetch(`/api/live-streams/${streamId}/attendance`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to mark attendance");
+      return res.json();
+    },
+    onSuccess: () => {
+      setHasMarkedAttendance(true);
+      queryClient.invalidateQueries({ queryKey: ["/api/live-streams/current"] });
+    },
+  });
 
   const { data: currentStream, isLoading: loadingCurrent } = useQuery<LiveStream | null>({
     queryKey: ["/api/live-streams/current"],
@@ -90,10 +106,30 @@ export default function LiveStreamPage() {
         </div>
         <div className="flex items-center gap-2">
           {currentStream && (
-            <span className="text-gray-500 flex items-center gap-1 text-sm">
-              <Eye className="w-4 h-4" />
-              {currentStream.viewerCount}
-            </span>
+            <>
+              <span className="text-gray-500 flex items-center gap-1 text-sm">
+                <Eye className="w-4 h-4" />
+                {currentStream.viewerCount}
+              </span>
+              {user && !hasMarkedAttendance && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => currentStream && markAttendanceMutation.mutate(currentStream.id)}
+                  disabled={markAttendanceMutation.isPending}
+                  className="gap-1"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  {markAttendanceMutation.isPending ? "Marking..." : "Mark Attendance"}
+                </Button>
+              )}
+              {hasMarkedAttendance && (
+                <span className="text-green-600 flex items-center gap-1 text-sm">
+                  <CheckCircle className="w-4 h-4" />
+                  Attending
+                </span>
+              )}
+            </>
           )}
           {isAdmin && (
             <Button size="sm" onClick={() => setLocation("/admin/live-stream/new")}>
