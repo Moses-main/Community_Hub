@@ -84,7 +84,8 @@ function Router() {
           <Route path="/live" component={LiveStreamPage} />
           <Route path="/admin/live-stream/new" component={AdminLiveStreamPage} />
           <Route path="/volunteer" component={VolunteerPage} />
-<Route path="/house-cells" component={HouseCellsPage} />
+          <Route path="/music" component={MusicPage} />
+          <Route path="/house-cells" component={HouseCellsPage} />
           <Route path="/groups" component={GroupsPage} />
           <Route path="/bible" component={BiblePage} />
           <Route path="/discipleship" component={DiscipleshipPage} />
