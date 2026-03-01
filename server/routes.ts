@@ -665,7 +665,10 @@ export async function registerRoutes(
       const limit = parseInt(req.query.limit as string) || 50;
       const role = req.query.role as string;
       const houseFellowship = req.query.houseFellowship as string;
+      const parish = req.query.parish as string;
       const search = req.query.search as string;
+      const dateFrom = req.query.dateFrom as string;
+      const dateTo = req.query.dateTo as string;
 
       const allUsers = await storage.getAllUsers();
       
@@ -677,6 +680,21 @@ export async function registerRoutes(
 
       if (houseFellowship) {
         filteredUsers = filteredUsers.filter(u => u.houseFellowship === houseFellowship);
+      }
+
+      if (parish) {
+        filteredUsers = filteredUsers.filter(u => u.parish === parish);
+      }
+
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        filteredUsers = filteredUsers.filter(u => u.createdAt && new Date(u.createdAt) >= fromDate);
+      }
+
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filteredUsers = filteredUsers.filter(u => u.createdAt && new Date(u.createdAt) <= toDate);
       }
 
       if (search) {
@@ -726,6 +744,7 @@ export async function registerRoutes(
         filters: {
           roles: Array.from(new Set(allUsers.map(u => u.role))),
           houseFellowships: Array.from(new Set(allUsers.map(u => u.houseFellowship).filter(Boolean) as string[])),
+          parishes: Array.from(new Set(allUsers.map(u => u.parish).filter(Boolean) as string[])),
         },
       });
     } catch (err) {

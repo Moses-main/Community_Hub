@@ -15,7 +15,10 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
-  User
+  User,
+  Download,
+  Calendar,
+  Activity
 } from "lucide-react";
 import { buildApiUrl } from "@/lib/api-config";
 
@@ -45,6 +48,7 @@ interface MembersResponse {
   filters: {
     roles: string[];
     houseFellowships: string[];
+    parishes?: string[];
   };
 }
 
@@ -82,6 +86,9 @@ export default function MembersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [houseFellowshipFilter, setHouseFellowshipFilter] = useState("");
+  const [parishFilter, setParishFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -100,6 +107,9 @@ export default function MembersPage() {
         if (search) params.append("search", search);
         if (roleFilter) params.append("role", roleFilter);
         if (houseFellowshipFilter) params.append("houseFellowship", houseFellowshipFilter);
+        if (parishFilter) params.append("parish", parishFilter);
+        if (dateFrom) params.append("dateFrom", dateFrom);
+        if (dateTo) params.append("dateTo", dateTo);
 
         const res = await fetch(buildApiUrl(`/api/members?${params}`), {
           credentials: "include",
@@ -122,10 +132,72 @@ export default function MembersPage() {
     if (user?.isAdmin) {
       fetchMembers();
     }
-  }, [user, page, roleFilter, houseFellowshipFilter]);
+  }, [user, page, roleFilter, houseFellowshipFilter, parishFilter, dateFrom, dateTo]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setPage(1);
+  };
+
+  const exportToCSV = () => {
+    if (!data?.members.length) return;
+    
+    const headers = ["Name", "Email", "Phone", "Role", "House Fellowship", "House Cell", "Parish", "Member Since"];
+    const rows = data.members.map(m => [
+      `${m.firstName} ${m.lastName}`,
+      m.email,
+      m.phone || "",
+      m.role,
+      m.houseFellowship || "",
+      m.houseCellLocation || "",
+      m.parish || "",
+      new Date(m.createdAt).toLocaleDateString()
+    ]);
+    
+    const csvContent = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `members_export_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = async () => {
+    if (!data?.members.length) return;
+    
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Member Directory", 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Exported on ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    let y = 40;
+    data.members.forEach((member, index) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.setFontSize(10);
+      doc.text(`${member.firstName} ${member.lastName}`, 14, y);
+      doc.setFontSize(8);
+      doc.text(`${member.email} | ${member.role} | Joined: ${new Date(member.createdAt).toLocaleDateString()}`, 14, y + 6);
+      y += 14;
+    });
+    
+    doc.save(`members_export_${new Date().toISOString().split("T")[0]}.pdf`);
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setRoleFilter("");
+    setHouseFellowshipFilter("");
+    setParishFilter("");
+    setDateFrom("");
+    setDateTo("");
     setPage(1);
   };
 
@@ -207,22 +279,54 @@ export default function MembersPage() {
               ))}
             </select>
 
-            {(roleFilter || houseFellowshipFilter || search) && (
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSearch("");
-                  setRoleFilter("");
-                  setHouseFellowshipFilter("");
-                  setPage(1);
-                }}
-              >
+            <select
+              value={parishFilter}
+              onChange={(e) => { setParishFilter(e.target.value); setPage(1); }}
+              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+            >
+              <option value="">All Parishes</option>
+              {data?.filters.parishes?.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              className="w-auto h-10"
+              placeholder="From date"
+            />
+
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              className="w-auto h-10"
+              placeholder="To date"
+            />
+
+            {(roleFilter || houseFellowshipFilter || parishFilter || dateFrom || dateTo || search) && (
+              <Button variant="outline" onClick={clearFilters}>
                 Clear Filters
               </Button>
             )}
           </div>
         </CardContent>
       </Card>
+
+      <div className="flex justify-end gap-2 mb-4">
+        <Button variant="outline" onClick={exportToCSV} disabled={!data?.members.length}>
+          <Download className="w-4 h-4 mr-2" />
+          Export CSV
+        </Button>
+        <Button variant="outline" onClick={exportToPDF} disabled={!data?.members.length}>
+          <Download className="w-4 h-4 mr-2" />
+          Export PDF
+        </Button>
+      </div>
 
       {loading && (
         <div className="flex items-center justify-center min-h-[200px]">
