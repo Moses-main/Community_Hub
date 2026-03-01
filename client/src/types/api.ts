@@ -54,8 +54,10 @@ export interface User {
   parish?: string;
   role?: UserRole;
   isAdmin?: boolean;
+  isSuperAdmin?: boolean;
   isVerified?: boolean;
   profileImage?: string | null;
+  organizationId?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

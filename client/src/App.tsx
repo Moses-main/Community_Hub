@@ -39,6 +39,7 @@ import MusicPage from "@/pages/MusicPage";
 import GroupsPage from "@/pages/GroupsPage";
 import BiblePage from "@/pages/BiblePage";
 import DiscipleshipPage from "@/pages/DiscipleshipPage";
+import SuperAdminPage from "@/pages/SuperAdminPage";
 import SermonClipGeneratorPage from "@/pages/SermonClipGeneratorPage";
 import SocialFeedPage from "@/pages/SocialFeedPage";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -92,6 +93,7 @@ function Router() {
           <Route path="/admin/sermon-clips" component={SermonClipGeneratorPage} />
           <Route path="/feed" component={SocialFeedPage} />
           <Route path="/privacy" component={PrivacyPage} />
+          <Route path="/super-admin" component={SuperAdminPage} />
           <Route path="/messages" component={MessagesPage} />
           <Route path="/settings/language" component={LanguageSettingsPage} />
           {/* Detail pages could be added here later e.g. /sermons/:id */}

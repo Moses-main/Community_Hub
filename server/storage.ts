@@ -131,6 +131,13 @@ export interface IStorage {
   updateUserHouseCell(id: string, houseCellLocation: string): Promise<User>;
   verifyUser(id: string): Promise<User>;
 
+  // Organizations (Super Admin)
+  getOrganizations(): Promise<any[]>;
+  getOrganization(id: string): Promise<any | undefined>;
+  createOrganization(org: any): Promise<any>;
+  updateOrganization(id: string, updates: any): Promise<any>;
+  deleteOrganization(id: string): Promise<void>;
+
   // Branding
   getBranding(): Promise<Branding | undefined>;
   updateBranding(branding: InsertBranding): Promise<Branding>;
@@ -496,6 +503,34 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  // Organizations (Super Admin)
+  async getOrganizations() {
+    return db.select().from(organizations).orderBy(desc(organizations.createdAt));
+  }
+
+  async getOrganization(id: string) {
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    return org;
+  }
+
+  async createOrganization(org: any) {
+    const [created] = await db.insert(organizations).values(org).returning();
+    return created;
+  }
+
+  async updateOrganization(id: string, updates: any) {
+    const [updated] = await db
+      .update(organizations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(organizations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteOrganization(id: string) {
+    await db.delete(organizations).where(eq(organizations.id, id));
   }
 
   async markUserContacted(id: string): Promise<void> {

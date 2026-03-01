@@ -383,7 +383,20 @@ export function Navbar() {
                   {user && (
                     <>
                       <div className="pt-4 mt-2 border-t border-slate-100">
-                        <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Account</p>
+                        {(user.isAdmin || user.isSuperAdmin) && (
+                          <Link
+                            href="/super-admin"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
+                              isActive("/super-admin")
+                                ? "bg-indigo-50 text-indigo-700"
+                                : "text-slate-600 hover:bg-slate-50"
+                            }`}
+                          >
+                            <Shield className="w-5 h-5" />
+                            Super Admin
+                          </Link>
+                        )}
                         <Link
                           href={user.isAdmin ? "/admin" : "/dashboard"}
                           onClick={() => setMobileMenuOpen(false)}
