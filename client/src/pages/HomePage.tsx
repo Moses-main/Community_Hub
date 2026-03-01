@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowRight, Play, Calendar, Heart, Clock, MapPin, Sparkles, Users, BookOpen, CheckCircle } from "lucide-react";
+import { ArrowRight, Play, Calendar, Clock, MapPin, Users, BookOpen, Heart, ChevronRight } from "lucide-react";
 import { useSermons } from "@/hooks/use-sermons";
 import { useEvents } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
@@ -7,10 +7,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FaPray } from "react-icons/fa";
-import { FaHandHoldingHeart } from "react-icons/fa";
 import { format } from "date-fns";
-import { motion } from "framer-motion";
 import { LocationMap } from "@/components/LocationMap";
 
 export default function HomePage() {
@@ -25,334 +22,250 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col">
-      {/* Hero Section - Clean white like Copperx with church background */}
-      <section className="relative min-h-[70vh] md:min-h-[85vh] h-screen flex items-center justify-center overflow-hidden">
-        {/* Church background image */}
+      {/* Hero Section - Clean SaaS Style */}
+      <section className="relative min-h-[70vh] md:min-h-[80vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-50 to-white">
         <div className="absolute inset-0">
           <img 
             src="https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=1920&auto=format&fit=crop&q=80" 
             alt="Worship Background" 
             className="w-full h-full object-cover"
           />
-          {/* Dark overlay */}
-          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-gray-900/40 to-gray-900/20" />
         </div>
         
-        {/* Content */}
-        <div className="container relative z-10 px-3 md:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-sm text-white text-xs font-medium mb-3 md:mb-6 border border-white/20"
-            >
-              <Sparkles className="w-3 h-3" />
+        <div className="container relative z-10 px-4 md:px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-xs font-medium mb-6 border border-white/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
               Welcome to WCCRM Lagos
-            </motion.div>
+            </div>
             
-            <motion.h1 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="font-display font-bold text-2xl sm:text-3xl md:text-5xl lg:text-7xl text-white mb-3 md:mb-6 leading-tight"
-            >
+            <h1 className="font-semibold text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white mb-6 leading-[1.15]">
               Experience the
-              <motion.span 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="block text-lg md:text-xl lg:text-4xl text-white font-stylish italic"
-              >
-                Power of Faith
-              </motion.span>
-            </motion.h1>
+              <span className="block text-indigo-200 mt-1">Power of Faith</span>
+            </h1>
             
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="text-sm md:text-xl lg:text-2xl text-white/90 max-w-2xl mx-auto mb-5 md:mb-10 font-light leading-relaxed"
-            >
+            <p className="text-base md:text-lg lg:text-xl text-white/80 max-w-xl mx-auto mb-8 leading-relaxed">
               Join a vibrant community dedicated to loving God, loving people, and making a difference in our city and beyond.
-            </motion.p>
+            </p>
             
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="flex flex-col sm:flex-row gap-2 md:gap-4 justify-center"
-            >
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
                 asChild
-                size="sm"
-                className="text-sm md:text-lg px-5 md:px-10 py-2 md:py-6 rounded-lg bg-red-900/60 backdrop-blur-md border border-red-700/30 text-red-100 hover:bg-red-800/70 transition-colors"
+                className="rounded-xl px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors"
               >
                 <Link href="/events">
-                  Plan a Visit <ArrowRight className="ml-1.5 w-3.5 h-3.5 md:w-5 md:h-5" />
+                  Plan a Visit <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
               </Button>
               <Button
                 asChild
-                size="sm"
-                className="text-sm md:text-lg px-5 md:px-8 py-2 md:py-6 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20"
+                variant="outline"
+                className="rounded-xl px-6 py-3 border-white/20 text-white bg-white/5 hover:bg-white/15 backdrop-blur-sm font-medium transition-colors"
               >
                 <Link href="/sermons">
-                  <Play className="mr-1.5 w-3.5 h-3.5 md:w-5 md:h-5" /> Watch Online
+                  <Play className="mr-2 w-4 h-4" /> Watch Online
                 </Link>
               </Button>
               {user && (
                 <Button
                   asChild
-                  size="sm"
-                  className="text-sm md:text-lg px-5 md:px-8 py-2 md:py-6 rounded-lg bg-green-600/80 backdrop-blur-md border border-green-500/30 text-white hover:bg-green-600"
+                  className="rounded-xl px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors"
                 >
                   <Link href="/attendance/checkin">
-                    <CheckCircle className="mr-1.5 w-3.5 h-3.5 md:w-5 md:h-5" /> Check In
+                    Check In
                   </Link>
                 </Button>
               )}
-            </motion.div>
+            </div>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-2 md:gap-8 max-w-2xl mx-auto mt-8 md:mt-16 pt-8 md:pt-16 border-t border-white/20">
+          <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto mt-16 pt-12 border-t border-white/10">
             <div className="text-center">
-              <div className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-0.5">5000+</div>
-              <div className="text-xs text-white/70">Members</div>
+              <div className="text-2xl md:text-3xl font-semibold text-white mb-1">5000+</div>
+              <div className="text-xs text-white/60">Members</div>
             </div>
             <div className="text-center">
-              <div className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-0.5">15+</div>
-              <div className="text-xs text-white/70">Years Active</div>
+              <div className="text-2xl md:text-3xl font-semibold text-white mb-1">15+</div>
+              <div className="text-xs text-white/60">Years Active</div>
             </div>
             <div className="text-center">
-              <div className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-0.5">50+</div>
-              <div className="text-xs text-white/70">Ministries</div>
+              <div className="text-2xl md:text-3xl font-semibold text-white mb-1">50+</div>
+              <div className="text-xs text-white/60">Ministries</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Upcoming Events Section */}
-      <motion.section 
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="py-6 md:py-16 bg-white"
-      >
-        <div className="container px-3 md:px-8">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6 md:mb-12"
-          >
+      <section className="py-16 md:py-24 bg-white">
+        <div className="container px-4 md:px-6">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
             <div>
-              <h2 className="text-xl md:text-3xl lg:text-4xl font-display font-bold mb-1 md:mb-3">
-                {t("upcomingEvents")}
+              <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">
+                Upcoming Events
               </h2>
-              <p className="text-gray-500 text-sm md:text-lg">
-                {t("joinUsForFellowship") || "Join us for fellowship and growth"}
+              <p className="text-gray-500 text-sm md:text-base">
+                Join us for fellowship and growth
               </p>
             </div>
-            <Button variant="ghost" asChild className="gap-2 self-start md:self-auto text-sm">
+            <Button variant="ghost" asChild className="gap-2 self-start md:self-auto text-gray-600 hover:text-gray-900">
               <Link href="/events">
-                {t("viewAll")} <ArrowRight size={14} />
+                View all <ChevronRight size={16} />
               </Link>
             </Button>
-          </motion.div>
+          </div>
 
           {loadingEvents ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array(3).fill(0).map((_, i) => (
-                <div key={i} className="space-y-2 md:space-y-4">
-                  <Skeleton className="h-32 md:h-48 rounded-xl md:rounded-2xl" />
-                  <Skeleton className="h-4 md:h-6 w-3/4" />
-                  <Skeleton className="h-3 md:h-4 w-1/2" />
+                <div key={i} className="space-y-4">
+                  <Skeleton className="h-48 rounded-2xl" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
                 </div>
               ))}
             </div>
           ) : upcomingEvents.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {upcomingEvents.slice(0, 3).map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 md:py-16 border border-gray-100 rounded-xl md:rounded-2xl">
-              <Calendar className="h-8 w-8 md:h-16 md:w-16 mx-auto text-gray-200 mb-2 md:mb-4" />
-              <p className="text-gray-500 text-sm md:text-lg">{t("noEvents")}</p>
-              <Button variant="ghost" asChild className="mt-2 md:mt-4 text-sm">
-                <Link href="/events"><span>View Past Events</span></Link>
+            <div className="text-center py-16 border border-gray-100 rounded-2xl bg-gray-50/50">
+              <Calendar className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-500 mb-4">No upcoming events</p>
+              <Button variant="ghost" asChild>
+                <Link href="/events">View Past Events</Link>
               </Button>
             </div>
           )}
         </div>
-      </motion.section>
+      </section>
 
       {/* Latest Sermons Section */}
-      <motion.section 
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="py-6 md:py-16 bg-gray-50/50"
-      >
-        <div className="container px-3 md:px-8">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6 md:mb-12">
+      <section className="py-16 md:py-24 bg-gray-50">
+        <div className="container px-4 md:px-6">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
             <div>
-              <h2 className="text-xl md:text-3xl lg:text-4xl font-display font-bold mb-1 md:mb-3">
+              <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">
                 Latest Sermons
               </h2>
-              <p className="text-gray-500 text-sm md:text-lg">
+              <p className="text-gray-500 text-sm md:text-base">
                 Experience God's word through our preaching
               </p>
             </div>
-            <Button variant="ghost" asChild className="gap-2 self-start md:self-auto text-sm">
+            <Button variant="ghost" asChild className="gap-2 self-start md:self-auto text-gray-600 hover:text-gray-900">
               <Link href="/sermons">
-                View All Sermons <ArrowRight size={14} />
+                View all sermons <ChevronRight size={16} />
               </Link>
             </Button>
           </div>
 
           {loadingSermons ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array(3).fill(0).map((_, i) => (
-                <div key={i} className="space-y-2 md:space-y-4">
-                  <Skeleton className="aspect-video rounded-xl md:rounded-2xl" />
-                  <Skeleton className="h-4 md:h-6 w-3/4" />
-                  <Skeleton className="h-3 md:h-4 w-1/2" />
+                <div key={i} className="space-y-4">
+                  <Skeleton className="aspect-video rounded-2xl" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
                 </div>
               ))}
             </div>
           ) : sermons && sermons.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {sermons.slice(0, 3).map((sermon) => (
                 <SermonCard key={sermon.id} sermon={sermon} />
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 md:py-16 bg-gray-50 rounded-xl md:rounded-2xl">
-              <Play className="h-8 w-8 md:h-16 md:w-16 mx-auto text-gray-300 mb-2 md:mb-4" />
-              <p className="text-gray-500 text-sm md:text-lg">{t("noSermons")}</p>
+            <div className="text-center py-16 bg-white rounded-2xl shadow-soft">
+              <Play className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-500">No sermons available</p>
             </div>
           )}
         </div>
-      </motion.section>
+      </section>
 
-      {/* Call to Action - Prayer & Giving */}
-      {/* <section className="section-py bg-white">
-        <div className="container px-4 md:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <div className="border border-gray-100 rounded-2xl p-8 hover:shadow-lg transition-shadow">
-              <div className="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center mb-5">
-                <FaPray className="w-6 h-6 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-display font-bold text-gray-900 mb-3">
-                Need Prayer?
-              </h3>
-              <p className="text-gray-500 mb-6">
-                We believe in the power of prayer. Share your request and let our community stand with you.
-              </p>
-              <Button asChild variant="outline" className="rounded-lg px-6">
-                <Link href="/prayer">Share Request</Link>
-              </Button>
-            </div>
-
-            <div className="border border-gray-100 rounded-2xl p-8 hover:shadow-lg transition-shadow">
-              <div className="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center mb-5">
-                <FaHandHoldingHeart className="w-6 h-6 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-display font-bold text-gray-900 mb-3">
-                Give Online
-              </h3>
-              <p className="text-gray-500 mb-6">
-                Support the mission and ministry of WCCRM Lagos through generous giving.
-              </p>
-              <Button asChild className="rounded-lg px-6 bg-purple-600 hover:bg-purple-700">
-                <Link href="/give">Give Now</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section> */}
-
-      {/* Features / Ministries Preview */}
-      <section className="py-6 md:py-16 bg-gray-50/50">
-        <div className="container px-3 md:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-6 md:mb-12">
-            <h2 className="text-xl md:text-3xl lg:text-4xl font-display font-bold mb-2 md:mb-4">
+      {/* Ministries Section */}
+      <section className="py-16 md:py-24 bg-white">
+        <div className="container px-4 md:px-6">
+          <div className="text-center max-w-xl mx-auto mb-12">
+            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-3">
               Our Ministries
             </h2>
-            <p className="text-gray-500 text-sm md:text-lg">
+            <p className="text-gray-500 text-sm md:text-base">
               We have various ministries designed to help you grow in your faith and serve others
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <MinistryCard 
-              icon={<Users className="w-5 h-5 md:w-8 md:h-8" />}
+              icon={<Users className="w-6 h-6" />}
               title="Community Groups"
               description="Connect with others in small groups for fellowship and growth"
+              href="/groups"
             />
             <MinistryCard 
-              icon={<BookOpen className="w-5 h-5 md:w-8 md:h-8" />}
+              icon={<BookOpen className="w-6 h-6" />}
               title="Bible Study"
               description="Dive deeper into God's word with our weekly Bible study sessions"
+              href="/bible"
             />
             <MinistryCard 
-              icon={<Heart className="w-5 h-5 md:w-8 md:h-8" />}
+              icon={<Heart className="w-6 h-6" />}
               title="Prayer Ministry"
               description="Join our prayer team and experience the power of prayer"
+              href="/prayer"
             />
           </div>
         </div>
       </section>
 
-      {/* Church Building Section */}
-      <section className="relative min-h-[40vh] md:min-h-[60vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src="/church_building.avif" 
-            alt="WCCRM Lagos Church Building" 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/40" />
-        </div>
-        
-        <div className="container relative z-10 px-3 md:px-8">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="font-display font-bold text-xl md:text-4xl lg:text-5xl text-white mb-3 md:mb-6">
-              Visit Us This Sunday
-            </h2>
-            <p className="text-sm md:text-xl text-white/90 mb-5 md:mb-8 leading-relaxed">
-              We welcome you to join us for worship, fellowship, and community. 
-              Experience the warmth of God's love at WCCRM Lagos.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 md:gap-4 justify-center">
-              <Button
-                asChild
-                size="sm"
-                className="text-sm md:text-lg px-5 md:px-8 py-2 md:py-6 rounded-lg bg-white text-gray-900 hover:bg-gray-100"
-              >
-                <Link href="/events">
-                  Service Times <ArrowRight className="ml-1.5 w-3.5 h-3.5 md:w-5 md:h-5" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="sm"
-                variant="outline"
-                className="text-sm md:text-lg px-5 md:px-8 py-2 md:py-6 rounded-lg border-white text-white bg-transparent hover:bg-white/10"
-              >
-                <Link href="/contact">
-                  Get Directions
-                </Link>
-              </Button>
+      {/* Visit Us Section */}
+      <section className="py-16 md:py-24 bg-gray-50">
+        <div className="container px-4 md:px-6">
+          <Card className="overflow-hidden shadow-soft-md rounded-2xl">
+            <div className="grid md:grid-cols-2">
+              <div className="relative min-h-[300px] md:min-h-full">
+                <img 
+                  src="/church_building.avif" 
+                  alt="WCCRM Lagos Church Building" 
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-8 md:p-12 flex flex-col justify-center">
+                <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-4">
+                  Visit Us This Sunday
+                </h2>
+                <p className="text-gray-500 mb-8 leading-relaxed">
+                  We welcome you to join us for worship, fellowship, and community. 
+                  Experience the warmth of God's love at WCCRM Lagos.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    asChild
+                    className="rounded-xl px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+                  >
+                    <Link href="/events">
+                      Service Times <ArrowRight className="ml-2 w-4 h-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="rounded-xl px-6 py-3 border-gray-200 text-gray-700 hover:bg-gray-50 font-medium"
+                  >
+                    <Link href="/contact">
+                      Get Directions
+                    </Link>
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          </Card>
         </div>
       </section>
 
@@ -367,8 +280,8 @@ function EventCard({ event }: { event: any }) {
   
   return (
     <Link href={`/events/${event.id}`}>
-      <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border border-gray-100 bg-white h-full">
-        <div className="aspect-[4/3] relative bg-gray-50">
+      <Card className="overflow-hidden shadow-soft hover:shadow-soft-md transition-all duration-200 border-0 bg-white rounded-2xl h-full group cursor-pointer">
+        <div className="aspect-[4/3] relative bg-gray-100">
           {event.imageUrl ? (
             <img 
               src={event.imageUrl} 
@@ -377,23 +290,23 @@ function EventCard({ event }: { event: any }) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <Calendar className="h-8 w-8 md:h-12 md:w-12 text-gray-200" />
+              <Calendar className="h-10 w-10 text-gray-300" />
             </div>
           )}
-          <div className="absolute top-2 left-2 bg-white px-2 py-1 rounded-lg text-center shadow-sm border border-gray-100">
-            <div className="text-[10px] font-semibold uppercase text-gray-500">{format(eventDate, "MMM")}</div>
-            <div className="text-base md:text-xl font-bold text-gray-900 leading-none">{format(eventDate, "dd")}</div>
+          <div className="absolute top-3 left-3 bg-white px-3 py-2 rounded-xl text-center shadow-soft">
+            <div className="text-[10px] font-semibold uppercase text-gray-500 tracking-wide">{format(eventDate, "MMM")}</div>
+            <div className="text-xl font-semibold text-gray-900 leading-none">{format(eventDate, "dd")}</div>
           </div>
         </div>
-        <CardContent className="p-2.5 md:p-4">
-          <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1 text-sm">{event.title}</h3>
-          <div className="space-y-0.5 text-xs text-gray-500">
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3 h-3" />
+        <CardContent className="p-5">
+          <h3 className="font-semibold text-gray-900 mb-3 line-clamp-1 text-base">{event.title}</h3>
+          <div className="space-y-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-gray-400" />
               <span>{format(eventDate, "EEEE, h:mm a")}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <MapPin className="w-3 h-3" />
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-gray-400" />
               <span className="line-clamp-1">{event.location}</span>
             </div>
           </div>
@@ -408,8 +321,8 @@ function SermonCard({ sermon }: { sermon: any }) {
   
   return (
     <Link href={`/sermons/${sermon.id}`}>
-      <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 border border-gray-100 bg-white h-full">
-        <div className="aspect-video relative bg-gray-50 group">
+      <Card className="overflow-hidden shadow-soft hover:shadow-soft-md transition-all duration-200 border-0 bg-white rounded-2xl h-full group cursor-pointer">
+        <div className="aspect-video relative bg-gray-100">
           {sermon.thumbnailUrl ? (
             <img 
               src={sermon.thumbnailUrl} 
@@ -418,27 +331,27 @@ function SermonCard({ sermon }: { sermon: any }) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <Play className="h-6 w-6 md:h-10 md:w-10 text-gray-200" />
+              <Play className="h-8 w-8 text-gray-300" />
             </div>
           )}
           {sermon.videoUrl && (
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-              <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white flex items-center justify-center shadow">
-                <Play className="h-2.5 w-2.5 md:h-4 md:w-4 text-gray-900 ml-0.5" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900/20">
+              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg">
+                <Play className="h-4 w-4 text-gray-900 ml-0.5" />
               </div>
             </div>
           )}
         </div>
-        <CardContent className="p-2.5 md:p-4">
+        <CardContent className="p-5">
           {sermon.series && (
-            <p className="text-[10px] font-medium text-purple-600 mb-1">
+            <p className="text-xs font-medium text-indigo-600 mb-2">
               {sermon.series}
             </p>
           )}
-          <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2 text-sm">{sermon.title}</h3>
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <h3 className="font-semibold text-gray-900 mb-3 line-clamp-2 text-base">{sermon.title}</h3>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
             <span>{sermon.speaker}</span>
-            <span>·</span>
+            <span className="text-gray-300">·</span>
             <span>{format(sermonDate, "MMM d")}</span>
           </div>
         </CardContent>
@@ -447,16 +360,18 @@ function SermonCard({ sermon }: { sermon: any }) {
   );
 }
 
-function MinistryCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+function MinistryCard({ icon, title, description, href }: { icon: React.ReactNode; title: string; description: string; href: string }) {
   return (
-    <Card className="bg-white border border-gray-100 hover:shadow-lg transition-all duration-200 h-full">
-      <CardContent className="p-3 md:p-6 text-center">
-        <div className="w-9 h-9 md:w-12 md:h-12 rounded-xl bg-purple-50 flex items-center justify-center mx-auto mb-2 md:mb-4 text-purple-600">
-          {icon}
-        </div>
-        <h3 className="font-semibold text-gray-900 mb-1 text-sm">{title}</h3>
-        <p className="text-gray-500 text-xs">{description}</p>
-      </CardContent>
-    </Card>
+    <Link href={href}>
+      <Card className="bg-white border-0 shadow-soft hover:shadow-soft-md transition-all duration-200 rounded-2xl h-full group cursor-pointer">
+        <CardContent className="p-8 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-5 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+            {icon}
+          </div>
+          <h3 className="font-semibold text-gray-900 mb-2 text-lg">{title}</h3>
+          <p className="text-gray-500 text-sm leading-relaxed">{description}</p>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
