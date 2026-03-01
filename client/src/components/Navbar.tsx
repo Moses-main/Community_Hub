@@ -72,7 +72,7 @@ export function Navbar() {
           : "bg-white border-b border-slate-100"
       }`}
     >
-      <div className="max-w-6xl mx-auto px-6 h-16 md:h-18 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 h-16 md:h-18 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
           <img 
             src="/church_logo.jpeg" 

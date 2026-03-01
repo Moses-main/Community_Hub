@@ -478,7 +478,7 @@ export default function AdminDashboardPage() {
         <title>Admin Dashboard | WCCRM Lagos</title>
       </Helmet>
 
-      <div className="container px-4 md:px-8 max-w-6xl mx-auto">
+      <div className="container px-4 md:px-8 max-w-[95%] mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-display font-bold text-gray-900">Admin Dashboard</h1>
