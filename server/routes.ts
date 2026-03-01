@@ -25,6 +25,7 @@ interface AuthenticatedRequest extends Request {
     firstName?: string;
     lastName?: string;
     isAdmin?: boolean;
+    isSuperAdmin?: boolean;
     role?: string;
   };
 }
@@ -73,7 +74,8 @@ const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) =
       email: user.email!,
       firstName: user.firstName || undefined,
       lastName: user.lastName || undefined,
-      isAdmin: user.email === 'admin@wccrm.com', // Simple admin check
+      isAdmin: user.email === 'admin@wccrm.com' || user.isAdmin === true, // Simple admin check
+      isSuperAdmin: user.email === 'superadmin@wccrm.com' || user.isSuperAdmin === true,
       role: user.role || undefined
     };
     
@@ -6992,4 +6994,98 @@ async function seedDatabase() {
       isActive: true,
     });
   }
+
+  // === Super Admin Routes ===
+  
+  // Get all organizations (super admin only)
+  app.get("/api/super-admin/organizations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isSuperAdmin) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+      const organizations = await storage.getOrganizations();
+      res.json(organizations);
+    } catch (err) {
+      console.error("Error fetching organizations:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create organization (super admin only)
+  app.post("/api/super-admin/organizations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isSuperAdmin) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+      const { name, slug, description, logoUrl, churchName, churchEmail, churchPhone, churchAddress, churchCity, churchState, churchCountry, isActive } = req.body;
+      
+      if (!name || !slug) {
+        return res.status(400).json({ message: "Name and slug are required" });
+      }
+
+      const org = await storage.createOrganization({
+        name,
+        slug,
+        description: description || null,
+        logoUrl: logoUrl || null,
+        churchName: churchName || null,
+        churchEmail: churchEmail || null,
+        churchPhone: churchPhone || null,
+        churchAddress: churchAddress || null,
+        churchCity: churchCity || null,
+        churchState: churchState || null,
+        churchCountry: churchCountry || null,
+        isActive: isActive ?? true,
+      });
+      res.status(201).json(org);
+    } catch (err) {
+      console.error("Error creating organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update organization (super admin only)
+  app.put("/api/super-admin/organizations/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isSuperAdmin) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+      const id = req.params.id;
+      const { name, slug, description, logoUrl, churchName, churchEmail, churchPhone, churchAddress, churchCity, churchState, churchCountry, isActive } = req.body;
+
+      const org = await storage.updateOrganization(id, {
+        name,
+        slug,
+        description: description || null,
+        logoUrl: logoUrl || null,
+        churchName: churchName || null,
+        churchEmail: churchEmail || null,
+        churchPhone: churchPhone || null,
+        churchAddress: churchAddress || null,
+        churchCity: churchCity || null,
+        churchState: churchState || null,
+        churchCountry: churchCountry || null,
+        isActive,
+      });
+      res.json(org);
+    } catch (err) {
+      console.error("Error updating organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete organization (super admin only)
+  app.delete("/api/super-admin/organizations/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.isSuperAdmin) {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+      const id = req.params.id;
+      await storage.deleteOrganization(id);
+      res.json({ message: "Organization deleted" });
+    } catch (err) {
+      console.error("Error deleting organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 }
