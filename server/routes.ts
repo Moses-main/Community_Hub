@@ -2,8 +2,8 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage, type ISermonFilter } from "./storage";
 import { db } from "./db";
-import { supportedLanguages, groupJoinRequests, groupActivityLogs, volunteerSkills, volunteerBadges, volunteerOpportunities } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { supportedLanguages, groupJoinRequests, groupActivityLogs, volunteerSkills, volunteerBadges, volunteerOpportunities, userReports } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -25,6 +25,7 @@ interface AuthenticatedRequest extends Request {
     firstName?: string;
     lastName?: string;
     isAdmin?: boolean;
+    role?: string;
   };
 }
 
@@ -72,7 +73,8 @@ const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) =
       email: user.email!,
       firstName: user.firstName || undefined,
       lastName: user.lastName || undefined,
-      isAdmin: user.email === 'admin@wccrm.com' // Simple admin check
+      isAdmin: user.email === 'admin@wccrm.com', // Simple admin check
+      role: user.role || undefined
     };
     
     next();
@@ -86,6 +88,14 @@ const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) =
 const isAdmin = async (req: AuthenticatedRequest, res: any, next: any) => {
   if (!req.user?.isAdmin) {
     return res.status(403).json({ message: "Admin access required" });
+  }
+  next();
+};
+
+// Pastor middleware (admin or pastor role)
+const isPastor = async (req: AuthenticatedRequest, res: any, next: any) => {
+  if (!req.user?.isAdmin && req.user?.role !== 'PASTOR' && req.user?.role !== 'PASTORS_WIFE') {
+    return res.status(403).json({ message: "Pastor access required" });
   }
   next();
 };
@@ -1425,6 +1435,1217 @@ export async function registerRoutes(
     }
   });
 
+  // === AI SERMON SEARCH & RECOMMENDATIONS ===
+
+  // Record sermon view
+  app.post("/api/sermons/:id/view", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const sermonId = Number(req.params.id);
+      const userId = req.user!.id;
+      const { watchDuration, completed } = req.body;
+      
+      const view = await storage.recordSermonView(sermonId, userId, watchDuration || 0, completed || false);
+      res.json(view);
+    } catch (err) {
+      console.error("Error recording sermon view:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's sermon views
+  app.get("/api/sermons/views/me", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const views = await storage.getUserSermonViews(userId);
+      res.json(views);
+    } catch (err) {
+      console.error("Error fetching sermon views:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get popular sermons
+  app.get("/api/sermons/popular", async (req, res) => {
+    try {
+      const sermons = await storage.getPopularSermons(10);
+      res.json(sermons);
+    } catch (err) {
+      console.error("Error fetching popular sermons:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get/update user sermon preferences
+  app.get("/api/sermons/preferences", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const prefs = await storage.getUserSermonPreferences(userId);
+      res.json(prefs || { userId, favoriteSpeakers: [], favoriteTopics: [], favoriteSeries: [] });
+    } catch (err) {
+      console.error("Error fetching preferences:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/sermons/preferences", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { favoriteSpeakers, favoriteTopics, favoriteSeries } = req.body;
+      
+      const prefs = await storage.updateUserSermonPreferences(userId, {
+        favoriteSpeakers,
+        favoriteTopics,
+        favoriteSeries,
+      });
+      res.json(prefs);
+    } catch (err) {
+      console.error("Error updating preferences:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get personalized recommendations
+  app.get("/api/sermons/recommendations/personal", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const sermons = await storage.getSermonRecommendations(userId, 10);
+      res.json(sermons);
+    } catch (err) {
+      console.error("Error fetching recommendations:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Search sermons (AI-powered)
+  app.get("/api/sermons/search/ai", async (req, res) => {
+    try {
+      const { q, limit = 20 } = req.query;
+      const searchQuery = q as string;
+      
+      if (!searchQuery) {
+        return res.status(400).json({ message: "Search query required" });
+      }
+      
+      const sermons = await storage.searchSermons(searchQuery, parseInt(limit as string) || 20);
+      res.json(sermons);
+    } catch (err) {
+      console.error("Error searching sermons:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get related sermons (using storage method)
+  app.get("/api/sermons/:id/related-ai", async (req, res) => {
+    try {
+      const sermonId = Number(req.params.id);
+      const sermons = await storage.getRelatedSermons(sermonId, 5);
+      res.json(sermons);
+    } catch (err) {
+      console.error("Error fetching related sermons:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Generate AI summary (using storage method)
+  app.get("/api/sermons/:id/ai-summary", async (req, res) => {
+    try {
+      const sermonId = Number(req.params.id);
+      const summary = await storage.generateSermonSummary(sermonId);
+      res.json({ summary, sermonId });
+    } catch (err) {
+      console.error("Error generating summary:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === AI CHURCH ASSISTANT (CHATBOT) ===
+
+  // Start a new chat conversation
+  app.post("/api/chat/conversations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { sessionId, title } = req.body;
+      
+      const conversation = await storage.createChatConversation({
+        userId,
+        sessionId: sessionId || `session_${Date.now()}`,
+        title,
+      });
+      
+      res.json(conversation);
+    } catch (err) {
+      console.error("Error creating conversation:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's chat conversations
+  app.get("/api/chat/conversations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const conversations = await storage.getChatConversationsByUser(userId);
+      res.json(conversations);
+    } catch (err) {
+      console.error("Error fetching conversations:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get a specific conversation with messages
+  app.get("/api/chat/conversations/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      const conversation = await storage.getChatConversation(id);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      const messages = await storage.getChatMessages(id);
+      res.json({ conversation, messages });
+    } catch (err) {
+      console.error("Error fetching conversation:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Send a message to the chatbot
+  app.post("/api/chat/message", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { message, conversationId, sessionId } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      
+      let convId = conversationId;
+      
+      // Create new conversation if none provided
+      if (!convId) {
+        const conversation = await storage.createChatConversation({
+          userId,
+          sessionId: sessionId || `session_${Date.now()}`,
+        });
+        convId = conversation.id;
+      }
+      
+      // Save user message
+      await storage.addChatMessage({
+        conversationId: convId,
+        role: "user",
+        content: message,
+      });
+      
+      // Get AI response
+      const botResponse = await storage.generateChatbotResponse(message, convId);
+      
+      // Save assistant message
+      const assistantMessage = await storage.addChatMessage({
+        conversationId: convId,
+        role: "assistant",
+        content: botResponse.response,
+        metadata: botResponse.intentName ? { intentId: botResponse.intentId, intentName: botResponse.intentName } : undefined,
+      } as any);
+      
+      // Update conversation
+      await storage.updateChatConversation(convId, { status: "active" });
+      
+      res.json({
+        conversationId: convId,
+        userMessage: message,
+        response: botResponse.response,
+        messageId: assistantMessage.id,
+        intent: botResponse.intentName,
+      });
+    } catch (err) {
+      console.error("Error processing chat message:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Quick chat (anonymous, no session required)
+  app.post("/api/chat/quick", async (req, res) => {
+    try {
+      const { message } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      
+      const botResponse = await storage.generateChatbotResponse(message);
+      
+      res.json({
+        response: botResponse.response,
+        intent: botResponse.intentName,
+      });
+    } catch (err) {
+      console.error("Error in quick chat:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get chatbot intents (admin)
+  app.get("/api/chat/intents", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const intents = await storage.getChatbotIntents();
+      res.json(intents);
+    } catch (err) {
+      console.error("Error fetching intents:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create chatbot intent (admin)
+  app.post("/api/chat/intents", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, patterns, responses, category, keywords, priority } = req.body;
+      
+      const intent = await storage.createChatbotIntent({
+        name,
+        patterns,
+        responses,
+        category,
+        keywords,
+        priority: priority || 0,
+      });
+      
+      res.json(intent);
+    } catch (err) {
+      console.error("Error creating intent:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update chatbot intent (admin)
+  app.put("/api/chat/intents/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { name, patterns, responses, category, keywords, priority, isActive } = req.body;
+      
+      const intent = await storage.updateChatbotIntent(id, {
+        name,
+        patterns,
+        responses,
+        category,
+        keywords,
+        priority,
+        isActive,
+      });
+      
+      res.json(intent);
+    } catch (err) {
+      console.error("Error updating intent:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete chatbot intent (admin)
+  app.delete("/api/chat/intents/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteChatbotIntent(id);
+      res.json({ message: "Intent deleted" });
+    } catch (err) {
+      console.error("Error deleting intent:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get/update chatbot preferences
+  app.get("/api/chat/preferences", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const prefs = await storage.getChatbotPreferences(userId);
+      res.json(prefs || { userId, language: "en", notificationEnabled: true, digestPreference: "daily" });
+    } catch (err) {
+      console.error("Error fetching preferences:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/chat/preferences", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { language, notificationEnabled, digestPreference } = req.body;
+      
+      const prefs = await storage.updateChatbotPreferences(userId, {
+        language,
+        notificationEnabled,
+        digestPreference,
+      });
+      
+      res.json(prefs);
+    } catch (err) {
+      console.error("Error updating preferences:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get chatbot analytics (admin)
+  app.get("/api/chat/analytics", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const analytics = await storage.getChatbotAnalytics();
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error fetching analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === MULTI-CAMPUS & BRANCH MANAGEMENT ===
+
+  // Get all campuses
+  app.get("/api/campuses", async (req, res) => {
+    try {
+      const includeInactive = req.query.includeInactive === 'true';
+      const campuses = await storage.getCampuses(includeInactive);
+      res.json(campuses);
+    } catch (err) {
+      console.error("Error fetching campuses:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get campus by ID
+  app.get("/api/campuses/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const campus = await storage.getCampus(id);
+      if (!campus) {
+        return res.status(404).json({ message: "Campus not found" });
+      }
+      res.json(campus);
+    } catch (err) {
+      console.error("Error fetching campus:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create campus (admin)
+  app.post("/api/campuses", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, code, address, city, state, country, phone, email, website, pastorId, isHeadquarters, timezone, logoUrl } = req.body;
+      const campus = await storage.createCampus({
+        name, code, address, city, state, country, phone, email, website, pastorId, isHeadquarters: isHeadquarters || false, timezone, logoUrl,
+      });
+      res.json(campus);
+    } catch (err) {
+      console.error("Error creating campus:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update campus (admin)
+  app.put("/api/campuses/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const campus = await storage.updateCampus(id, req.body);
+      res.json(campus);
+    } catch (err) {
+      console.error("Error updating campus:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete campus (admin)
+  app.delete("/api/campuses/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteCampus(id);
+      res.json({ message: "Campus deleted" });
+    } catch (err) {
+      console.error("Error deleting campus:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get branches by campus
+  app.get("/api/campuses/:id/branches", async (req, res) => {
+    try {
+      const campusId = Number(req.params.id);
+      const includeInactive = req.query.includeInactive === 'true';
+      const branches = await storage.getBranchesByCampus(campusId, includeInactive);
+      res.json(branches);
+    } catch (err) {
+      console.error("Error fetching branches:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create branch (admin)
+  app.post("/api/branches", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { campusId, name, code, address, city, state, leaderId, leaderName, leaderPhone } = req.body;
+      const branch = await storage.createBranch({ campusId, name, code, address, city, state, leaderId, leaderName, leaderPhone });
+      res.json(branch);
+    } catch (err) {
+      console.error("Error creating branch:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update branch (admin)
+  app.put("/api/branches/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const branch = await storage.updateBranch(id, req.body);
+      res.json(branch);
+    } catch (err) {
+      console.error("Error updating branch:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete branch (admin)
+  app.delete("/api/branches/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteBranch(id);
+      res.json({ message: "Branch deleted" });
+    } catch (err) {
+      console.error("Error deleting branch:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's campus/branch
+  app.get("/api/my-campuses", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const member = await storage.getCampusMember(userId);
+      res.json(member);
+    } catch (err) {
+      console.error("Error fetching user campus:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get campus members
+  app.get("/api/campuses/:id/members", isAuthenticated, async (req, res) => {
+    try {
+      const campusId = Number(req.params.id);
+      const members = await storage.getCampusMembers(campusId);
+      res.json(members);
+    } catch (err) {
+      console.error("Error fetching campus members:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Assign member to campus (admin)
+  app.post("/api/campuses/:id/members", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const campusId = Number(req.params.id);
+      const { userId, branchId, membershipType } = req.body;
+      const member = await storage.assignMemberToCampus({ userId, campusId, branchId, membershipType });
+      res.json(member);
+    } catch (err) {
+      console.error("Error assigning member:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Request campus transfer
+  app.post("/api/campuses/transfer", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { toCampusId, toBranchId, notes } = req.body;
+      const currentMember = await storage.getCampusMember(userId);
+      const transfer = await storage.createTransfer({
+        userId,
+        fromCampusId: currentMember?.campusId,
+        fromBranchId: currentMember?.branchId,
+        toCampusId,
+        toBranchId,
+        notes,
+      });
+      res.json(transfer);
+    } catch (err) {
+      console.error("Error creating transfer:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get pending transfers (admin)
+  app.get("/api/campuses/transfers", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const transfers = await storage.getPendingTransfers();
+      res.json(transfers);
+    } catch (err) {
+      console.error("Error fetching transfers:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Approve transfer (admin)
+  app.post("/api/campuses/transfers/:id/approve", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const approvedBy = req.user!.id;
+      const transfer = await storage.approveTransfer(id, approvedBy);
+      res.json(transfer);
+    } catch (err) {
+      console.error("Error approving transfer:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Reject transfer (admin)
+  app.post("/api/campuses/transfers/:id/reject", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const approvedBy = req.user!.id;
+      const transfer = await storage.rejectTransfer(id, approvedBy);
+      res.json(transfer);
+    } catch (err) {
+      console.error("Error rejecting transfer:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get campus statistics (admin)
+  app.get("/api/campuses/:id/stats", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const campusId = Number(req.params.id);
+      const stats = await storage.getCampusStats(campusId);
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching campus stats:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === PRIVACY, SAFETY & MODERATION CONTROLS ===
+
+  // Get privacy settings
+  app.get("/api/privacy", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const settings = await storage.getPrivacySettings(userId);
+      res.json(settings || { userId, profileVisibility: "members", showEmail: false, showPhone: false, showBirthday: true, showSocialLinks: true, allowMessages: true, allowGroupInvites: true });
+    } catch (err) {
+      console.error("Error fetching privacy settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update privacy settings
+  app.put("/api/privacy", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const settings = await storage.updatePrivacySettings(userId, req.body);
+      res.json(settings);
+    } catch (err) {
+      console.error("Error updating privacy settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Block user
+  app.post("/api/users/:id/block", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const blockerId = req.user!.id;
+      const blockedId = req.params.id;
+      const { reason } = req.body;
+      const reasonStr = typeof reason === 'string' ? reason : (Array.isArray(reason) ? reason[0] : undefined);
+      const block = await storage.blockUser(blockerId, blockedId, reasonStr);
+      res.json(block);
+    } catch (err) {
+      console.error("Error blocking user:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Unblock user
+  app.delete("/api/users/:id/block", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const blockerId = req.user!.id;
+      const blockedId = req.params.id;
+      await storage.unblockUser(blockerId, blockedId as string);
+      res.json({ message: "User unblocked" });
+    } catch (err) {
+      console.error("Error unblocking user:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get blocked users
+  app.get("/api/users/blocks", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const blockerId = req.user!.id;
+      const blocks = await storage.getBlockedUsers(blockerId);
+      res.json(blocks);
+    } catch (err) {
+      console.error("Error fetching blocked users:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Report user/content
+  app.post("/api/reports", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const reporterId = req.user!.id;
+      const { reportedUserId, reportedContentId, reportedContentType, categoryId, reason, description } = req.body;
+      const report = await storage.createReport({ reporterId, reportedUserId, reportedContentId, reportedContentType, categoryId, reason, description });
+      res.json(report);
+    } catch (err) {
+      console.error("Error creating report:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get reports (admin)
+  app.get("/api/reports", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const status = req.query.status as string;
+      const reports = status ? await storage.getReportsByStatus(status) : await db.select().from(userReports).orderBy(desc(userReports.createdAt));
+      res.json(reports);
+    } catch (err) {
+      console.error("Error fetching reports:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Resolve report (admin)
+  app.post("/api/reports/:id/resolve", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const resolvedBy = req.user!.id;
+      const { action, notes } = req.body;
+      const report = await storage.resolveReport(id, resolvedBy, action, notes);
+      res.json(report);
+    } catch (err) {
+      console.error("Error resolving report:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get report categories
+  app.get("/api/reports/categories", async (req, res) => {
+    try {
+      const categories = await storage.getReportCategories();
+      res.json(categories);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Moderation queue (admin)
+  app.get("/api/moderation/queue", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const queue = await storage.getPendingModeration();
+      res.json(queue);
+    } catch (err) {
+      console.error("Error fetching moderation queue:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Moderate content (admin)
+  app.post("/api/moderation/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const reviewedBy = req.user!.id;
+      const { action, notes } = req.body;
+      const result = await storage.moderateContent(id, reviewedBy, action, notes);
+      res.json(result);
+    } catch (err) {
+      console.error("Error moderating content:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get moderation stats (admin)
+  app.get("/api/moderation/stats", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getModerationStats();
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching moderation stats:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get login history
+  app.get("/api/auth/login-history", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const history = await storage.getLoginHistory(userId);
+      res.json(history);
+    } catch (err) {
+      console.error("Error fetching login history:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user sessions
+  app.get("/api/auth/sessions", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const sessions = await storage.getUserSessions(userId);
+      res.json(sessions);
+    } catch (err) {
+      console.error("Error fetching sessions:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Revoke session
+  app.delete("/api/auth/sessions/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.revokeSession(id);
+      res.json({ message: "Session revoked" });
+    } catch (err) {
+      console.error("Error revoking session:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Revoke all sessions
+  app.delete("/api/auth/sessions", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      await storage.revokeAllSessions(userId);
+      res.json({ message: "All sessions revoked" });
+    } catch (err) {
+      console.error("Error revoking sessions:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // 2FA management
+  app.get("/api/auth/2fa", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const settings = await storage.get2FASettings(userId);
+      res.json(settings ? { enabled: settings.enabled } : { enabled: false });
+    } catch (err) {
+      console.error("Error fetching 2FA settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Enable 2FA (simplified - would need TOTP library in production)
+  app.post("/api/auth/2fa/enable", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      // In production, this would use TOTP
+      const secret = `secret_${Date.now()}`;
+      const backupCodes = Array.from({ length: 8 }, () => Math.random().toString(36).substring(2, 10).toUpperCase());
+      const result = await storage.enable2FA(userId, secret, backupCodes);
+      res.json({ enabled: true, backupCodes });
+    } catch (err) {
+      console.error("Error enabling 2FA:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Disable 2FA
+  app.post("/api/auth/2fa/disable", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      await storage.disable2FA(userId);
+      res.json({ enabled: false });
+    } catch (err) {
+      console.error("Error disabling 2FA:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Data export request
+  app.post("/api/privacy/export", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const request = await storage.requestDataExport(userId);
+      res.json(request);
+    } catch (err) {
+      console.error("Error requesting data export:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get export status
+  app.get("/api/privacy/export", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const request = await storage.getExportRequest(userId);
+      res.json(request || { status: "none" });
+    } catch (err) {
+      console.error("Error fetching export status:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Request data deletion
+  app.post("/api/privacy/delete", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const request = await storage.requestDataDeletion(userId);
+      res.json(request);
+    } catch (err) {
+      console.error("Error requesting data deletion:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Cancel data deletion
+  app.delete("/api/privacy/delete", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      await storage.cancelDataDeletion(userId);
+      res.json({ message: "Deletion request cancelled" });
+    } catch (err) {
+      console.error("Error cancelling deletion:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === WHITE-LABEL CHURCH PLATFORM ===
+
+  // Get all organizations
+  app.get("/api/organizations", async (req, res) => {
+    try {
+      const includeInactive = req.query.includeInactive === 'true';
+      const orgs = await storage.getOrganizations(includeInactive);
+      res.json(orgs);
+    } catch (err) {
+      console.error("Error fetching organizations:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get organization by ID or slug
+  app.get("/api/organizations/:id", async (req, res) => {
+    try {
+      const idOrSlug = req.params.id;
+      const id = parseInt(idOrSlug);
+      let org = isNaN(id) ? await storage.getOrganizationBySlug(idOrSlug) : await storage.getOrganization(id);
+      if (!org) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      res.json(org);
+    } catch (err) {
+      console.error("Error fetching organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create organization (admin)
+  app.post("/api/organizations", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, slug, domain, primaryColor, secondaryColor, accentColor, contactEmail, contactPhone, address, city, state, country, timezone, plan } = req.body;
+      const org = await storage.createOrganization({
+        name, slug, domain, primaryColor, secondaryColor, accentColor, contactEmail, contactPhone, address, city, state, country, timezone, plan
+      });
+      
+      // Create default theme and settings
+      await storage.createTheme({ organizationId: org.id, name: 'Default', isDefault: true, config: { primaryColor, secondaryColor, accentColor } });
+      await storage.updateOrganizationSettings(org.id, { allowCustomDomain: true, allowCustomTheme: true, enableCustomPages: true });
+      
+      res.json(org);
+    } catch (err) {
+      console.error("Error creating organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update organization (admin)
+  app.put("/api/organizations/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const org = await storage.updateOrganization(id, req.body);
+      res.json(org);
+    } catch (err) {
+      console.error("Error updating organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete organization (admin)
+  app.delete("/api/organizations/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteOrganization(id);
+      res.json({ message: "Organization deleted" });
+    } catch (err) {
+      console.error("Error deleting organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get organization themes
+  app.get("/api/organizations/:id/themes", async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const themes = await storage.getOrganizationThemes(orgId);
+      res.json(themes);
+    } catch (err) {
+      console.error("Error fetching themes:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create theme (admin)
+  app.post("/api/organizations/:id/themes", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { name, isDefault, config } = req.body;
+      const theme = await storage.createTheme({ organizationId: orgId, name, isDefault: isDefault || false, config });
+      res.json(theme);
+    } catch (err) {
+      console.error("Error creating theme:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get custom pages
+  app.get("/api/organizations/:id/pages", async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const pages = await storage.getOrganizationPages(orgId);
+      res.json(pages);
+    } catch (err) {
+      console.error("Error fetching pages:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create custom page (admin)
+  app.post("/api/organizations/:id/pages", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { title, slug, content, metaTitle, metaDescription, isPublished, showInNav, orderIndex } = req.body;
+      const page = await storage.createCustomPage({ organizationId: orgId, title, slug, content, metaTitle, metaDescription, isPublished: isPublished || false, showInNav: showInNav || false, orderIndex: orderIndex || 0 });
+      res.json(page);
+    } catch (err) {
+      console.error("Error creating page:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update custom page (admin)
+  app.put("/api/pages/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const page = await storage.updateCustomPage(id, req.body);
+      res.json(page);
+    } catch (err) {
+      console.error("Error updating page:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete custom page (admin)
+  app.delete("/api/pages/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteCustomPage(id);
+      res.json({ message: "Page deleted" });
+    } catch (err) {
+      console.error("Error deleting page:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get menu items
+  app.get("/api/organizations/:id/menu", async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const location = (req.query.location as string) || 'header';
+      const items = await storage.getMenuItems(orgId, location);
+      res.json(items);
+    } catch (err) {
+      console.error("Error fetching menu:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create menu item (admin)
+  app.post("/api/organizations/:id/menu", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { menuLocation, label, url, pageId, icon, orderIndex, isVisible } = req.body;
+      const item = await storage.createMenuItem({ organizationId: orgId, menuLocation, label, url, pageId, icon, orderIndex: orderIndex || 0, isVisible: isVisible !== false });
+      res.json(item);
+    } catch (err) {
+      console.error("Error creating menu item:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update menu item (admin)
+  app.put("/api/menu/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const item = await storage.updateMenuItem(id, req.body);
+      res.json(item);
+    } catch (err) {
+      console.error("Error updating menu item:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete menu item (admin)
+  app.delete("/api/menu/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteMenuItem(id);
+      res.json({ message: "Menu item deleted" });
+    } catch (err) {
+      console.error("Error deleting menu item:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get email templates (admin)
+  app.get("/api/organizations/:id/emails", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const templates = await storage.getOrganizationEmailTemplates(orgId);
+      res.json(templates);
+    } catch (err) {
+      console.error("Error fetching email templates:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create email template (admin)
+  app.post("/api/organizations/:id/emails", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { name, subject, body, type, isActive } = req.body;
+      const template = await storage.createEmailTemplate({ organizationId: orgId, name, subject, body, type, isActive: isActive !== false });
+      res.json(template);
+    } catch (err) {
+      console.error("Error creating email template:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get custom fields
+  app.get("/api/organizations/:id/fields/:entity", async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const entityType = req.params.entity;
+      const fields = await storage.getCustomFields(orgId, entityType);
+      res.json(fields);
+    } catch (err) {
+      console.error("Error fetching custom fields:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create custom field (admin)
+  app.post("/api/organizations/:id/fields", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { entityType, name, fieldType, label, placeholder, isRequired, options, orderIndex, isActive } = req.body;
+      const field = await storage.createCustomField({ organizationId: orgId, entityType, name, fieldType, label, placeholder, isRequired: isRequired || false, options, orderIndex: orderIndex || 0, isActive: isActive !== false });
+      res.json(field);
+    } catch (err) {
+      console.error("Error creating custom field:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete custom field (admin)
+  app.delete("/api/fields/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.deleteCustomField(id);
+      res.json({ message: "Field deleted" });
+    } catch (err) {
+      console.error("Error deleting custom field:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get organization settings
+  app.get("/api/organizations/:id/settings", async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const settings = await storage.getOrganizationSettings(orgId);
+      res.json(settings || { organizationId: orgId, settings: {}, features: {} });
+    } catch (err) {
+      console.error("Error fetching settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update organization settings (admin)
+  app.put("/api/organizations/:id/settings", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const settings = await storage.updateOrganizationSettings(orgId, req.body);
+      res.json(settings);
+    } catch (err) {
+      console.error("Error updating settings:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Add custom domain (admin)
+  app.post("/api/organizations/:id/domains", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { domain } = req.body;
+      const verificationCode = Math.random().toString(36).substring(2, 15);
+      const customDomain = await storage.addCustomDomain({ organizationId: orgId, domain, verificationCode });
+      res.json({ ...customDomain, verificationCode });
+    } catch (err) {
+      console.error("Error adding custom domain:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Verify custom domain (admin)
+  app.post("/api/domains/verify", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { domain, verificationCode } = req.body;
+      const existing = await storage.getCustomDomain(domain);
+      if (!existing) {
+        return res.status(404).json({ message: "Domain not found" });
+      }
+      if (existing.verificationCode !== verificationCode) {
+        return res.status(400).json({ message: "Invalid verification code" });
+      }
+      const verified = await storage.verifyCustomDomain(existing.id);
+      res.json(verified);
+    } catch (err) {
+      console.error("Error verifying domain:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Record organization analytics
+  app.post("/api/organizations/:id/analytics", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const { metricType, metricValue, metadata } = req.body;
+      const analytic = await storage.recordOrganizationMetric({ organizationId: orgId, metricType, metricValue, metadata });
+      res.json(analytic);
+    } catch (err) {
+      console.error("Error recording analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get organization analytics
+  app.get("/api/organizations/:id/analytics", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orgId = Number(req.params.id);
+      const metricType = req.query.type as string;
+      const analytics = await storage.getOrganizationMetrics(orgId, metricType);
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error fetching analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Prayer Requests
   app.get(api.prayer.list.path, async (req, res) => {
     const requests = await storage.getPrayerRequests();
@@ -2256,6 +3477,215 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       res.json(stats);
     } catch (err) {
       console.error("Error fetching prayer analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === SPIRITUAL HEALTH & ENGAGEMENT ANALYTICS ===
+
+  // Get user engagement metrics (personal)
+  app.get("/api/analytics/engagement", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { startDate, endDate } = req.query;
+      
+      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : new Date();
+      
+      const metrics = await storage.getUserEngagementMetrics(req.user.id, start, end);
+      res.json(metrics);
+    } catch (err) {
+      console.error("Error fetching engagement metrics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Record engagement activity
+  app.post("/api/analytics/engagement", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { sermonsWatched, prayersSubmitted, eventsAttended, devotionalsRead, groupMessages, sessionTime } = req.body;
+      
+      const metrics = await storage.upsertUserEngagementMetrics({
+        userId: req.user.id,
+        date: new Date().toISOString().split('T')[0],
+        sermonsWatched: sermonsWatched || 0,
+        prayersSubmitted: prayersSubmitted || 0,
+        eventsAttended: eventsAttended || 0,
+        devotionalsRead: devotionalsRead || 0,
+        groupMessages: groupMessages || 0,
+        totalSessionTime: sessionTime || 0,
+        loginCount: 1,
+      });
+      
+      res.json(metrics);
+    } catch (err) {
+      console.error("Error recording engagement:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get spiritual health scores (personal)
+  app.get("/api/analytics/spiritual-health", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const scores = await storage.getSpiritualHealthScores(req.user.id);
+      res.json(scores);
+    } catch (err) {
+      console.error("Error fetching spiritual health scores:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Calculate spiritual health score for current week
+  app.post("/api/analytics/spiritual-health/calculate", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const score = await storage.calculateSpiritualHealthScore(req.user.id, weekStart);
+      res.json(score);
+    } catch (err) {
+      console.error("Error calculating spiritual health score:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get engagement summary (admin only)
+  app.get("/api/analytics/engagement-summary", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      const now = new Date();
+      const start = startDate ? new Date(startDate as string) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : now;
+      
+      const summary = await storage.getEngagementSummary(start, end);
+      res.json(summary);
+    } catch (err) {
+      console.error("Error fetching engagement summary:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get spiritual health trends (admin only)
+  app.get("/api/analytics/spiritual-health-trends", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { weeks } = req.query;
+      const trends = await storage.getSpiritualHealthTrends(weeks ? parseInt(weeks as string) : 4);
+      res.json(trends);
+    } catch (err) {
+      console.error("Error fetching spiritual health trends:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get discipleship analytics (admin only)
+  app.get("/api/analytics/discipleship", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const trackId = req.query.trackId;
+      const weeks = req.query.weeks;
+      const trackIdNum = trackId ? parseInt(String(trackId)) : undefined;
+      const weeksNum = weeks ? parseInt(String(weeks)) : 4;
+      const analytics = await storage.getDiscipleshipAnalytics(trackIdNum, weeksNum);
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error fetching discipleship analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Calculate discipleship analytics (admin only)
+  app.post("/api/analytics/discipleship/calculate", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { trackId, weekStart } = req.body;
+      
+      if (!trackId || !weekStart) {
+        return res.status(400).json({ message: "Track ID and week start date are required" });
+      }
+      
+      const analytics = await storage.calculateDiscipleshipAnalytics(trackId, new Date(weekStart));
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error calculating discipleship analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get group analytics (admin only)
+  app.get("/api/analytics/groups", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const groupId = req.query.groupId;
+      const weeks = req.query.weeks;
+      const analytics = await storage.getGroupAnalytics(groupId ? parseInt(String(groupId)) : undefined, weeks ? parseInt(String(weeks)) : 4);
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error fetching group analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Calculate group analytics (admin only)
+  app.post("/api/analytics/groups/calculate", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { groupId, weekStart } = req.body;
+      
+      if (!groupId || !weekStart) {
+        return res.status(400).json({ message: "Group ID and week start date are required" });
+      }
+      
+      const analytics = await storage.calculateGroupAnalytics(groupId, new Date(weekStart));
+      res.json(analytics);
+    } catch (err) {
+      console.error("Error calculating group analytics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get/create analytics reports (admin only)
+  app.get("/api/analytics/reports", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const reportType = req.query.reportType;
+      const reports = await storage.getAnalyticsReports(reportType ? String(reportType) : undefined);
+      res.json(reports);
+    } catch (err) {
+      console.error("Error fetching analytics reports:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/analytics/reports", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      const { name, reportType, filters } = req.body;
+      
+      const report = await storage.createAnalyticsReport({
+        name,
+        reportType,
+        filters: filters || {},
+        generatedBy: req.user.id,
+      });
+      
+      res.json(report);
+    } catch (err) {
+      console.error("Error creating analytics report:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/analytics/reports/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const idParam = req.params.id;
+      const id = typeof idParam === 'string' ? parseInt(idParam) : parseInt(idParam[0]);
+      await storage.deleteAnalyticsReport(id);
+      res.json({ message: "Report deleted" });
+    } catch (err) {
+      console.error("Error deleting analytics report:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -3560,7 +4990,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
   app.post("/api/webhooks", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       if (!req.user) return res.status(401).json({ message: "Unauthorized" });
-      const { url, events, secret } = req.body;
+      const { name, url, events, secret } = req.body;
       
       if (!url || !events || !Array.isArray(events)) {
         return res.status(400).json({ message: "URL and events array are required" });
@@ -3568,6 +4998,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       
       const webhook = await storage.createWebhook({
         userId: req.user!.id,
+        name: name || "Untitled Webhook",
         url,
         events,
         secret: secret || crypto.randomBytes(32).toString("hex"),
@@ -4427,6 +5858,253 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       res.json({ message: "Reflection deleted" });
     } catch (err) {
       console.error("Error deleting reflection:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Pastoral Care & Counseling System ===
+
+  // Get counseling requests (user sees their own, admin sees all)
+  app.get("/api/counseling/requests", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const filters: { status?: string; assignedTo?: string; userId?: string } = {};
+      if (req.query.status) filters.status = String(req.query.status);
+      
+      // Regular users see only their own requests
+      if (!req.user.isAdmin) {
+        filters.userId = req.user.id;
+      } else if (req.query.assignedTo) {
+        filters.assignedTo = String(req.query.assignedTo);
+      }
+      
+      const requests = await storage.getCounselingRequests(filters);
+      res.json(requests);
+    } catch (err) {
+      console.error("Error fetching counseling requests:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get single counseling request
+  app.get("/api/counseling/requests/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const request = await storage.getCounselingRequest(Number(req.params.id));
+      if (!request) return res.status(404).json({ message: "Request not found" });
+      
+      // Check access
+      if (!req.user.isAdmin && request.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(request);
+    } catch (err) {
+      console.error("Error fetching counseling request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create counseling request
+  app.post("/api/counseling/requests", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const { requestType, urgency, subject, description } = req.body;
+      
+      const request = await storage.createCounselingRequest({
+        userId: req.user.id,
+        requestType,
+        urgency: urgency || 'normal',
+        subject,
+        description,
+      });
+      
+      res.json(request);
+    } catch (err) {
+      console.error("Error creating counseling request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update counseling request (admin only)
+  app.patch("/api/counseling/requests/:id", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, assignedTo } = req.body;
+      const updates: any = {};
+      
+      if (status) updates.status = status;
+      if (assignedTo) {
+        updates.assignedTo = assignedTo;
+        updates.assignedAt = new Date();
+        updates.status = 'assigned';
+      }
+      
+      const request = await storage.updateCounselingRequest(Number(req.params.id), updates);
+      res.json(request);
+    } catch (err) {
+      console.error("Error updating counseling request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Assign counseling request (pastor/admin)
+  app.post("/api/counseling/requests/:id/assign", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { assignedTo } = req.body;
+      if (!assignedTo) return res.status(400).json({ message: "Assignee required" });
+      
+      const request = await storage.assignCounselingRequest(Number(req.params.id), assignedTo);
+      res.json(request);
+    } catch (err) {
+      console.error("Error assigning counseling request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Complete counseling request
+  app.post("/api/counseling/requests/:id/complete", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const request = await storage.completeCounselingRequest(Number(req.params.id));
+      res.json(request);
+    } catch (err) {
+      console.error("Error completing counseling request:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get counseling notes
+  app.get("/api/counseling/requests/:id/notes", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const request = await storage.getCounselingRequest(Number(req.params.id));
+      if (!request) return res.status(404).json({ message: "Request not found" });
+      
+      // Only assigned pastor or admin can see notes
+      if (!req.user.isAdmin && request.assignedTo !== req.user.id && request.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const notes = await storage.getCounselingNotes(Number(req.params.id));
+      res.json(notes);
+    } catch (err) {
+      console.error("Error fetching counseling notes:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Add counseling note (assigned pastor or admin)
+  app.post("/api/counseling/requests/:id/notes", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const request = await storage.getCounselingRequest(Number(req.params.id));
+      if (!request) return res.status(404).json({ message: "Request not found" });
+      
+      // Only assigned pastor, admin, or the requester can add notes
+      if (!req.user.isAdmin && request.assignedTo !== req.user.id && request.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const { content, isInternal } = req.body;
+      const note = await storage.createCounselingNote({
+        requestId: Number(req.params.id),
+        authorId: req.user.id,
+        content,
+        isInternal: isInternal !== false,
+      });
+      
+      res.json(note);
+    } catch (err) {
+      console.error("Error creating counseling note:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get counseling follow-ups
+  app.get("/api/counseling/followups", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const followups = await storage.getPendingFollowups();
+      res.json(followups);
+    } catch (err) {
+      console.error("Error fetching follow-ups:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create follow-up reminder
+  app.post("/api/counseling/requests/:id/followups", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { scheduledDate, notes } = req.body;
+      const followup = await storage.createCounselingFollowup({
+        requestId: Number(req.params.id),
+        scheduledDate,
+        notes,
+      });
+      res.json(followup);
+    } catch (err) {
+      console.error("Error creating follow-up:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Complete follow-up
+  app.post("/api/counseling/followups/:id/complete", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { notes } = req.body;
+      const followup = await storage.completeCounselingFollowup(Number(req.params.id), notes);
+      res.json(followup);
+    } catch (err) {
+      console.error("Error completing follow-up:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Pastoral visits
+  app.get("/api/counseling/visits", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      const filters: { visitorId?: string; visitedUserId?: string } = {};
+      if (req.query.visitedUserId) filters.visitedUserId = String(req.query.visitedUserId);
+      
+      const visits = await storage.getPastoralVisits(filters);
+      res.json(visits);
+    } catch (err) {
+      console.error("Error fetching visits:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/counseling/visits", isAuthenticated, isPastor, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      
+      const { requestId, visitedUserId, visitDate, location, notes, followUpNeeded } = req.body;
+      const visit = await storage.createPastoralVisit({
+        requestId,
+        visitorId: req.user.id,
+        visitedUserId,
+        visitDate,
+        location,
+        notes,
+        followUpNeeded: followUpNeeded || false,
+      });
+      res.json(visit);
+    } catch (err) {
+      console.error("Error creating visit:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Pastoral statistics (admin only)
+  app.get("/api/counseling/stats", isAuthenticated, isAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const stats = await storage.getPastoralStats();
+      res.json(stats);
+    } catch (err) {
+      console.error("Error fetching pastoral stats:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });

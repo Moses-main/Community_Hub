@@ -1,5 +1,5 @@
 export * from "./models/auth";
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, pgEnum, uuid, date, varchar, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./models/auth";
@@ -791,7 +791,7 @@ export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 
 // === Webhooks for External Integrations ===
 
-export const webhooks = pgTable("webhooks", {
+export const apiWebhooks = pgTable("api_webhooks", {
   id: serial("id").primaryKey(),
   userId: uuid("user_id").references(() => users.id).notNull(),
   url: text("url").notNull(),
@@ -802,16 +802,16 @@ export const webhooks = pgTable("webhooks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const webhookRelations = relations(webhooks, ({ one }) => ({
+export const apiWebhookRelations = relations(apiWebhooks, ({ one }) => ({
   user: one(users, {
-    fields: [webhooks.userId],
+    fields: [apiWebhooks.userId],
     references: [users.id],
   }),
 }));
 
-export const insertWebhookSchema = createInsertSchema(webhooks).omit({ id: true, createdAt: true });
-export type Webhook = typeof webhooks.$inferSelect;
-export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+export const insertApiWebhookSchema = createInsertSchema(apiWebhooks).omit({ id: true, createdAt: true });
+export type ApiWebhook = typeof apiWebhooks.$inferSelect;
+export type InsertApiWebhook = z.infer<typeof insertApiWebhookSchema>;
 
 // === MULTI-LANGUAGE & LOCALIZATION ===
 
@@ -1449,3 +1449,1268 @@ export type InsertUserConnection = z.infer<typeof insertUserConnectionSchema>;
 export const insertHashtagSchema = createInsertSchema(hashtags).omit({ id: true, createdAt: true, postsCount: true });
 export type Hashtag = typeof hashtags.$inferSelect;
 export type InsertHashtag = z.infer<typeof insertHashtagSchema>;
+
+// === SPIRITUAL HEALTH & ENGAGEMENT ANALYTICS ===
+
+export const userEngagementMetrics = pgTable("user_engagement_metrics", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  date: date("date").notNull().defaultNow(),
+  sermonsWatched: integer("sermons_watched").default(0),
+  prayersSubmitted: integer("prayers_submitted").default(0),
+  eventsAttended: integer("events_attended").default(0),
+  devotionalsRead: integer("devotionals_read").default(0),
+  groupMessages: integer("group_messages").default(0),
+  loginCount: integer("login_count").default(1),
+  totalSessionTime: integer("total_session_time").default(0),
+});
+
+export const spiritualHealthScores = pgTable("spiritual_health_scores", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  weekStart: date("week_start").notNull(),
+  attendanceScore: integer("attendance_score").default(0),
+  engagementScore: integer("engagement_score").default(0),
+  growthScore: integer("growth_score").default(0),
+  overallScore: integer("overall_score").default(0),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+});
+
+export const discipleshipAnalytics = pgTable("discipleship_analytics", {
+  id: serial("id").primaryKey(),
+  trackId: integer("track_id").references(() => discipleshipTracks.id),
+  totalEnrolled: integer("total_enrolled").default(0),
+  activeLearners: integer("active_learners").default(0),
+  completedCount: integer("completed_count").default(0),
+  averageCompletionTime: integer("average_completion_time"),
+  quizAverageScore: integer("quiz_average_score"),
+  weekStart: date("week_start").notNull(),
+});
+
+export const groupAnalytics = pgTable("group_analytics", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").references(() => groups.id),
+  weekStart: date("week_start").notNull(),
+  activeMembers: integer("active_members").default(0),
+  messagesCount: integer("messages_count").default(0),
+  meetingsHeld: integer("meetings_held").default(0),
+  newMembers: integer("new_members").default(0),
+});
+
+export const analyticsReports = pgTable("analytics_reports", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  reportType: text("report_type").notNull(),
+  filters: jsonb("filters").default("{}"),
+  generatedBy: uuid("generated_by").references(() => users.id),
+  filePath: text("file_path"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const userEngagementMetricsRelations = relations(userEngagementMetrics, ({ one }) => ({
+  user: one(users, {
+    fields: [userEngagementMetrics.userId],
+    references: [users.id],
+  }),
+}));
+
+export const spiritualHealthScoresRelations = relations(spiritualHealthScores, ({ one }) => ({
+  user: one(users, {
+    fields: [spiritualHealthScores.userId],
+    references: [users.id],
+  }),
+}));
+
+export const discipleshipAnalyticsRelations = relations(discipleshipAnalytics, ({ one }) => ({
+  track: one(discipleshipTracks, {
+    fields: [discipleshipAnalytics.trackId],
+    references: [discipleshipTracks.id],
+  }),
+}));
+
+export const groupAnalyticsRelations = relations(groupAnalytics, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupAnalytics.groupId],
+    references: [groups.id],
+  }),
+}));
+
+export const analyticsReportsRelations = relations(analyticsReports, ({ one }) => ({
+  generator: one(users, {
+    fields: [analyticsReports.generatedBy],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertUserEngagementMetricsSchema = createInsertSchema(userEngagementMetrics).omit({ id: true });
+export type UserEngagementMetrics = typeof userEngagementMetrics.$inferSelect;
+export type InsertUserEngagementMetrics = z.infer<typeof insertUserEngagementMetricsSchema>;
+
+export const insertSpiritualHealthScoreSchema = createInsertSchema(spiritualHealthScores).omit({ id: true, calculatedAt: true });
+export type SpiritualHealthScore = typeof spiritualHealthScores.$inferSelect;
+export type InsertSpiritualHealthScore = z.infer<typeof insertSpiritualHealthScoreSchema>;
+
+export const insertDiscipleshipAnalyticsSchema = createInsertSchema(discipleshipAnalytics).omit({ id: true });
+export type DiscipleshipAnalytics = typeof discipleshipAnalytics.$inferSelect;
+export type InsertDiscipleshipAnalytics = z.infer<typeof insertDiscipleshipAnalyticsSchema>;
+
+export const insertGroupAnalyticsSchema = createInsertSchema(groupAnalytics).omit({ id: true });
+export type GroupAnalytics = typeof groupAnalytics.$inferSelect;
+export type InsertGroupAnalytics = z.infer<typeof insertGroupAnalyticsSchema>;
+
+export const insertAnalyticsReportSchema = createInsertSchema(analyticsReports).omit({ id: true, createdAt: true });
+export type AnalyticsReport = typeof analyticsReports.$inferSelect;
+export type InsertAnalyticsReport = z.infer<typeof insertAnalyticsReportSchema>;
+
+// === PASTORAL CARE & COUNSELING SYSTEM ===
+
+export const counselingRequests = pgTable("counseling_requests", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id),
+  requestType: text("request_type").notNull(),
+  urgency: text("urgency").default("normal"),
+  subject: text("subject").notNull(),
+  description: text("description").notNull(),
+  status: text("status").default("pending"),
+  assignedTo: uuid("assigned_to").references(() => users.id),
+  assignedAt: timestamp("assigned_at"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const counselingNotes = pgTable("counseling_notes", {
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id").references(() => counselingRequests.id).notNull(),
+  authorId: uuid("author_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  isInternal: boolean("is_internal").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const counselingFollowups = pgTable("counseling_followups", {
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id").references(() => counselingRequests.id).notNull(),
+  scheduledDate: date("scheduled_date").notNull(),
+  completed: boolean("completed").default(false),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pastoralVisits = pgTable("pastoral_visits", {
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id").references(() => counselingRequests.id),
+  visitorId: uuid("visitor_id").references(() => users.id).notNull(),
+  visitedUserId: uuid("visited_user_id").references(() => users.id),
+  visitDate: date("visit_date").notNull(),
+  location: text("location"),
+  notes: text("notes"),
+  followUpNeeded: boolean("follow_up_needed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const counselingRequestRelations = relations(counselingRequests, ({ one, many }) => ({
+  user: one(users, {
+    fields: [counselingRequests.userId],
+    references: [users.id],
+  }),
+  assignedTo: one(users, {
+    fields: [counselingRequests.assignedTo],
+    references: [users.id],
+  }),
+  notes: many(counselingNotes),
+  followups: many(counselingFollowups),
+  visits: many(pastoralVisits),
+}));
+
+export const counselingNoteRelations = relations(counselingNotes, ({ one }) => ({
+  request: one(counselingRequests, {
+    fields: [counselingNotes.requestId],
+    references: [counselingRequests.id],
+  }),
+  author: one(users, {
+    fields: [counselingNotes.authorId],
+    references: [users.id],
+  }),
+}));
+
+export const counselingFollowupRelations = relations(counselingFollowups, ({ one }) => ({
+  request: one(counselingRequests, {
+    fields: [counselingFollowups.requestId],
+    references: [counselingRequests.id],
+  }),
+}));
+
+export const pastoralVisitRelations = relations(pastoralVisits, ({ one }) => ({
+  request: one(counselingRequests, {
+    fields: [pastoralVisits.requestId],
+    references: [counselingRequests.id],
+  }),
+  visitor: one(users, {
+    fields: [pastoralVisits.visitorId],
+    references: [users.id],
+  }),
+  visitedUser: one(users, {
+    fields: [pastoralVisits.visitedUserId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertCounselingRequestSchema = createInsertSchema(counselingRequests).omit({ id: true, createdAt: true, updatedAt: true });
+export type CounselingRequest = typeof counselingRequests.$inferSelect;
+export type InsertCounselingRequest = z.infer<typeof insertCounselingRequestSchema>;
+
+export const insertCounselingNoteSchema = createInsertSchema(counselingNotes).omit({ id: true, createdAt: true });
+export type CounselingNote = typeof counselingNotes.$inferSelect;
+export type InsertCounselingNote = z.infer<typeof insertCounselingNoteSchema>;
+
+export const insertCounselingFollowupSchema = createInsertSchema(counselingFollowups).omit({ id: true, createdAt: true });
+export type CounselingFollowup = typeof counselingFollowups.$inferSelect;
+export type InsertCounselingFollowup = z.infer<typeof insertCounselingFollowupSchema>;
+
+export const insertPastoralVisitSchema = createInsertSchema(pastoralVisits).omit({ id: true, createdAt: true });
+export type PastoralVisit = typeof pastoralVisits.$inferSelect;
+export type InsertPastoralVisit = z.infer<typeof insertPastoralVisitSchema>;
+
+// === AI SERMON SEARCH & SMART RECOMMENDATIONS ===
+
+export const sermonEmbeddings = pgTable("sermon_embeddings", {
+  id: serial("id").primaryKey(),
+  sermonId: integer("sermon_id").references(() => sermons.id).notNull(),
+  summary: text("summary"),
+  keyTopics: jsonb("key_topics").$type<string[]>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const sermonViews = pgTable("sermon_views", {
+  id: serial("id").primaryKey(),
+  sermonId: integer("sermon_id").references(() => sermons.id).notNull(),
+  userId: uuid("user_id").references(() => users.id),
+  watchDuration: integer("watch_duration").default(0),
+  completed: boolean("completed").default(false),
+  viewedAt: timestamp("viewed_at").defaultNow(),
+});
+
+export const userSermonPreferences = pgTable("user_sermon_preferences", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  favoriteSpeakers: jsonb("favorite_speakers").$type<string[]>(),
+  favoriteTopics: jsonb("favorite_topics").$type<string[]>(),
+  favoriteSeries: jsonb("favorite_series").$type<string[]>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const sermonRecommendations = pgTable("sermon_recommendations", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id),
+  recommendedSermons: jsonb("recommended_sermons").$type<number[]>(),
+  basedOn: text("based_on"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const sermonEmbeddingRelations = relations(sermonEmbeddings, ({ one }) => ({
+  sermon: one(sermons, {
+    fields: [sermonEmbeddings.sermonId],
+    references: [sermons.id],
+  }),
+}));
+
+export const sermonViewRelations = relations(sermonViews, ({ one }) => ({
+  sermon: one(sermons, {
+    fields: [sermonViews.sermonId],
+    references: [sermons.id],
+  }),
+  user: one(users, {
+    fields: [sermonViews.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userSermonPreferenceRelations = relations(userSermonPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userSermonPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+export const sermonRecommendationRelations = relations(sermonRecommendations, ({ one }) => ({
+  user: one(users, {
+    fields: [sermonRecommendations.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertSermonEmbeddingSchema = createInsertSchema(sermonEmbeddings).omit({ id: true, createdAt: true });
+export type SermonEmbedding = typeof sermonEmbeddings.$inferSelect;
+export type InsertSermonEmbedding = z.infer<typeof insertSermonEmbeddingSchema>;
+
+export const insertSermonViewSchema = createInsertSchema(sermonViews).omit({ id: true, viewedAt: true });
+export type SermonView = typeof sermonViews.$inferSelect;
+export type InsertSermonView = z.infer<typeof insertSermonViewSchema>;
+
+export const insertUserSermonPreferenceSchema = createInsertSchema(userSermonPreferences).omit({ id: true, createdAt: true, updatedAt: true });
+export type UserSermonPreference = typeof userSermonPreferences.$inferSelect;
+export type InsertUserSermonPreference = z.infer<typeof insertUserSermonPreferenceSchema>;
+
+export const insertSermonRecommendationSchema = createInsertSchema(sermonRecommendations).omit({ id: true, createdAt: true });
+export type SermonRecommendation = typeof sermonRecommendations.$inferSelect;
+export type InsertSermonRecommendation = z.infer<typeof insertSermonRecommendationSchema>;
+
+// === AI CHURCH ASSISTANT (CHATBOT) ===
+
+export const chatConversations = pgTable("chat_conversations", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
+  title: varchar("title", { length: 255 }),
+  status: varchar("status", { length: 50 }).default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => chatConversations.id).notNull(),
+  role: varchar("role", { length: 20 }).notNull(),
+  content: text("content").notNull(),
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const chatbotIntents = pgTable("chatbot_intents", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  patterns: jsonb("patterns").$type<string[]>(),
+  responses: jsonb("responses").$type<string[]>().notNull(),
+  category: varchar("category", { length: 100 }),
+  keywords: jsonb("keywords").$type<string[]>(),
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const chatbotPreferences = pgTable("chatbot_preferences", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  language: varchar("language", { length: 10 }).default("en"),
+  notificationEnabled: boolean("notification_enabled").default(true),
+  digestPreference: varchar("digest_preference", { length: 50 }).default("daily"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const chatbotAnalytics = pgTable("chatbot_analytics", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").references(() => chatConversations.id),
+  userId: uuid("user_id").references(() => users.id),
+  intent: varchar("intent", { length: 255 }),
+  responseTimeMs: integer("response_time_ms"),
+  feedback: varchar("feedback", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const chatConversationRelations = relations(chatConversations, ({ one, many }) => ({
+  user: one(users, {
+    fields: [chatConversations.userId],
+    references: [users.id],
+  }),
+  messages: many(chatMessages),
+}));
+
+export const chatMessageRelations = relations(chatMessages, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatMessages.conversationId],
+    references: [chatConversations.id],
+  }),
+}));
+
+export const chatbotIntentRelations = relations(chatbotIntents, () => ({}));
+
+export const chatbotPreferenceRelations = relations(chatbotPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [chatbotPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+export const chatbotAnalyticRelations = relations(chatbotAnalytics, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatbotAnalytics.conversationId],
+    references: [chatConversations.id],
+  }),
+  user: one(users, {
+    fields: [chatbotAnalytics.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({ id: true, createdAt: true, updatedAt: true });
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, createdAt: true });
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+
+export const insertChatbotIntentSchema = createInsertSchema(chatbotIntents).omit({ id: true, createdAt: true });
+export type ChatbotIntent = typeof chatbotIntents.$inferSelect;
+export type InsertChatbotIntent = z.infer<typeof insertChatbotIntentSchema>;
+
+export const insertChatbotPreferenceSchema = createInsertSchema(chatbotPreferences).omit({ id: true, createdAt: true, updatedAt: true });
+export type ChatbotPreference = typeof chatbotPreferences.$inferSelect;
+export type InsertChatbotPreference = z.infer<typeof insertChatbotPreferenceSchema>;
+
+export const insertChatbotAnalyticSchema = createInsertSchema(chatbotAnalytics).omit({ id: true, createdAt: true });
+export type ChatbotAnalytic = typeof chatbotAnalytics.$inferSelect;
+export type InsertChatbotAnalytic = z.infer<typeof insertChatbotAnalyticSchema>;
+
+// === MULTI-CAMPUS & BRANCH MANAGEMENT ===
+
+export const campuses = pgTable("campuses", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("Nigeria"),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  pastorId: uuid("pastor_id").references(() => users.id),
+  isHeadquarters: boolean("is_headquarters").default(false),
+  isActive: boolean("is_active").default(true),
+  timezone: varchar("timezone", { length: 50 }).default("Africa/Lagos"),
+  logoUrl: varchar("logo_url", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const branches = pgTable("branches", {
+  id: serial("id").primaryKey(),
+  campusId: integer("campus_id").references(() => campuses.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  leaderId: uuid("leader_id").references(() => users.id),
+  leaderName: varchar("leader_name", { length: 255 }),
+  leaderPhone: varchar("leader_phone", { length: 50 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const campusMembers = pgTable("campus_members", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  campusId: integer("campus_id").references(() => campuses.id).notNull(),
+  branchId: integer("branch_id").references(() => branches.id),
+  membershipType: varchar("membership_type", { length: 50 }).default("member"),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+});
+
+export const campusEvents = pgTable("campus_events", {
+  id: serial("id").primaryKey(),
+  campusId: integer("campus_id").references(() => campuses.id).notNull(),
+  eventId: integer("event_id").references(() => events.id).notNull(),
+  isPrimary: boolean("is_primary").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const campusTransfers = pgTable("campus_transfers", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  fromCampusId: integer("from_campus_id").references(() => campuses.id),
+  toCampusId: integer("to_campus_id").references(() => campuses.id).notNull(),
+  fromBranchId: integer("from_branch_id").references(() => branches.id),
+  toBranchId: integer("to_branch_id").references(() => branches.id),
+  status: varchar("status", { length: 50 }).default("pending"),
+  approvedBy: uuid("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const campusReports = pgTable("campus_reports", {
+  id: serial("id").primaryKey(),
+  campusId: integer("campus_id").references(() => campuses.id).notNull(),
+  reportType: varchar("report_type", { length: 100 }).notNull(),
+  data: jsonb("data").$type<Record<string, any>>(),
+  generatedBy: uuid("generated_by").references(() => users.id),
+  generatedAt: timestamp("generated_at").defaultNow(),
+});
+
+// Relations
+export const campusRelations = relations(campuses, ({ one, many }) => ({
+  pastor: one(users, {
+    fields: [campuses.pastorId],
+    references: [users.id],
+  }),
+  branches: many(branches),
+  members: many(campusMembers),
+}));
+
+export const branchRelations = relations(branches, ({ one, many }) => ({
+  campus: one(campuses, {
+    fields: [branches.campusId],
+    references: [campuses.id],
+  }),
+  leader: one(users, {
+    fields: [branches.leaderId],
+    references: [users.id],
+  }),
+}));
+
+export const campusMemberRelations = relations(campusMembers, ({ one }) => ({
+  user: one(users, {
+    fields: [campusMembers.userId],
+    references: [users.id],
+  }),
+  campus: one(campuses, {
+    fields: [campusMembers.campusId],
+    references: [campuses.id],
+  }),
+  branch: one(branches, {
+    fields: [campusMembers.branchId],
+    references: [branches.id],
+  }),
+}));
+
+export const campusEventRelations = relations(campusEvents, ({ one }) => ({
+  campus: one(campuses, {
+    fields: [campusEvents.campusId],
+    references: [campuses.id],
+  }),
+  event: one(events, {
+    fields: [campusEvents.eventId],
+    references: [events.id],
+  }),
+}));
+
+export const campusTransferRelations = relations(campusTransfers, ({ one }) => ({
+  user: one(users, {
+    fields: [campusTransfers.userId],
+    references: [users.id],
+  }),
+  fromCampus: one(campuses, {
+    fields: [campusTransfers.fromCampusId],
+    references: [campuses.id],
+  }),
+  toCampus: one(campuses, {
+    fields: [campusTransfers.toCampusId],
+    references: [campuses.id],
+  }),
+}));
+
+export const campusReportRelations = relations(campusReports, ({ one }) => ({
+  campus: one(campuses, {
+    fields: [campusReports.campusId],
+    references: [campuses.id],
+  }),
+}));
+
+// Insert schemas
+export const insertCampusSchema = createInsertSchema(campuses).omit({ id: true, createdAt: true, updatedAt: true });
+export type Campus = typeof campuses.$inferSelect;
+export type InsertCampus = z.infer<typeof insertCampusSchema>;
+
+export const insertBranchSchema = createInsertSchema(branches).omit({ id: true, createdAt: true, updatedAt: true });
+export type Branch = typeof branches.$inferSelect;
+export type InsertBranch = z.infer<typeof insertBranchSchema>;
+
+export const insertCampusMemberSchema = createInsertSchema(campusMembers).omit({ id: true, assignedAt: true });
+export type CampusMember = typeof campusMembers.$inferSelect;
+export type InsertCampusMember = z.infer<typeof insertCampusMemberSchema>;
+
+export const insertCampusEventSchema = createInsertSchema(campusEvents).omit({ id: true, createdAt: true });
+export type CampusEvent = typeof campusEvents.$inferSelect;
+export type InsertCampusEvent = z.infer<typeof insertCampusEventSchema>;
+
+export const insertCampusTransferSchema = createInsertSchema(campusTransfers).omit({ id: true, approvedAt: true, createdAt: true });
+export type CampusTransfer = typeof campusTransfers.$inferSelect;
+export type InsertCampusTransfer = z.infer<typeof insertCampusTransferSchema>;
+
+export const insertCampusReportSchema = createInsertSchema(campusReports).omit({ id: true, generatedAt: true });
+export type CampusReport = typeof campusReports.$inferSelect;
+export type InsertCampusReport = z.infer<typeof insertCampusReportSchema>;
+
+// === PRIVACY, SAFETY & MODERATION CONTROLS ===
+
+export const userPrivacySettings = pgTable("privacy_settings", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  profileVisibility: varchar("profile_visibility", { length: 50 }).default("members"),
+  showEmail: boolean("show_email").default(false),
+  showPhone: boolean("show_phone").default(false),
+  showBirthday: boolean("show_birthday").default(true),
+  showSocialLinks: boolean("show_social_links").default(true),
+  allowMessages: boolean("allow_messages").default(true),
+  allowGroupInvites: boolean("allow_group_invites").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const reportCategories = pgTable("report_categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  severityLevel: integer("severity_level").default(1),
+  isActive: boolean("is_active").default(true),
+});
+
+export const userReports = pgTable("user_reports", {
+  id: serial("id").primaryKey(),
+  reporterId: uuid("reporter_id").references(() => users.id).notNull(),
+  reportedUserId: uuid("reported_user_id").references(() => users.id),
+  reportedContentId: integer("reported_content_id"),
+  reportedContentType: varchar("reported_content_type", { length: 50 }),
+  categoryId: integer("category_id").references(() => reportCategories.id),
+  reason: text("reason").notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).default("pending"),
+  resolvedBy: uuid("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const moderationQueue = pgTable("moderation_queue", {
+  id: serial("id").primaryKey(),
+  contentType: varchar("content_type", { length: 50 }).notNull(),
+  contentId: integer("content_id").notNull(),
+  contentData: jsonb("content_data").$type<Record<string, any>>(),
+  flaggedBy: uuid("flagged_by").references(() => users.id),
+  flagReason: varchar("flag_reason", { length: 255 }),
+  status: varchar("status", { length: 50 }).default("pending"),
+  reviewedBy: uuid("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  action: varchar("action", { length: 50 }),
+  actionNotes: text("action_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userBlocks = pgTable("user_blocks", {
+  id: serial("id").primaryKey(),
+  blockerId: uuid("blocker_id").references(() => users.id).notNull(),
+  blockedId: uuid("blocked_id").references(() => users.id).notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userHiddenContent = pgTable("user_hidden_content", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  contentType: varchar("content_type", { length: 50 }).notNull(),
+  contentId: integer("content_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userSessions = pgTable("user_sessions", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  sessionToken: varchar("session_token", { length: 255 }).notNull(),
+  deviceInfo: varchar("device_info", { length: 500 }),
+  ipAddress: varchar("ip_address", { length: 50 }),
+  lastActive: timestamp("last_active").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const loginHistory = pgTable("login_history", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  ipAddress: varchar("ip_address", { length: 50 }),
+  deviceInfo: varchar("device_info", { length: 500 }),
+  location: varchar("location", { length: 255 }),
+  success: boolean("success").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const user2FA = pgTable("user_2fa", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  secret: varchar("secret", { length: 255 }).notNull(),
+  enabled: boolean("enabled").default(false),
+  backupCodes: jsonb("backup_codes").$type<string[]>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const dataExportRequests = pgTable("data_export_requests", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  status: varchar("status", { length: 50 }).default("pending"),
+  exportData: jsonb("export_data").$type<string[]>(),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const dataDeletionRequests = pgTable("data_deletion_requests", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  status: varchar("status", { length: 50 }).default("pending"),
+  scheduledDeletion: date("scheduled_deletion"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const privacySettingRelations = relations(privacySettings, ({ one }) => ({
+  user: one(users, {
+    fields: [privacySettings.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userReportRelations = relations(userReports, ({ one }) => ({
+  reporter: one(users, {
+    fields: [userReports.reporterId],
+    references: [users.id],
+  }),
+  reportedUser: one(users, {
+    fields: [userReports.reportedUserId],
+    references: [users.id],
+  }),
+  category: one(reportCategories, {
+    fields: [userReports.categoryId],
+    references: [reportCategories.id],
+  }),
+}));
+
+export const userBlockRelations = relations(userBlocks, ({ one }) => ({
+  blocker: one(users, {
+    fields: [userBlocks.blockerId],
+    references: [users.id],
+  }),
+  blocked: one(users, {
+    fields: [userBlocks.blockedId],
+    references: [users.id],
+  }),
+}));
+
+export const userSessionRelations = relations(userSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSessions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const loginHistoryRelations = relations(loginHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [loginHistory.userId],
+    references: [users.id],
+  }),
+}));
+
+export const user2FARelations = relations(user2FA, ({ one }) => ({
+  user: one(users, {
+    fields: [user2FA.userId],
+    references: [users.id],
+  }),
+}));
+
+export const dataExportRequestRelations = relations(dataExportRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [dataExportRequests.userId],
+    references: [users.id],
+  }),
+}));
+
+export const dataDeletionRequestRelations = relations(dataDeletionRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [dataDeletionRequests.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas
+export const insertPrivacySettingSchema = createInsertSchema(privacySettings).omit({ id: true, createdAt: true, updatedAt: true });
+export type PrivacySetting = typeof privacySettings.$inferSelect;
+export type InsertPrivacySetting = z.infer<typeof insertPrivacySettingSchema>;
+
+export const insertReportCategorySchema = createInsertSchema(reportCategories).omit({ id: true });
+export type ReportCategory = typeof reportCategories.$inferSelect;
+export type InsertReportCategory = z.infer<typeof insertReportCategorySchema>;
+
+export const insertUserReportSchema = createInsertSchema(userReports).omit({ id: true, resolvedAt: true, createdAt: true });
+export type UserReport = typeof userReports.$inferSelect;
+export type InsertUserReport = z.infer<typeof insertUserReportSchema>;
+
+export const insertModerationQueueSchema = createInsertSchema(moderationQueue).omit({ id: true, reviewedAt: true, createdAt: true });
+export type ModerationQueue = typeof moderationQueue.$inferSelect;
+export type InsertModerationQueue = z.infer<typeof insertModerationQueueSchema>;
+
+export const insertUserBlockSchema = createInsertSchema(userBlocks).omit({ id: true, createdAt: true });
+export type UserBlock = typeof userBlocks.$inferSelect;
+export type InsertUserBlock = z.infer<typeof insertUserBlockSchema>;
+
+export const insertUserHiddenContentSchema = createInsertSchema(userHiddenContent).omit({ id: true, createdAt: true });
+export type UserHiddenContent = typeof userHiddenContent.$inferSelect;
+export type InsertUserHiddenContent = z.infer<typeof insertUserHiddenContentSchema>;
+
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({ id: true, lastActive: true, createdAt: true });
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+
+export const insertLoginHistorySchema = createInsertSchema(loginHistory).omit({ id: true, createdAt: true });
+export type LoginHistory = typeof loginHistory.$inferSelect;
+export type InsertLoginHistory = z.infer<typeof insertLoginHistorySchema>;
+
+export const insertUser2FASchema = createInsertSchema(user2FA).omit({ id: true, createdAt: true, updatedAt: true });
+export type User2FA = typeof user2FA.$inferSelect;
+export type InsertUser2FA = z.infer<typeof insertUser2FASchema>;
+
+export const insertDataExportRequestSchema = createInsertSchema(dataExportRequests).omit({ id: true, processedAt: true, createdAt: true });
+export type DataExportRequest = typeof dataExportRequests.$inferSelect;
+export type InsertDataExportRequest = z.infer<typeof insertDataExportRequestSchema>;
+
+export const insertDataDeletionRequestSchema = createInsertSchema(dataDeletionRequests).omit({ id: true, processedAt: true, createdAt: true });
+export type DataDeletionRequest = typeof dataDeletionRequests.$inferSelect;
+export type InsertDataDeletionRequest = z.infer<typeof insertDataDeletionRequestSchema>;
+
+// === API & EXTERNAL INTEGRATIONS ===
+
+export const externalApiKeys = pgTable("external_api_keys", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  keyPrefix: varchar("key_prefix", { length: 20 }).notNull(),
+  hashedKey: varchar("hashed_key", { length: 255 }).notNull(),
+  permissions: jsonb("permissions").$type<string[]>().default([]),
+  rateLimit: integer("rate_limit").default(1000),
+  lastUsedAt: timestamp("last_used_at"),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const webhooks = pgTable("webhooks_v2", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  url: varchar("url", { length: 500 }).notNull(),
+  events: jsonb("events").$type<string[]>().notNull(),
+  secret: varchar("secret", { length: 255 }),
+  isActive: boolean("is_active").default(true),
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  failureCount: integer("failure_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const webhookDeliveries = pgTable("webhook_deliveries", {
+  id: serial("id").primaryKey(),
+  webhookId: integer("webhook_id").references(() => webhooks.id).notNull(),
+  eventType: varchar("event_type", { length: 100 }).notNull(),
+  payload: jsonb("payload").$type<Record<string, any>>(),
+  responseStatus: integer("response_status"),
+  responseBody: text("response_body"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const externalIntegrations = pgTable("external_integrations", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 100 }).notNull(),
+  status: varchar("status", { length: 50 }).default("disconnected"),
+  config: jsonb("config").$type<Record<string, any>>(),
+  credentials: jsonb("credentials").$type<Record<string, any>>(),
+  lastSyncAt: timestamp("last_sync_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const oauthApps = pgTable("oauth_apps", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  clientId: varchar("client_id", { length: 255 }).notNull().unique(),
+  clientSecret: varchar("client_secret", { length: 255 }),
+  redirectUris: jsonb("redirect_uris").$type<string[]>(),
+  scopes: jsonb("scopes").$type<string[]>().default([]),
+  isPublic: boolean("is_public").default(false),
+  ownerId: uuid("owner_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const oauthCodes = pgTable("oauth_codes", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 255 }).notNull().unique(),
+  clientId: varchar("client_id", { length: 255 }).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  redirectUri: varchar("redirect_uri", { length: 500 }).notNull(),
+  scope: jsonb("scope").$type<string[]>(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const oauthTokens = pgTable("oauth_tokens", {
+  id: serial("id").primaryKey(),
+  accessToken: varchar("access_token", { length: 255 }).notNull().unique(),
+  refreshToken: varchar("refresh_token", { length: 255 }),
+  clientId: varchar("client_id", { length: 255 }).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  scope: jsonb("scope").$type<string[]>(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const apiRateLimits = pgTable("api_rate_limits", {
+  id: serial("id").primaryKey(),
+  apiKeyId: integer("api_key_id").references(() => externalApiKeys.id),
+  endpoint: varchar("endpoint", { length: 255 }),
+  ipAddress: varchar("ip_address", { length: 50 }),
+  requestCount: integer("request_count").default(1),
+  windowStart: timestamp("window_start").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const apiCallLogs = pgTable("api_call_logs", {
+  id: serial("id").primaryKey(),
+  apiKeyId: integer("api_key_id").references(() => externalApiKeys.id),
+  method: varchar("method", { length: 10 }).notNull(),
+  path: varchar("path", { length: 500 }).notNull(),
+  statusCode: integer("status_code"),
+  responseTimeMs: integer("response_time_ms"),
+  ipAddress: varchar("ip_address", { length: 50 }),
+  userAgent: varchar("user_agent", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const integrationSyncJobs = pgTable("integration_sync_jobs", {
+  id: serial("id").primaryKey(),
+  integrationId: integer("integration_id").references(() => externalIntegrations.id).notNull(),
+  status: varchar("status", { length: 50 }).default("pending"),
+  recordsProcessed: integer("records_processed").default(0),
+  recordsFailed: integer("records_failed").default(0),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const externalApiKeyRelations = relations(externalApiKeys, ({ one, many }) => ({
+  user: one(users, {
+    fields: [externalApiKeys.userId],
+    references: [users.id],
+  }),
+  rateLimits: many(apiRateLimits),
+  callLogs: many(apiCallLogs),
+}));
+
+export const webhookV2Relations = relations(webhooks, ({ one, many }) => ({
+  user: one(users, {
+    fields: [webhooks.userId],
+    references: [users.id],
+  }),
+  deliveries: many(webhookDeliveries),
+}));
+
+export const webhookDeliveryRelations = relations(webhookDeliveries, ({ one }) => ({
+  webhook: one(webhooks, {
+    fields: [webhookDeliveries.webhookId],
+    references: [webhooks.id],
+  }),
+}));
+
+export const oauthAppRelations = relations(oauthApps, ({ one }) => ({
+  owner: one(users, {
+    fields: [oauthApps.ownerId],
+    references: [users.id],
+  }),
+}));
+
+export const oauthCodeRelations = relations(oauthCodes, ({ one }) => ({
+  user: one(users, {
+    fields: [oauthCodes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const oauthTokenRelations = relations(oauthTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [oauthTokens.userId],
+    references: [users.id],
+  }),
+}));
+
+export const integrationSyncJobRelations = relations(integrationSyncJobs, ({ one }) => ({
+  integration: one(externalIntegrations, {
+    fields: [integrationSyncJobs.integrationId],
+    references: [externalIntegrations.id],
+  }),
+}));
+
+// Insert schemas
+export const insertExternalApiKeySchema = createInsertSchema(externalApiKeys).omit({ id: true, createdAt: true, updatedAt: true });
+export type ExternalApiKey = typeof externalApiKeys.$inferSelect;
+export type InsertExternalApiKey = z.infer<typeof insertExternalApiKeySchema>;
+
+export const insertWebhookSchema = createInsertSchema(webhooks).omit({ id: true, createdAt: true, updatedAt: true });
+export type Webhook = typeof webhooks.$inferSelect;
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+
+export const insertWebhookDeliverySchema = createInsertSchema(webhookDeliveries).omit({ id: true, createdAt: true });
+export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
+export type InsertWebhookDelivery = z.infer<typeof insertWebhookDeliverySchema>;
+
+export const insertExternalIntegrationSchema = createInsertSchema(externalIntegrations).omit({ id: true, createdAt: true, updatedAt: true });
+export type ExternalIntegration = typeof externalIntegrations.$inferSelect;
+export type InsertExternalIntegration = z.infer<typeof insertExternalIntegrationSchema>;
+
+export const insertOauthAppSchema = createInsertSchema(oauthApps).omit({ id: true, createdAt: true });
+export type OauthApp = typeof oauthApps.$inferSelect;
+export type InsertOauthApp = z.infer<typeof insertOauthAppSchema>;
+
+export const insertOauthCodeSchema = createInsertSchema(oauthCodes).omit({ id: true, createdAt: true });
+export type OauthCode = typeof oauthCodes.$inferSelect;
+export type InsertOauthCode = z.infer<typeof insertOauthCodeSchema>;
+
+export const insertOauthTokenSchema = createInsertSchema(oauthTokens).omit({ id: true, createdAt: true });
+export type OauthToken = typeof oauthTokens.$inferSelect;
+export type InsertOauthToken = z.infer<typeof insertOauthTokenSchema>;
+
+export const insertApiRateLimitSchema = createInsertSchema(apiRateLimits).omit({ id: true, createdAt: true });
+export type ApiRateLimit = typeof apiRateLimits.$inferSelect;
+export type InsertApiRateLimit = z.infer<typeof insertApiRateLimitSchema>;
+
+export const insertApiCallLogSchema = createInsertSchema(apiCallLogs).omit({ id: true, createdAt: true });
+export type ApiCallLog = typeof apiCallLogs.$inferSelect;
+export type InsertApiCallLog = z.infer<typeof insertApiCallLogSchema>;
+
+export const insertIntegrationSyncJobSchema = createInsertSchema(integrationSyncJobs).omit({ id: true, createdAt: true });
+export type IntegrationSyncJob = typeof integrationSyncJobs.$inferSelect;
+export type InsertIntegrationSyncJob = z.infer<typeof insertIntegrationSyncJobSchema>;
+
+// === WHITE-LABEL CHURCH PLATFORM ===
+
+export const organizations = pgTable("organizations", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  domain: varchar("domain", { length: 255 }),
+  logoUrl: varchar("logo_url", { length: 500 }),
+  faviconUrl: varchar("favicon_url", { length: 500 }),
+  primaryColor: varchar("primary_color", { length: 20 }).default("#1a73e8"),
+  secondaryColor: varchar("secondary_color", { length: 20 }).default("#34a853"),
+  accentColor: varchar("accent_color", { length: 20 }).default("#fbbc04"),
+  backgroundColor: varchar("background_color", { length: 20 }).default("#ffffff"),
+  textColor: varchar("text_color", { length: 20 }).default("#202124"),
+  contactEmail: varchar("contact_email", { length: 255 }),
+  contactPhone: varchar("contact_phone", { length: 50 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("Nigeria"),
+  timezone: varchar("timezone", { length: 50 }).default("Africa/Lagos"),
+  isActive: boolean("is_active").default(true),
+  isVerified: boolean("is_verified").default(false),
+  plan: varchar("plan", { length: 50 }).default("free"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizationThemes = pgTable("organization_themes", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  isDefault: boolean("is_default").default(false),
+  config: jsonb("config").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const customPages = pgTable("custom_pages", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull(),
+  content: text("content"),
+  metaTitle: varchar("meta_title", { length: 255 }),
+  metaDescription: text("meta_description"),
+  isPublished: boolean("is_published").default(false),
+  showInNav: boolean("show_in_nav").default(false),
+  orderIndex: integer("order_index").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const customMenuItems = pgTable("custom_menu_items", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  menuLocation: varchar("menu_location", { length: 50 }).notNull(),
+  label: varchar("label", { length: 100 }).notNull(),
+  url: varchar("url", { length: 500 }),
+  pageId: integer("page_id").references(() => customPages.id),
+  icon: varchar("icon", { length: 100 }),
+  orderIndex: integer("order_index").default(0),
+  isVisible: boolean("is_visible").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  body: text("body").notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const customFields = pgTable("custom_fields", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  entityType: varchar("entity_type", { length: 50 }).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  fieldType: varchar("field_type", { length: 50 }).notNull(),
+  label: varchar("label", { length: 255 }).notNull(),
+  placeholder: varchar("placeholder", { length: 255 }),
+  isRequired: boolean("is_required").default(false),
+  options: jsonb("options").$type<string[]>(),
+  orderIndex: integer("order_index").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizationMembers = pgTable("organization_members", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  role: varchar("role", { length: 50 }).default("member"),
+  status: varchar("status", { length: 50 }).default("active"),
+  invitedBy: uuid("invited_by"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const organizationSettings = pgTable("organization_settings", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull().unique(),
+  settings: jsonb("settings").$type<Record<string, any>>(),
+  features: jsonb("features").$type<Record<string, any>>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const customDomains = pgTable("custom_domains", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  domain: varchar("domain", { length: 255 }).notNull().unique(),
+  sslEnabled: boolean("ssl_enabled").default(false),
+  sslCert: varchar("ssl_cert", { length: 500 }),
+  sslKey: varchar("ssl_key", { length: 500 }),
+  isVerified: boolean("is_verified").default(false),
+  verificationCode: varchar("verification_code", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizationAnalytics = pgTable("organization_analytics", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  metricType: varchar("metric_type", { length: 100 }).notNull(),
+  metricValue: real("metric_value").notNull(),
+  metadata: jsonb("metadata").$type<Record<string, any>>(),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
+// Relations
+export const organizationRelations = relations(organizations, ({ one, many }) => ({
+  themes: many(organizationThemes),
+  pages: many(customPages),
+  members: many(organizationMembers),
+  settings: one(organizationSettings),
+  customDomains: many(customDomains),
+}));
+
+export const organizationThemeRelations = relations(organizationThemes, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationThemes.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const customPageRelations = relations(customPages, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [customPages.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+export const organizationMemberRelations = relations(organizationMembers, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationMembers.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [organizationMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const organizationSettingRelations = relations(organizationSettings, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationSettings.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+// Insert schemas
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true, updatedAt: true });
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+
+export const insertOrganizationThemeSchema = createInsertSchema(organizationThemes).omit({ id: true, createdAt: true, updatedAt: true });
+export type OrganizationTheme = typeof organizationThemes.$inferSelect;
+export type InsertOrganizationTheme = z.infer<typeof insertOrganizationThemeSchema>;
+
+export const insertCustomPageSchema = createInsertSchema(customPages).omit({ id: true, createdAt: true, updatedAt: true });
+export type CustomPage = typeof customPages.$inferSelect;
+export type InsertCustomPage = z.infer<typeof insertCustomPageSchema>;
+
+export const insertCustomMenuItemSchema = createInsertSchema(customMenuItems).omit({ id: true, createdAt: true, updatedAt: true });
+export type CustomMenuItem = typeof customMenuItems.$inferSelect;
+export type InsertCustomMenuItem = z.infer<typeof insertCustomMenuItemSchema>;
+
+export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+
+export const insertCustomFieldSchema = createInsertSchema(customFields).omit({ id: true, createdAt: true, updatedAt: true });
+export type CustomField = typeof customFields.$inferSelect;
+export type InsertCustomField = z.infer<typeof insertCustomFieldSchema>;
+
+export const insertOrganizationMemberSchema = createInsertSchema(organizationMembers).omit({ id: true, joinedAt: true });
+export type OrganizationMember = typeof organizationMembers.$inferSelect;
+export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
+
+export const insertOrganizationSettingSchema = createInsertSchema(organizationSettings).omit({ id: true, createdAt: true, updatedAt: true });
+export type OrganizationSetting = typeof organizationSettings.$inferSelect;
+export type InsertOrganizationSetting = z.infer<typeof insertOrganizationSettingSchema>;
+
+export const insertCustomDomainSchema = createInsertSchema(customDomains).omit({ id: true, createdAt: true, updatedAt: true });
+export type CustomDomain = typeof customDomains.$inferSelect;
+export type InsertCustomDomain = z.infer<typeof insertCustomDomainSchema>;
+
+export const insertOrganizationAnalyticSchema = createInsertSchema(organizationAnalytics).omit({ id: true, recordedAt: true });
+export type OrganizationAnalytic = typeof organizationAnalytics.$inferSelect;
+export type InsertOrganizationAnalytic = z.infer<typeof insertOrganizationAnalyticSchema>;

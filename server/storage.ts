@@ -15,6 +15,16 @@ import {
   sermonClips,
   supportedLanguages,
   posts, postLikes, postComments, commentLikes, postShares, userConnections, hashtags, postHashtags,
+  userEngagementMetrics, spiritualHealthScores, discipleshipAnalytics, groupAnalytics, analyticsReports,
+  counselingRequests, counselingNotes, counselingFollowups, pastoralVisits,
+  sermonEmbeddings, sermonViews, userSermonPreferences, sermonRecommendations,
+  chatConversations, chatMessages, chatbotIntents, chatbotPreferences, chatbotAnalytics,
+  campuses, branches, campusMembers, campusEvents, campusTransfers, campusReports,
+  reportCategories, userReports, moderationQueue, userBlocks, userHiddenContent,
+  userSessions, loginHistory, user2FA, dataExportRequests, dataDeletionRequests,
+  externalApiKeys, webhookDeliveries, externalIntegrations, oauthApps, oauthCodes, oauthTokens, apiRateLimits, apiCallLogs, integrationSyncJobs,
+  organizations, organizationThemes, customPages, customMenuItems, emailTemplates, customFields, 
+  organizationMembers, organizationSettings, customDomains, organizationAnalytics,
   type User, type Branding, type Event, type Sermon, type PrayerRequest, type Donation, type EventRsvp, type FundraisingCampaign, type DailyDevotional, type BibleReadingPlan, type BibleReadingProgress,
   type Music, type MusicPlaylist, type MusicGenre,
   type InsertBranding, type InsertEvent, type InsertSermon, type InsertPrayerRequest, type InsertDonation, type InsertEventRsvp, type InsertFundraisingCampaign,
@@ -52,7 +62,52 @@ import {
   type CommentLike, type InsertCommentLike,
   type PostShare, type InsertPostShare,
   type UserConnection, type InsertUserConnection,
-  type Hashtag, type InsertHashtag
+  type Hashtag, type InsertHashtag,
+  type UserEngagementMetrics, type InsertUserEngagementMetrics,
+  type SpiritualHealthScore, type InsertSpiritualHealthScore,
+  type DiscipleshipAnalytics, type InsertDiscipleshipAnalytics,
+  type GroupAnalytics, type InsertGroupAnalytics,
+  type AnalyticsReport, type InsertAnalyticsReport,
+  type CounselingRequest, type InsertCounselingRequest,
+  type CounselingNote, type InsertCounselingNote,
+  type CounselingFollowup, type InsertCounselingFollowup,
+  type PastoralVisit, type InsertPastoralVisit,
+  type SermonEmbedding, type InsertSermonEmbedding,
+  type SermonView, type InsertSermonView,
+  type UserSermonPreference, type InsertUserSermonPreference,
+  type SermonRecommendation, type InsertSermonRecommendation,
+  type ChatConversation, type InsertChatConversation,
+  type ChatMessage, type InsertChatMessage,
+  type ChatbotIntent, type InsertChatbotIntent,
+  type ChatbotPreference, type InsertChatbotPreference,
+  type ChatbotAnalytic, type InsertChatbotAnalytic,
+  type Campus, type InsertCampus,
+  type Branch, type InsertBranch,
+  type CampusMember, type InsertCampusMember,
+  type CampusEvent, type InsertCampusEvent,
+  type CampusTransfer, type InsertCampusTransfer,
+  type CampusReport, type InsertCampusReport,
+  type PrivacySetting, type InsertPrivacySetting,
+  type ReportCategory, type InsertReportCategory,
+  type UserReport, type InsertUserReport,
+  type ModerationQueue, type InsertModerationQueue,
+  type UserBlock, type InsertUserBlock,
+  type UserHiddenContent, type InsertUserHiddenContent,
+  type UserSession, type InsertUserSession,
+  type LoginHistory, type InsertLoginHistory,
+  type User2FA, type InsertUser2FA,
+  type DataExportRequest, type InsertDataExportRequest,
+  type DataDeletionRequest, type InsertDataDeletionRequest,
+  type Organization, type InsertOrganization,
+  type OrganizationTheme, type InsertOrganizationTheme,
+  type CustomPage, type InsertCustomPage,
+  type CustomMenuItem, type InsertCustomMenuItem,
+  type EmailTemplate, type InsertEmailTemplate,
+  type CustomField, type InsertCustomField,
+  type OrganizationMember, type InsertOrganizationMember,
+  type OrganizationSetting, type InsertOrganizationSetting,
+  type CustomDomain, type InsertCustomDomain,
+  type OrganizationAnalytic, type InsertOrganizationAnalytic
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, or, and, sql, gte, lte, lt, asc } from "drizzle-orm";
@@ -1708,17 +1763,17 @@ export class DatabaseStorage implements IStorage {
 
   // Webhooks
   async getWebhooks(userId: string): Promise<Webhook[]> {
-    return db.select().from(webhooks).where(eq(webhooks.userId, userId));
+    return db.select().from(webhooks).where(eq(webhooks.userId, userId)) as any;
   }
 
   async getWebhook(id: number): Promise<Webhook | undefined> {
     const [webhook] = await db.select().from(webhooks).where(eq(webhooks.id, id));
-    return webhook;
+    return webhook as any;
   }
 
   async createWebhook(webhookData: InsertWebhook): Promise<Webhook> {
-    const [created] = await db.insert(webhooks).values(webhookData).returning();
-    return created;
+    const [created] = await db.insert(webhooks).values(webhookData as any).returning();
+    return created as any;
   }
 
   async updateWebhook(id: number, updates: Partial<Webhook>): Promise<Webhook> {
@@ -1839,26 +1894,6 @@ export class DatabaseStorage implements IStorage {
   async awardBadge(userId: string, badgeId: number): Promise<UserBadge> {
     const [awarded] = await db.insert(userBadges).values({ userId, badgeId }).returning();
     return awarded;
-  }
-
-  // Privacy & Moderation
-  async getPrivacySettings(userId: string): Promise<PrivacySettings | undefined> {
-    const [settings] = await db.select().from(privacySettings).where(eq(privacySettings.userId, userId));
-    return settings;
-  }
-
-  async createOrUpdatePrivacySettings(settings: InsertPrivacySettings): Promise<PrivacySettings> {
-    const existing = await this.getPrivacySettings(settings.userId);
-    if (existing) {
-      const [updated] = await db
-        .update(privacySettings)
-        .set({ ...settings, updatedAt: new Date() })
-        .where(eq(privacySettings.userId, settings.userId))
-        .returning();
-      return updated;
-    }
-    const [created] = await db.insert(privacySettings).values(settings).returning();
-    return created;
   }
 
   async getContentFlags(contentType?: string, status?: string): Promise<ContentFlag[]> {
@@ -2448,6 +2483,1382 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(posts.isPinned), desc(posts.createdAt))
       .limit(limit)
       .offset(offset);
+  }
+
+  // === SPIRITUAL HEALTH & ENGAGEMENT ANALYTICS ===
+
+  // User Engagement Metrics
+  async getUserEngagementMetrics(userId: string, startDate?: Date, endDate?: Date): Promise<UserEngagementMetrics[]> {
+    let conditions: any[] = [eq(userEngagementMetrics.userId, userId)];
+    if (startDate) {
+      conditions.push(gte(userEngagementMetrics.date, startDate.toISOString().split('T')[0]));
+    }
+    if (endDate) {
+      conditions.push(lte(userEngagementMetrics.date, endDate.toISOString().split('T')[0]));
+    }
+    return db.select().from(userEngagementMetrics)
+      .where(and(...conditions))
+      .orderBy(desc(userEngagementMetrics.date));
+  }
+
+  async getAllEngagementMetrics(startDate?: Date, endDate?: Date): Promise<UserEngagementMetrics[]> {
+    let conditions: any[] = [];
+    if (startDate) {
+      conditions.push(gte(userEngagementMetrics.date, startDate.toISOString().split('T')[0]));
+    }
+    if (endDate) {
+      conditions.push(lte(userEngagementMetrics.date, endDate.toISOString().split('T')[0]));
+    }
+    return db.select().from(userEngagementMetrics)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(userEngagementMetrics.date));
+  }
+
+  async upsertUserEngagementMetrics(metrics: InsertUserEngagementMetrics): Promise<UserEngagementMetrics> {
+    const existingDate = metrics.date || new Date().toISOString().split('T')[0];
+    const [existing] = await db.select().from(userEngagementMetrics).where(
+      and(eq(userEngagementMetrics.userId, metrics.userId), eq(userEngagementMetrics.date, existingDate))
+    );
+    
+    if (existing) {
+      const [updated] = await db
+        .update(userEngagementMetrics)
+        .set({
+          sermonsWatched: (existing.sermonsWatched || 0) + (metrics.sermonsWatched || 0),
+          prayersSubmitted: (existing.prayersSubmitted || 0) + (metrics.prayersSubmitted || 0),
+          eventsAttended: (existing.eventsAttended || 0) + (metrics.eventsAttended || 0),
+          devotionalsRead: (existing.devotionalsRead || 0) + (metrics.devotionalsRead || 0),
+          groupMessages: (existing.groupMessages || 0) + (metrics.groupMessages || 0),
+          loginCount: (existing.loginCount || 0) + (metrics.loginCount || 0),
+          totalSessionTime: (existing.totalSessionTime || 0) + (metrics.totalSessionTime || 0),
+        })
+        .where(eq(userEngagementMetrics.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db.insert(userEngagementMetrics).values(metrics).returning();
+    return created;
+  }
+
+  // Spiritual Health Scores
+  async getSpiritualHealthScores(userId: string): Promise<SpiritualHealthScore[]> {
+    return db.select().from(spiritualHealthScores)
+      .where(eq(spiritualHealthScores.userId, userId))
+      .orderBy(desc(spiritualHealthScores.weekStart));
+  }
+
+  async calculateSpiritualHealthScore(userId: string, weekStart: Date): Promise<SpiritualHealthScore> {
+    // Get engagement data for the week
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    const weekEndStr = weekEnd.toISOString().split('T')[0];
+    
+    const metrics = await this.getUserEngagementMetrics(userId, weekStart, weekEnd);
+    
+    // Calculate scores (simplified algorithm)
+    const totalMetrics = metrics.reduce((acc, m) => ({
+      sermons: acc.sermons + (m.sermonsWatched || 0),
+      prayers: acc.prayers + (m.prayersSubmitted || 0),
+      events: acc.events + (m.eventsAttended || 0),
+      devotionals: acc.devotionals + (m.devotionalsRead || 0),
+      messages: acc.messages + (m.groupMessages || 0),
+    }), { sermons: 0, prayers: 0, events: 0, devotionals: 0, messages: 0 });
+    
+    // Attendance score (based on events)
+    const attendanceScore = Math.min(100, totalMetrics.events * 25);
+    // Engagement score (based on interactions)
+    const engagementScore = Math.min(100, Math.round((totalMetrics.sermons * 10 + totalMetrics.prayers * 5 + totalMetrics.devotionals * 8 + totalMetrics.messages * 2) / 2));
+    // Growth score (based on consistency)
+    const growthScore = Math.min(100, Math.round((metrics.length / 7) * 100));
+    // Overall score
+    const overallScore = Math.round((attendanceScore + engagementScore + growthScore) / 3);
+    
+    const [score] = await db
+      .insert(spiritualHealthScores)
+      .values({
+        userId,
+        weekStart: weekStartStr,
+        attendanceScore,
+        engagementScore,
+        growthScore,
+        overallScore,
+      })
+      .onConflictDoUpdate({
+        target: [spiritualHealthScores.userId, spiritualHealthScores.weekStart],
+        set: { attendanceScore, engagementScore, growthScore, overallScore, calculatedAt: new Date() },
+      })
+      .returning();
+    
+    return score;
+  }
+
+  // Discipleship Analytics
+  async getDiscipleshipAnalytics(trackId?: number, weeks = 4): Promise<DiscipleshipAnalytics[]> {
+    if (trackId) {
+      return db.select().from(discipleshipAnalytics)
+        .where(eq(discipleshipAnalytics.trackId, trackId))
+        .orderBy(desc(discipleshipAnalytics.weekStart))
+        .limit(weeks);
+    }
+    return db.select().from(discipleshipAnalytics)
+      .orderBy(desc(discipleshipAnalytics.weekStart))
+      .limit(weeks * 10);
+  }
+
+  async calculateDiscipleshipAnalytics(trackId: number, weekStart: Date): Promise<DiscipleshipAnalytics> {
+    const track = await this.getDiscipleshipTrack(trackId);
+    if (!track) throw new Error("Track not found");
+    
+    // Get all users enrolled in this track
+    const allProgress = await db.select().from(userProgress).where(eq(userProgress.trackId, trackId));
+    
+    const activeLearners = allProgress.filter(p => !p.completed).length;
+    const completedCount = allProgress.filter(p => p.completed).length;
+    
+    // Get quiz scores
+    const quizzesForTrack = await db.select().from(quizzes).where(eq(quizzes.lessonId, trackId));
+    const quizIds = quizzesForTrack.map(q => q.id);
+    
+    let quizScores: number[] = [];
+    if (quizIds.length > 0) {
+      const progressWithQuizzes = allProgress.filter(p => p.quizScore !== null);
+      quizScores = progressWithQuizzes.map(p => p.quizScore!);
+    }
+    
+    const quizAverageScore = quizScores.length > 0 
+      ? Math.round(quizScores.reduce((a, b) => a + b, 0) / quizScores.length)
+      : null;
+    
+    const [analytics] = await db
+      .insert(discipleshipAnalytics)
+      .values({
+        trackId,
+        weekStart: weekStart.toISOString().split('T')[0],
+        totalEnrolled: allProgress.length,
+        activeLearners,
+        completedCount,
+        quizAverageScore,
+      })
+      .onConflictDoUpdate({
+        target: [discipleshipAnalytics.trackId, discipleshipAnalytics.weekStart],
+        set: { totalEnrolled: allProgress.length, activeLearners, completedCount, quizAverageScore },
+      })
+      .returning();
+    
+    return analytics;
+  }
+
+  // Group Analytics
+  async getGroupAnalytics(groupId?: number, weeks = 4): Promise<GroupAnalytics[]> {
+    if (groupId) {
+      return db.select().from(groupAnalytics)
+        .where(eq(groupAnalytics.groupId, groupId))
+        .orderBy(desc(groupAnalytics.weekStart))
+        .limit(weeks);
+    }
+    return db.select().from(groupAnalytics)
+      .orderBy(desc(groupAnalytics.weekStart))
+      .limit(weeks * 10);
+  }
+
+  async calculateGroupAnalytics(groupId: number, weekStart: Date): Promise<GroupAnalytics> {
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    
+    const members = await this.getGroupMembers(groupId);
+    const messages = await this.getGroupMessages(groupId);
+    const weekMessages = messages.filter(m => {
+      const msgDate = new Date(m.createdAt || '');
+      return msgDate >= weekStart && msgDate < weekEnd;
+    });
+    
+    const activeMembers = members.filter(m => {
+      const memberMessages = weekMessages.filter(msg => msg.userId === m.userId);
+      return memberMessages.length > 0;
+    }).length;
+    
+    const [analytics] = await db
+      .insert(groupAnalytics)
+      .values({
+        groupId,
+        weekStart: weekStartStr,
+        activeMembers,
+        messagesCount: weekMessages.length,
+      })
+      .onConflictDoUpdate({
+        target: [groupAnalytics.groupId, groupAnalytics.weekStart],
+        set: { activeMembers, messagesCount: weekMessages.length },
+      })
+      .returning();
+    
+    return analytics;
+  }
+
+  // Analytics Reports
+  async getAnalyticsReports(reportType?: string): Promise<AnalyticsReport[]> {
+    if (reportType) {
+      return db.select().from(analyticsReports)
+        .where(eq(analyticsReports.reportType, reportType))
+        .orderBy(desc(analyticsReports.createdAt));
+    }
+    return db.select().from(analyticsReports).orderBy(desc(analyticsReports.createdAt));
+  }
+
+  async createAnalyticsReport(report: InsertAnalyticsReport): Promise<AnalyticsReport> {
+    const [created] = await db.insert(analyticsReports).values(report).returning();
+    return created;
+  }
+
+  async deleteAnalyticsReport(id: number): Promise<void> {
+    await db.delete(analyticsReports).where(eq(analyticsReports.id, id));
+  }
+
+  // Dashboard Analytics Summary
+  async getEngagementSummary(startDate: Date, endDate: Date): Promise<{
+    totalSermonsWatched: number;
+    totalPrayersSubmitted: number;
+    totalEventsAttended: number;
+    totalDevotionalsRead: number;
+    uniqueActiveUsers: number;
+  }> {
+    const metrics = await this.getAllEngagementMetrics(startDate, endDate);
+    
+    return {
+      totalSermonsWatched: metrics.reduce((sum, m) => sum + (m.sermonsWatched || 0), 0),
+      totalPrayersSubmitted: metrics.reduce((sum, m) => sum + (m.prayersSubmitted || 0), 0),
+      totalEventsAttended: metrics.reduce((sum, m) => sum + (m.eventsAttended || 0), 0),
+      totalDevotionalsRead: metrics.reduce((sum, m) => sum + (m.devotionalsRead || 0), 0),
+      uniqueActiveUsers: new Set(metrics.map(m => m.userId)).size,
+    };
+  }
+
+  // Get spiritual health trends for all users
+  async getSpiritualHealthTrends(weeks = 4): Promise<{
+    weekStart: string;
+    averageScore: number;
+    improving: number;
+    declining: number;
+  }[]> {
+    const scores = await db.select().from(spiritualHealthScores)
+      .orderBy(desc(spiritualHealthScores.weekStart))
+      .limit(weeks);
+    
+    const byWeek: Record<string, SpiritualHealthScore[]> = {};
+    scores.forEach(s => {
+      const weekKey = String(s.weekStart);
+      if (!byWeek[weekKey]) byWeek[weekKey] = [];
+      byWeek[weekKey].push(s);
+    });
+    
+    return Object.entries(byWeek).map(([week, weekScores]) => {
+      const averageScore = Math.round(weekScores.reduce((sum, s) => sum + (s.overallScore || 0), 0) / weekScores.length);
+      
+      // Calculate trend
+      const previousWeekDate = new Date(week);
+      previousWeekDate.setDate(previousWeekDate.getDate() - 7);
+      const prevWeekStr = previousWeekDate.toISOString().split('T')[0];
+      const prevScores = scores.filter(s => String(s.weekStart) === prevWeekStr);
+      
+      let improving = 0, declining = 0;
+      if (prevScores.length > 0) {
+        weekScores.forEach(s => {
+          const prev = prevScores.find(p => p.userId === s.userId);
+          if (prev) {
+            if ((s.overallScore || 0) > (prev.overallScore || 0)) improving++;
+            else if ((s.overallScore || 0) < (prev.overallScore || 0)) declining++;
+          }
+        });
+      }
+      
+      return { weekStart: week, averageScore, improving, declining };
+    });
+  }
+
+  // === PASTORAL CARE & COUNSELING SYSTEM ===
+
+  // Counseling Requests
+  async getCounselingRequests(filters?: { status?: string; assignedTo?: string; userId?: string }): Promise<CounselingRequest[]> {
+    let conditions = [];
+    if (filters?.status) conditions.push(eq(counselingRequests.status, filters.status));
+    if (filters?.assignedTo) conditions.push(eq(counselingRequests.assignedTo, filters.assignedTo));
+    if (filters?.userId) conditions.push(eq(counselingRequests.userId, filters.userId));
+    
+    return db.select().from(counselingRequests)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(counselingRequests.createdAt));
+  }
+
+  async getCounselingRequest(id: number): Promise<CounselingRequest | undefined> {
+    const [request] = await db.select().from(counselingRequests).where(eq(counselingRequests.id, id));
+    return request;
+  }
+
+  async createCounselingRequest(request: InsertCounselingRequest): Promise<CounselingRequest> {
+    const [created] = await db.insert(counselingRequests).values(request).returning();
+    return created;
+  }
+
+  async updateCounselingRequest(id: number, updates: Partial<CounselingRequest>): Promise<CounselingRequest> {
+    const [updated] = await db
+      .update(counselingRequests)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(counselingRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async assignCounselingRequest(id: number, assignedTo: string): Promise<CounselingRequest> {
+    return this.updateCounselingRequest(id, {
+      assignedTo,
+      assignedAt: new Date(),
+      status: 'assigned'
+    });
+  }
+
+  async completeCounselingRequest(id: number): Promise<CounselingRequest> {
+    return this.updateCounselingRequest(id, {
+      status: 'completed',
+      completedAt: new Date()
+    });
+  }
+
+  // Counseling Notes
+  async getCounselingNotes(requestId: number): Promise<CounselingNote[]> {
+    return db.select().from(counselingNotes)
+      .where(eq(counselingNotes.requestId, requestId))
+      .orderBy(desc(counselingNotes.createdAt));
+  }
+
+  async createCounselingNote(note: InsertCounselingNote): Promise<CounselingNote> {
+    const [created] = await db.insert(counselingNotes).values(note).returning();
+    return created;
+  }
+
+  // Counseling Follow-ups
+  async getCounselingFollowups(requestId: number): Promise<CounselingFollowup[]> {
+    return db.select().from(counselingFollowups)
+      .where(eq(counselingFollowups.requestId, requestId))
+      .orderBy(asc(counselingFollowups.scheduledDate));
+  }
+
+  async getPendingFollowups(): Promise<CounselingFollowup[]> {
+    return db.select().from(counselingFollowups)
+      .where(eq(counselingFollowups.completed, false))
+      .orderBy(asc(counselingFollowups.scheduledDate));
+  }
+
+  async createCounselingFollowup(followup: InsertCounselingFollowup): Promise<CounselingFollowup> {
+    const [created] = await db.insert(counselingFollowups).values(followup).returning();
+    return created;
+  }
+
+  async completeCounselingFollowup(id: number, notes?: string): Promise<CounselingFollowup> {
+    const [updated] = await db
+      .update(counselingFollowups)
+      .set({ completed: true, completedAt: new Date(), notes })
+      .where(eq(counselingFollowups.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Pastoral Visits
+  async getPastoralVisits(filters?: { visitorId?: string; visitedUserId?: string }): Promise<PastoralVisit[]> {
+    let conditions = [];
+    if (filters?.visitorId) conditions.push(eq(pastoralVisits.visitorId, filters.visitorId));
+    if (filters?.visitedUserId) conditions.push(eq(pastoralVisits.visitedUserId, filters.visitedUserId));
+    
+    return db.select().from(pastoralVisits)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(pastoralVisits.visitDate));
+  }
+
+  async createPastoralVisit(visit: InsertPastoralVisit): Promise<PastoralVisit> {
+    const [created] = await db.insert(pastoralVisits).values(visit).returning();
+    return created;
+  }
+
+  // Get pastoral statistics
+  async getPastoralStats(): Promise<{
+    totalRequests: number;
+    pendingRequests: number;
+    inProgressRequests: number;
+    completedRequests: number;
+    pendingFollowups: number;
+    visitsThisMonth: number;
+  }> {
+    const allRequests = await db.select().from(counselingRequests);
+    const pendingFollowups = await this.getPendingFollowups();
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    const visitsThisMonth = await db.select().from(pastoralVisits)
+      .where(gte(pastoralVisits.visitDate, startOfMonth.toISOString().split('T')[0]));
+
+    return {
+      totalRequests: allRequests.length,
+      pendingRequests: allRequests.filter(r => r.status === 'pending').length,
+      inProgressRequests: allRequests.filter(r => r.status === 'assigned' || r.status === 'in_progress').length,
+      completedRequests: allRequests.filter(r => r.status === 'completed').length,
+      pendingFollowups: pendingFollowups.length,
+      visitsThisMonth: visitsThisMonth.length,
+    };
+  }
+
+  // === AI SERMON SEARCH & SMART RECOMMENDATIONS ===
+
+  // Sermon Views (tracking)
+  async recordSermonView(sermonId: number, userId: string, watchDuration: number = 0, completed: boolean = false): Promise<SermonView> {
+    const [view] = await db.insert(sermonViews).values({
+      sermonId,
+      userId,
+      watchDuration,
+      completed,
+    }).returning();
+    return view;
+  }
+
+  async updateSermonView(id: number, updates: Partial<SermonView>): Promise<SermonView> {
+    const [updated] = await db
+      .update(sermonViews)
+      .set(updates)
+      .where(eq(sermonViews.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getUserSermonViews(userId: string, limit = 20): Promise<SermonView[]> {
+    return db.select().from(sermonViews)
+      .where(eq(sermonViews.userId, userId))
+      .orderBy(desc(sermonViews.viewedAt))
+      .limit(limit);
+  }
+
+  async getPopularSermons(limit = 10): Promise<any[]> {
+    const views = await db.select().from(sermonViews);
+    const sermonCounts = views.reduce((acc, v) => {
+      acc[v.sermonId] = (acc[v.sermonId] || 0) + 1;
+      return acc;
+    }, {} as Record<number, number>);
+    
+    const sortedSermons = Object.entries(sermonCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, limit)
+      .map(([sermonId]) => Number(sermonId));
+    
+    if (sortedSermons.length === 0) return [];
+    
+    return sortedSermons.map(id => this.getSermon(id)).filter(Boolean);
+  }
+
+  // User Sermon Preferences
+  async getUserSermonPreferences(userId: string): Promise<UserSermonPreference | undefined> {
+    const [pref] = await db.select().from(userSermonPreferences).where(eq(userSermonPreferences.userId, userId));
+    return pref;
+  }
+
+  async updateUserSermonPreferences(userId: string, updates: { favoriteSpeakers?: string[]; favoriteTopics?: string[]; favoriteSeries?: string[] }): Promise<UserSermonPreference> {
+    const existing = await this.getUserSermonPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(userSermonPreferences)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(userSermonPreferences.userId, userId))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db
+      .insert(userSermonPreferences)
+      .values({ userId, ...updates })
+      .returning();
+    return created;
+  }
+
+  // Smart Recommendations
+  async getSermonRecommendations(userId: string, limit = 10): Promise<Sermon[]> {
+    // Check cache first
+    const [cached] = await db.select().from(sermonRecommendations)
+      .where(eq(sermonRecommendations.userId, userId));
+    
+    if (cached && cached.recommendedSermons && cached.recommendedSermons.length > 0) {
+      const recSermons = await Promise.all(
+        cached.recommendedSermons.map(id => this.getSermon(id))
+      );
+      return recSermons.filter(Boolean) as Sermon[];
+    }
+    
+    // Generate recommendations based on preferences and views
+    const prefs = await this.getUserSermonPreferences(userId);
+    const views = await this.getUserSermonViews(userId);
+    
+    // Get viewed sermon IDs
+    const viewedIds = new Set(views.map(v => v.sermonId));
+    
+    // Get all sermons
+    const allSermons = await this.getSermons();
+    
+    // Score sermons based on user preferences
+    const scored = allSermons
+      .filter(s => !viewedIds.has(s.id))
+      .map(sermon => {
+        let score = 0;
+        
+        // Boost by preferences
+        if (prefs?.favoriteSpeakers?.includes(sermon.speaker)) score += 5;
+        if (prefs?.favoriteSeries === sermon.series) score += 3;
+        if (prefs?.favoriteTopics?.some(t => sermon.topic?.toLowerCase().includes(t.toLowerCase()))) score += 4;
+        
+        // Boost by popularity
+        const viewCount = views.filter(v => v.sermonId === sermon.id).length;
+        score += viewCount;
+        
+        // Boost recent sermons
+        const daysSince = Math.floor((Date.now() - new Date(sermon.date).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSince < 30) score += 2;
+        if (daysSince < 7) score += 3;
+        
+        return { sermon, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(({ sermon }) => sermon);
+    
+    // Cache recommendations
+    if (scored.length > 0) {
+      await db.insert(sermonRecommendations).values({
+        userId,
+        recommendedSermons: scored.map(s => s.id),
+        basedOn: prefs ? 'preferences' : 'popularity',
+      }).onConflictDoUpdate({
+        target: sermonRecommendations.userId,
+        set: { recommendedSermons: scored.map(s => s.id), basedOn: prefs ? 'preferences' : 'popularity', createdAt: new Date() },
+      });
+    }
+    
+    return scored;
+  }
+
+  // AI Search (keyword-based for now)
+  async searchSermons(query: string, limit = 20): Promise<Sermon[]> {
+    const searchTerm = `%${query.toLowerCase()}%`;
+    const allSermons = await this.getSermons();
+    
+    return allSermons.filter(s => 
+      s.title.toLowerCase().includes(query.toLowerCase()) ||
+      s.speaker.toLowerCase().includes(query.toLowerCase()) ||
+      s.topic?.toLowerCase().includes(query.toLowerCase()) ||
+      s.description?.toLowerCase().includes(query.toLowerCase()) ||
+      s.series?.toLowerCase().includes(query.toLowerCase())
+    ).slice(0, limit);
+  }
+
+  // Generate sermon summary (placeholder for AI)
+  async generateSermonSummary(sermonId: number): Promise<string> {
+    const sermon = await this.getSermon(sermonId);
+    if (!sermon) return '';
+    
+    // In production, this would call an AI service
+    // For now, return a basic summary
+    return `A sermon titled "${sermon.title}" by ${sermon.speaker} on ${new Date(sermon.date).toLocaleDateString()}. ${sermon.topic ? `Topic: ${sermon.topic}.` : ''} ${sermon.description?.substring(0, 200) || ''}`;
+  }
+
+  // Get related sermons
+  async getRelatedSermons(sermonId: number, limit = 5): Promise<Sermon[]> {
+    const sermon = await this.getSermon(sermonId);
+    if (!sermon) return [];
+    
+    const allSermons = await this.getSermons();
+    
+    return allSermons
+      .filter(s => s.id !== sermonId)
+      .map(s => {
+        let score = 0;
+        if (s.speaker === sermon.speaker) score += 5;
+        if (s.series === sermon.series) score += 4;
+        if (s.topic === sermon.topic) score += 3;
+        
+        // Add to results with score
+        return { sermon: s, score };
+      })
+      .filter(r => r.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(({ sermon }) => sermon);
+  }
+
+  // === AI CHURCH ASSISTANT (CHATBOT) ===
+
+  // Chat Conversations
+  async createChatConversation(conv: InsertChatConversation): Promise<ChatConversation> {
+    const [created] = await db.insert(chatConversations).values(conv).returning();
+    return created;
+  }
+
+  async getChatConversation(id: number): Promise<ChatConversation | undefined> {
+    const [conv] = await db.select().from(chatConversations).where(eq(chatConversations.id, id));
+    return conv;
+  }
+
+  async getChatConversationsBySession(sessionId: string): Promise<ChatConversation[]> {
+    return db.select().from(chatConversations).where(eq(chatConversations.sessionId, sessionId));
+  }
+
+  async getChatConversationsByUser(userId: string): Promise<ChatConversation[]> {
+    return db.select().from(chatConversations).where(eq(chatConversations.userId, userId)).orderBy(desc(chatConversations.updatedAt));
+  }
+
+  async updateChatConversation(id: number, updates: Partial<ChatConversation>): Promise<ChatConversation> {
+    const [updated] = await db
+      .update(chatConversations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(chatConversations.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Chat Messages
+  async addChatMessage(msg: InsertChatMessage): Promise<ChatMessage> {
+    const [created] = await db.insert(chatMessages).values(msg).returning();
+    
+    // Update conversation timestamp
+    await db
+      .update(chatConversations)
+      .set({ updatedAt: new Date() })
+      .where(eq(chatConversations.id, msg.conversationId));
+    
+    return created;
+  }
+
+  async getChatMessages(conversationId: number): Promise<ChatMessage[]> {
+    return db.select().from(chatMessages).where(eq(chatMessages.conversationId, conversationId)).orderBy(asc(chatMessages.createdAt));
+  }
+
+  // Chatbot Intents
+  async getChatbotIntents(): Promise<ChatbotIntent[]> {
+    return db.select().from(chatbotIntents).where(eq(chatbotIntents.isActive, true)).orderBy(desc(chatbotIntents.priority));
+  }
+
+  async getChatbotIntentById(id: number): Promise<ChatbotIntent | undefined> {
+    const [intent] = await db.select().from(chatbotIntents).where(eq(chatbotIntents.id, id));
+    return intent;
+  }
+
+  async createChatbotIntent(intent: InsertChatbotIntent): Promise<ChatbotIntent> {
+    const [created] = await db.insert(chatbotIntents).values(intent).returning();
+    return created;
+  }
+
+  async updateChatbotIntent(id: number, updates: Partial<ChatbotIntent>): Promise<ChatbotIntent> {
+    const [updated] = await db
+      .update(chatbotIntents)
+      .set(updates)
+      .where(eq(chatbotIntents.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteChatbotIntent(id: number): Promise<void> {
+    await db.delete(chatbotIntents).where(eq(chatbotIntents.id, id));
+  }
+
+  // Match user message to intent
+  async matchIntent(userMessage: string): Promise<ChatbotIntent | undefined> {
+    const intents = await this.getChatbotIntents();
+    const message = userMessage.toLowerCase();
+    
+    let bestMatch: ChatbotIntent | undefined;
+    let bestScore = 0;
+    
+    for (const intent of intents) {
+      let score = 0;
+      
+      // Check patterns
+      if (intent.patterns) {
+        for (const pattern of intent.patterns) {
+          if (message.includes(pattern.toLowerCase())) {
+            score += 10;
+          }
+        }
+      }
+      
+      // Check keywords
+      if (intent.keywords) {
+        for (const keyword of intent.keywords) {
+          if (message.includes(keyword.toLowerCase())) {
+            score += 5;
+          }
+        }
+      }
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = intent;
+      }
+    }
+    
+    return bestScore > 0 ? bestMatch : undefined;
+  }
+
+  // Generate chatbot response
+  async generateChatbotResponse(userMessage: string, conversationId?: number): Promise<{ response: string; intentId?: number; intentName?: string }> {
+    const startTime = Date.now();
+    
+    // Try to match an intent
+    const matchedIntent = await this.matchIntent(userMessage);
+    
+    if (matchedIntent && matchedIntent.responses && matchedIntent.responses.length > 0) {
+      // Random response from matched intent
+      const response = matchedIntent.responses[Math.floor(Math.random() * matchedIntent.responses.length)];
+      
+      // Log analytics
+      if (conversationId) {
+        await db.insert(chatbotAnalytics).values({
+          conversationId: conversationId,
+          intent: matchedIntent.name,
+          responseTimeMs: Date.now() - startTime,
+        } as any);
+      }
+      
+      return { 
+        response, 
+        intentId: matchedIntent.id, 
+        intentName: matchedIntent.name 
+      };
+    }
+    
+    // Default fallback responses
+    const fallbackResponses = [
+      "Thank you for your message. A member of our team will get back to you shortly.",
+      "I understand. Please contact our office for more detailed information.",
+      "That's a great question! Our pastoral team would be happy to help. Please reach out to us.",
+      "I appreciate you reaching out. For specific inquiries, please call our office."
+    ];
+    
+    const response = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+    
+    // Log analytics (no match)
+    if (conversationId) {
+      await db.insert(chatbotAnalytics).values({
+        conversationId: conversationId,
+        responseTimeMs: Date.now() - startTime,
+      } as any);
+    }
+    
+    return { response };
+  }
+
+  // Chatbot Preferences
+  async getChatbotPreferences(userId: string): Promise<ChatbotPreference | undefined> {
+    const [pref] = await db.select().from(chatbotPreferences).where(eq(chatbotPreferences.userId, userId));
+    return pref;
+  }
+
+  async updateChatbotPreferences(userId: string, updates: { language?: string; notificationEnabled?: boolean; digestPreference?: string }): Promise<ChatbotPreference> {
+    const existing = await this.getChatbotPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(chatbotPreferences)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(chatbotPreferences.userId, userId))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db
+      .insert(chatbotPreferences)
+      .values({ userId, ...updates })
+      .returning();
+    return created;
+  }
+
+  // Chatbot Analytics
+  async recordChatbotFeedback(conversationId: number, feedback: string): Promise<void> {
+    await db
+      .update(chatbotAnalytics)
+      .set({ feedback })
+      .where(eq(chatbotAnalytics.conversationId, conversationId));
+  }
+
+  async getChatbotAnalytics(startDate?: Date, endDate?: Date): Promise<any> {
+    let query = db.select().from(chatbotAnalytics);
+    
+    const analytics = await query;
+    
+    const totalChats = new Set(analytics.map(a => a.conversationId)).size;
+    const avgResponseTime = analytics.reduce((sum, a) => sum + (a.responseTimeMs || 0), 0) / (analytics.length || 1);
+    const intentCounts = analytics.reduce((acc, a) => {
+      if (a.intent) {
+        acc[a.intent] = (acc[a.intent] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return {
+      totalInteractions: analytics.length,
+      totalChats,
+      avgResponseTimeMs: Math.round(avgResponseTime),
+      topIntents: Object.entries(intentCounts).sort(([,a], [,b]) => b - a).slice(0, 10),
+    };
+  }
+
+  // === MULTI-CAMPUS & BRANCH MANAGEMENT ===
+
+  // Campuses
+  async createCampus(campus: InsertCampus): Promise<Campus> {
+    const [created] = await db.insert(campuses).values(campus).returning();
+    return created;
+  }
+
+  async getCampus(id: number): Promise<Campus | undefined> {
+    const [campus] = await db.select().from(campuses).where(eq(campuses.id, id));
+    return campus;
+  }
+
+  async getCampusByCode(code: string): Promise<Campus | undefined> {
+    const [campus] = await db.select().from(campuses).where(eq(campuses.code, code));
+    return campus;
+  }
+
+  async getCampuses(includeInactive = false): Promise<Campus[]> {
+    if (includeInactive) {
+      return db.select().from(campuses).orderBy(asc(campuses.name));
+    }
+    return db.select().from(campuses).where(eq(campuses.isActive, true)).orderBy(desc(campuses.isHeadquarters), asc(campuses.name));
+  }
+
+  async updateCampus(id: number, updates: Partial<Campus>): Promise<Campus> {
+    const [updated] = await db
+      .update(campuses)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(campuses.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCampus(id: number): Promise<void> {
+    await db.delete(campuses).where(eq(campuses.id, id));
+  }
+
+  async getHeadquarters(): Promise<Campus | undefined> {
+    const [campus] = await db.select().from(campuses).where(eq(campuses.isHeadquarters, true));
+    return campus;
+  }
+
+  // Branches
+  async createBranch(branch: InsertBranch): Promise<Branch> {
+    const [created] = await db.insert(branches).values(branch).returning();
+    return created;
+  }
+
+  async getBranch(id: number): Promise<Branch | undefined> {
+    const [branch] = await db.select().from(branches).where(eq(branches.id, id));
+    return branch;
+  }
+
+  async getBranchesByCampus(campusId: number, includeInactive = false): Promise<Branch[]> {
+    const query = db.select().from(branches).where(eq(branches.campusId, campusId));
+    if (!includeInactive) {
+      return query.where(eq(branches.isActive, true));
+    }
+    return query;
+  }
+
+  async getAllBranches(): Promise<Branch[]> {
+    return db.select().from(branches).orderBy(asc(branches.name));
+  }
+
+  async updateBranch(id: number, updates: Partial<Branch>): Promise<Branch> {
+    const [updated] = await db
+      .update(branches)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(branches.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBranch(id: number): Promise<void> {
+    await db.delete(branches).where(eq(branches.id, id));
+  }
+
+  // Campus Members
+  async assignMemberToCampus(member: InsertCampusMember): Promise<CampusMember> {
+    const [created] = await db.insert(campusMembers).values(member).onConflictDoUpdate({
+      target: campusMembers.userId,
+      set: { campusId: member.campusId, branchId: member.branchId, membershipType: member.membershipType, assignedAt: new Date() },
+    }).returning();
+    return created;
+  }
+
+  async getCampusMember(userId: string): Promise<CampusMember | undefined> {
+    const [member] = await db.select().from(campusMembers).where(eq(campusMembers.userId, userId));
+    return member;
+  }
+
+  async getCampusMembers(campusId: number): Promise<CampusMember[]> {
+    return db.select().from(campusMembers).where(eq(campusMembers.campusId, campusId));
+  }
+
+  async removeMemberFromCampus(userId: string): Promise<void> {
+    await db.delete(campusMembers).where(eq(campusMembers.userId, userId));
+  }
+
+  // Campus Transfers
+  async createTransfer(transfer: InsertCampusTransfer): Promise<CampusTransfer> {
+    const [created] = await db.insert(campusTransfers).values(transfer).returning();
+    return created;
+  }
+
+  async getPendingTransfers(): Promise<CampusTransfer[]> {
+    return db.select().from(campusTransfers).where(eq(campusTransfers.status, "pending"));
+  }
+
+  async approveTransfer(id: number, approvedBy: string): Promise<CampusTransfer> {
+    const transfer = await db.select().from(campusTransfers).where(eq(campusTransfers.id, id)).then(t => t[0]);
+    if (!transfer) throw new Error("Transfer not found");
+    
+    // Update member's campus
+    await this.assignMemberToCampus({
+      userId: transfer.userId,
+      campusId: transfer.toCampusId,
+      branchId: transfer.toBranchId || undefined,
+    });
+    
+    // Update transfer status
+    const [updated] = await db
+      .update(campusTransfers)
+      .set({ status: "approved", approvedBy, approvedAt: new Date() })
+      .where(eq(campusTransfers.id, id))
+      .returning();
+    
+    return updated;
+  }
+
+  async rejectTransfer(id: number, approvedBy: string): Promise<CampusTransfer> {
+    const [updated] = await db
+      .update(campusTransfers)
+      .set({ status: "rejected", approvedBy, approvedAt: new Date() })
+      .where(eq(campusTransfers.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Campus Events
+  async addEventToCampus(event: InsertCampusEvent): Promise<CampusEvent> {
+    const [created] = await db.insert(campusEvents).values(event).returning();
+    return created;
+  }
+
+  async getCampusEvents(campusId: number): Promise<CampusEvent[]> {
+    return db.select().from(campusEvents).where(eq(campusEvents.campusId, campusId));
+  }
+
+  // Campus Reports
+  async generateCampusReport(report: InsertCampusReport): Promise<CampusReport> {
+    const [created] = await db.insert(campusReports).values(report).returning();
+    return created;
+  }
+
+  async getCampusReports(campusId: number): Promise<CampusReport[]> {
+    return db.select().from(campusReports).where(eq(campusReports.campusId, campusId)).orderBy(desc(campusReports.generatedAt));
+  }
+
+  async getCampusStats(campusId: number): Promise<any> {
+    const members = await this.getCampusMembers(campusId);
+    const branches = await this.getBranchesByCampus(campusId);
+    const transfers = await db.select().from(campusTransfers).where(eq(campusTransfers.toCampusId, campusId));
+    
+    return {
+      totalMembers: members.length,
+      totalBranches: branches.length,
+      pendingTransfers: transfers.filter(t => t.status === "pending").length,
+    };
+  }
+
+  // === PRIVACY, SAFETY & MODERATION CONTROLS ===
+
+  // Privacy Settings
+  async getPrivacySettings(userId: string): Promise<PrivacySetting | undefined> {
+    const [settings] = await db.select().from(privacySettings).where(eq(privacySettings.userId, userId));
+    return settings;
+  }
+
+  async updatePrivacySettings(userId: string, updates: Partial<PrivacySetting>): Promise<PrivacySetting> {
+    const existing = await this.getPrivacySettings(userId);
+    if (existing) {
+      const [updated] = await db
+        .update(privacySettings)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(privacySettings.userId, userId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(privacySettings)
+      .values({ userId, ...updates })
+      .returning();
+    return created;
+  }
+
+  // User Blocks
+  async blockUser(blockerId: string, blockedId: string, reason?: string): Promise<UserBlock> {
+    const [created] = await db.insert(userBlocks).values({ blockerId, blockedId, reason }).onConflictDoNothing().returning();
+    return created;
+  }
+
+  async unblockUser(blockerId: string, blockedId: string): Promise<void> {
+    await db.delete(userBlocks).where(and(eq(userBlocks.blockerId, blockerId), eq(userBlocks.blockedId, blockedId)));
+  }
+
+  async getBlockedUsers(blockerId: string): Promise<UserBlock[]> {
+    return db.select().from(userBlocks).where(eq(userBlocks.blockerId, blockerId));
+  }
+
+  async isUserBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+    const [block] = await db.select().from(userBlocks).where(and(eq(userBlocks.blockerId, blockerId), eq(userBlocks.blockedId, blockedId)));
+    return !!block;
+  }
+
+  // User Reports
+  async createReport(report: InsertUserReport): Promise<UserReport> {
+    const [created] = await db.insert(userReports).values(report).returning();
+    return created;
+  }
+
+  async getReportsByStatus(status: string): Promise<UserReport[]> {
+    return db.select().from(userReports).where(eq(userReports.status, status)).orderBy(desc(userReports.createdAt));
+  }
+
+  async getReportsByUser(userId: string): Promise<UserReport[]> {
+    return db.select().from(userReports).where(eq(userReports.reportedUserId, userId)).orderBy(desc(userReports.createdAt));
+  }
+
+  async resolveReport(id: number, resolvedBy: string, action: string, notes?: string): Promise<UserReport> {
+    const [updated] = await db
+      .update(userReports)
+      .set({ status: "resolved", resolvedBy, resolvedAt: new Date(), resolutionNotes: notes })
+      .where(eq(userReports.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Report Categories
+  async getReportCategories(): Promise<ReportCategory[]> {
+    return db.select().from(reportCategories).where(eq(reportCategories.isActive, true));
+  }
+
+  // Moderation Queue
+  async addToModerationQueue(item: InsertModerationQueue): Promise<ModerationQueue> {
+    const [created] = await db.insert(moderationQueue).values(item).returning();
+    return created;
+  }
+
+  async getPendingModeration(): Promise<ModerationQueue[]> {
+    return db.select().from(moderationQueue).where(eq(moderationQueue.status, "pending")).orderBy(desc(moderationQueue.createdAt));
+  }
+
+  async moderateContent(id: number, reviewedBy: string, action: string, notes?: string): Promise<ModerationQueue> {
+    const [updated] = await db
+      .update(moderationQueue)
+      .set({ status: "reviewed", reviewedBy, reviewedAt: new Date(), action, actionNotes: notes })
+      .where(eq(moderationQueue.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Login History
+  async recordLoginHistory(login: InsertLoginHistory): Promise<LoginHistory> {
+    const [created] = await db.insert(loginHistory).values(login).returning();
+    return created;
+  }
+
+  async getLoginHistory(userId: string, limit = 20): Promise<LoginHistory[]> {
+    return db.select().from(loginHistory).where(eq(loginHistory.userId, userId)).orderBy(desc(loginHistory.createdAt)).limit(limit);
+  }
+
+  // User Sessions
+  async createSession(session: InsertUserSession): Promise<UserSession> {
+    const [created] = await db.insert(userSessions).values(session).returning();
+    return created;
+  }
+
+  async getUserSessions(userId: string): Promise<UserSession[]> {
+    return db.select().from(userSessions).where(eq(userSessions.userId, userId));
+  }
+
+  async revokeSession(id: number): Promise<void> {
+    await db.delete(userSessions).where(eq(userSessions.id, id));
+  }
+
+  async revokeAllSessions(userId: string): Promise<void> {
+    await db.delete(userSessions).where(eq(userSessions.userId, userId));
+  }
+
+  // 2FA
+  async enable2FA(userId: string, secret: string, backupCodes: string[]): Promise<User2FA> {
+    const [created] = await db.insert(user2FA).values({ userId, secret, enabled: true, backupCodes }).onConflictDoUpdate({
+      target: user2FA.userId,
+      set: { secret, enabled: true, backupCodes, updatedAt: new Date() },
+    }).returning();
+    return created;
+  }
+
+  async disable2FA(userId: string): Promise<void> {
+    await db.delete(user2FA).where(eq(user2FA.userId, userId));
+  }
+
+  async get2FASettings(userId: string): Promise<User2FA | undefined> {
+    const [settings] = await db.select().from(user2FA).where(eq(user2FA.userId, userId));
+    return settings;
+  }
+
+  // Data Export
+  async requestDataExport(userId: string): Promise<DataExportRequest> {
+    const [created] = await db.insert(dataExportRequests).values({ userId }).returning();
+    return created;
+  }
+
+  async getExportRequest(userId: string): Promise<DataExportRequest | undefined> {
+    const [request] = await db.select().from(dataExportRequests).where(eq(dataExportRequests.userId, userId)).orderBy(desc(dataExportRequests.createdAt)).limit(1);
+    return request;
+  }
+
+  // Data Deletion
+  async requestDataDeletion(userId: string): Promise<DataDeletionRequest> {
+    const scheduledDate = new Date();
+    scheduledDate.setDate(scheduledDate.getDate() + 30); // 30 days notice
+    const [created] = await db.insert(dataDeletionRequests).values({ userId, scheduledDeletion: scheduledDate.toISOString().split('T')[0] }).returning();
+    return created;
+  }
+
+  async getDeletionRequest(userId: string): Promise<DataDeletionRequest | undefined> {
+    const [request] = await db.select().from(dataDeletionRequests).where(eq(dataDeletionRequests.userId, userId)).orderBy(desc(dataDeletionRequests.createdAt)).limit(1);
+    return request;
+  }
+
+  async cancelDataDeletion(userId: string): Promise<void> {
+    await db.delete(dataDeletionRequests).where(and(eq(dataDeletionRequests.userId, userId), eq(dataDeletionRequests.status, "pending")));
+  }
+
+  // Moderation Stats
+  async getModerationStats(): Promise<any> {
+    const pending = await this.getPendingModeration();
+    const pendingReports = await this.getReportsByStatus("pending");
+    return {
+      pendingModeration: pending.length,
+      pendingReports: pendingReports.length,
+      reportCategories: await this.getReportCategories(),
+    };
+  }
+
+  // === WHITE-LABEL CHURCH PLATFORM ===
+
+  // Organizations
+  async createOrganization(org: InsertOrganization): Promise<Organization> {
+    const [created] = await db.insert(organizations).values(org).returning();
+    return created;
+  }
+
+  async getOrganization(id: number): Promise<Organization | undefined> {
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    return org;
+  }
+
+  async getOrganizationBySlug(slug: string): Promise<Organization | undefined> {
+    const [org] = await db.select().from(organizations).where(eq(organizations.slug, slug));
+    return org;
+  }
+
+  async getOrganizations(includeInactive = false): Promise<Organization[]> {
+    if (includeInactive) {
+      return db.select().from(organizations).orderBy(asc(organizations.name));
+    }
+    return db.select().from(organizations).where(eq(organizations.isActive, true)).orderBy(asc(organizations.name));
+  }
+
+  async updateOrganization(id: number, updates: Partial<Organization>): Promise<Organization> {
+    const [updated] = await db
+      .update(organizations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(organizations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteOrganization(id: number): Promise<void> {
+    await db.delete(organizations).where(eq(organizations.id, id));
+  }
+
+  // Organization Themes
+  async createTheme(theme: InsertOrganizationTheme): Promise<OrganizationTheme> {
+    const [created] = await db.insert(organizationThemes).values(theme).returning();
+    return created;
+  }
+
+  async getOrganizationThemes(orgId: number): Promise<OrganizationTheme[]> {
+    return db.select().from(organizationThemes).where(eq(organizationThemes.organizationId, orgId));
+  }
+
+  async getDefaultTheme(orgId: number): Promise<OrganizationTheme | undefined> {
+    const [theme] = await db.select().from(organizationThemes).where(and(eq(organizationThemes.organizationId, orgId), eq(organizationThemes.isDefault, true)));
+    return theme;
+  }
+
+  // Custom Pages
+  async createCustomPage(page: InsertCustomPage): Promise<CustomPage> {
+    const [created] = await db.insert(customPages).values(page).returning();
+    return created;
+  }
+
+  async getCustomPage(id: number): Promise<CustomPage | undefined> {
+    const [page] = await db.select().from(customPages).where(eq(customPages.id, id));
+    return page;
+  }
+
+  async getOrganizationPages(orgId: number): Promise<CustomPage[]> {
+    return db.select().from(customPages).where(and(eq(customPages.organizationId, orgId), eq(customPages.isPublished, true))).orderBy(asc(customPages.orderIndex));
+  }
+
+  async updateCustomPage(id: number, updates: Partial<CustomPage>): Promise<CustomPage> {
+    const [updated] = await db
+      .update(customPages)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(customPages.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCustomPage(id: number): Promise<void> {
+    await db.delete(customPages).where(eq(customPages.id, id));
+  }
+
+  // Custom Menu Items
+  async createMenuItem(item: InsertCustomMenuItem): Promise<CustomMenuItem> {
+    const [created] = await db.insert(customMenuItems).values(item).returning();
+    return created;
+  }
+
+  async getMenuItems(orgId: number, location: string): Promise<CustomMenuItem[]> {
+    return db.select().from(customMenuItems).where(and(eq(customMenuItems.organizationId, orgId), eq(customMenuItems.menuLocation, location), eq(customMenuItems.isVisible, true))).orderBy(asc(customMenuItems.orderIndex));
+  }
+
+  async updateMenuItem(id: number, updates: Partial<CustomMenuItem>): Promise<CustomMenuItem> {
+    const [updated] = await db
+      .update(customMenuItems)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(customMenuItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteMenuItem(id: number): Promise<void> {
+    await db.delete(customMenuItems).where(eq(customMenuItems.id, id));
+  }
+
+  // Email Templates
+  async createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate> {
+    const [created] = await db.insert(emailTemplates).values(template).returning();
+    return created;
+  }
+
+  async getOrganizationEmailTemplates(orgId: number): Promise<EmailTemplate[]> {
+    return db.select().from(emailTemplates).where(and(eq(emailTemplates.organizationId, orgId), eq(emailTemplates.isActive, true)));
+  }
+
+  async updateEmailTemplate(id: number, updates: Partial<EmailTemplate>): Promise<EmailTemplate> {
+    const [updated] = await db
+      .update(emailTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(emailTemplates.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Custom Fields
+  async createCustomField(field: InsertCustomField): Promise<CustomField> {
+    const [created] = await db.insert(customFields).values(field).returning();
+    return created;
+  }
+
+  async getCustomFields(orgId: number, entityType: string): Promise<CustomField[]> {
+    return db.select().from(customFields).where(and(eq(customFields.organizationId, orgId), eq(customFields.entityType, entityType), eq(customFields.isActive, true))).orderBy(asc(customFields.orderIndex));
+  }
+
+  async deleteCustomField(id: number): Promise<void> {
+    await db.delete(customFields).where(eq(customFields.id, id));
+  }
+
+  // Organization Members
+  async addOrganizationMember(member: InsertOrganizationMember): Promise<OrganizationMember> {
+    const [created] = await db.insert(organizationMembers).values(member).onConflictDoUpdate({
+      target: [organizationMembers.organizationId, organizationMembers.userId],
+      set: { role: member.role, status: member.status },
+    }).returning();
+    return created;
+  }
+
+  async getOrganizationMembers(orgId: number): Promise<OrganizationMember[]> {
+    return db.select().from(organizationMembers).where(eq(organizationMembers.organizationId, orgId));
+  }
+
+  // Organization Settings
+  async getOrganizationSettings(orgId: number): Promise<OrganizationSetting | undefined> {
+    const [settings] = await db.select().from(organizationSettings).where(eq(organizationSettings.organizationId, orgId));
+    return settings;
+  }
+
+  async updateOrganizationSettings(orgId: number, settings: Record<string, any>): Promise<OrganizationSetting> {
+    const existing = await this.getOrganizationSettings(orgId);
+    if (existing) {
+      const [updated] = await db
+        .update(organizationSettings)
+        .set({ settings, updatedAt: new Date() })
+        .where(eq(organizationSettings.organizationId, orgId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(organizationSettings)
+      .values({ organizationId: orgId, settings })
+      .returning();
+    return created;
+  }
+
+  // Custom Domains
+  async addCustomDomain(domain: InsertCustomDomain): Promise<CustomDomain> {
+    const [created] = await db.insert(customDomains).values(domain).returning();
+    return created;
+  }
+
+  async getCustomDomain(domain: string): Promise<CustomDomain | undefined> {
+    const [d] = await db.select().from(customDomains).where(eq(customDomains.domain, domain));
+    return d;
+  }
+
+  async verifyCustomDomain(id: number): Promise<CustomDomain> {
+    const [updated] = await db
+      .update(customDomains)
+      .set({ isVerified: true, updatedAt: new Date() })
+      .where(eq(customDomains.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Organization Analytics
+  async recordOrganizationMetric(metric: InsertOrganizationAnalytic): Promise<OrganizationAnalytic> {
+    const [recorded] = await db.insert(organizationAnalytics).values(metric).returning();
+    return recorded;
+  }
+
+  async getOrganizationMetrics(orgId: number, metricType?: string): Promise<OrganizationAnalytic[]> {
+    const conditions = [eq(organizationAnalytics.organizationId, orgId)];
+    if (metricType) {
+      conditions.push(eq(organizationAnalytics.metricType, metricType));
+    }
+    return db.select().from(organizationAnalytics).where(and(...conditions)).orderBy(desc(organizationAnalytics.recordedAt));
   }
 }
 
