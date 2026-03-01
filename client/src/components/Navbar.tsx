@@ -72,7 +72,7 @@ export function Navbar() {
           : "bg-white border-b border-slate-100"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 md:h-18 flex items-center justify-between">
+      <div className="max-w-8xl mx-auto px-6 h-16 md:h-18 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
           <img 
             src="/church_logo.jpeg" 
@@ -84,7 +84,7 @@ export function Navbar() {
           </span>
         </Link>
 
-        <div className="hidden lg:flex items-center gap-1">
+        <div className="hidden xl:flex items-center gap-1">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -177,7 +177,7 @@ export function Navbar() {
                         </span>
                       ) : null}
                     </div>
-                    <span className="hidden lg:block text-sm font-medium text-slate-700">
+                    <span className="hidden md:block text-sm font-medium text-slate-700">
                       {user.firstName || user.email.split('@')[0]}
                     </span>
                     <ChevronDown className="w-4 h-4 text-slate-400" />
@@ -270,7 +270,7 @@ export function Navbar() {
 
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-lg md:hidden">
+              <Button variant="ghost" size="icon" className="rounded-lg xl:hidden">
                 <Menu className="h-5 w-5 text-slate-600" />
               </Button>
             </SheetTrigger>

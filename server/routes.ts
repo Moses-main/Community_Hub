@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage, type ISermonFilter } from "./storage";
 import { db } from "./db";
-import { supportedLanguages, groupJoinRequests, groupActivityLogs, volunteerSkills, volunteerBadges, volunteerOpportunities, userReports } from "@shared/schema";
+import { supportedLanguages, groupJoinRequests, groupActivityLogs, volunteerSkills, volunteerBadges, volunteerOpportunities, userReports, pushSubscriptions, notificationPreferences } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { api } from "@shared/routes";
 import { z } from "zod";
@@ -14,6 +14,7 @@ import path from "path";
 import multer from "multer";
 import { sendNewMessageNotification } from "./websocket";
 import { processVideoClip } from "./video-processing";
+import { publicVapidKey } from "./services/push-notifications";
 
 const upload = multer({ dest: path.join(process.cwd(), "uploads", "videos") });
 
@@ -2048,7 +2049,7 @@ export async function registerRoutes(
   app.post("/api/users/:id/block", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const blockerId = req.user!.id;
-      const blockedId = req.params.id;
+      const blockedId = req.params.id as string;
       const { reason } = req.body;
       const reasonStr = typeof reason === 'string' ? reason : (Array.isArray(reason) ? reason[0] : undefined);
       const block = await storage.blockUser(blockerId, blockedId, reasonStr);
@@ -2301,6 +2302,139 @@ export async function registerRoutes(
       res.json({ message: "Deletion request cancelled" });
     } catch (err) {
       console.error("Error cancelling deletion:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === PUSH NOTIFICATIONS ===
+
+  // Get VAPID public key for client
+  app.get("/api/push/vapid-key", (req, res) => {
+    res.json({ publicKey: publicVapidKey });
+  });
+
+  // Subscribe to push notifications
+  app.post("/api/push/subscribe", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { endpoint, p256dh, auth } = req.body;
+
+      if (!endpoint || !p256dh || !auth) {
+        return res.status(400).json({ message: "Missing subscription details" });
+      }
+
+      // Check if subscription already exists
+      const existing = await db.select().from(pushSubscriptions)
+        .where(eq(pushSubscriptions.endpoint, endpoint));
+
+      if (existing.length > 0) {
+        // Update existing subscription with userId
+        await db.update(pushSubscriptions)
+          .set({ userId, updatedAt: new Date() })
+          .where(eq(pushSubscriptions.id, existing[0].id));
+      } else {
+        // Create new subscription
+        await db.insert(pushSubscriptions).values({
+          userId,
+          endpoint,
+          p256dh,
+          auth,
+        });
+      }
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error subscribing to push:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Unsubscribe from push notifications
+  app.post("/api/push/unsubscribe", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { endpoint } = req.body;
+
+      await db.delete(pushSubscriptions)
+        .where(eq(pushSubscriptions.endpoint, endpoint));
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error unsubscribing from push:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get notification preferences
+  app.get("/api/push/preferences", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+
+      const prefs = await db.select().from(notificationPreferences)
+        .where(eq(notificationPreferences.userId, userId));
+
+      if (prefs.length === 0) {
+        // Create default preferences
+        const [newPrefs] = await db.insert(notificationPreferences).values({
+          userId,
+        }).returning();
+        return res.json(newPrefs);
+      }
+
+      res.json(prefs[0]);
+    } catch (err) {
+      console.error("Error fetching preferences:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update notification preferences
+  app.put("/api/push/preferences", isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const {
+        eventNotifications,
+        sermonNotifications,
+        prayerNotifications,
+        liveStreamNotifications,
+        attendanceNotifications,
+        messageNotifications,
+        groupNotifications,
+      } = req.body;
+
+      const existing = await db.select().from(notificationPreferences)
+        .where(eq(notificationPreferences.userId, userId));
+
+      if (existing.length > 0) {
+        const [updated] = await db.update(notificationPreferences)
+          .set({
+            eventNotifications,
+            sermonNotifications,
+            prayerNotifications,
+            liveStreamNotifications,
+            attendanceNotifications,
+            messageNotifications,
+            groupNotifications,
+            updatedAt: new Date(),
+          })
+          .where(eq(notificationPreferences.userId, userId))
+          .returning();
+        res.json(updated);
+      } else {
+        const [created] = await db.insert(notificationPreferences).values({
+          userId,
+          eventNotifications,
+          sermonNotifications,
+          prayerNotifications,
+          liveStreamNotifications,
+          attendanceNotifications,
+          messageNotifications,
+          groupNotifications,
+        }).returning();
+        res.json(created);
+      }
+    } catch (err) {
+      console.error("Error updating preferences:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });

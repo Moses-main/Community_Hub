@@ -2582,6 +2582,44 @@ export const emailTemplates = pgTable("email_templates", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id),
+  endpoint: text("endpoint").notNull(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).unique(),
+  eventNotifications: boolean("event_notifications").default(true),
+  sermonNotifications: boolean("sermon_notifications").default(true),
+  prayerNotifications: boolean("prayer_notifications").default(true),
+  liveStreamNotifications: boolean("live_stream_notifications").default(true),
+  attendanceNotifications: boolean("attendance_notifications").default(true),
+  messageNotifications: boolean("message_notifications").default(true),
+  groupNotifications: boolean("group_notifications").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const pushNotificationLogs = pgTable("push_notification_logs", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id),
+  title: text("title").notNull(),
+  body: text("body"),
+  icon: text("icon"),
+  badge: text("badge"),
+  tag: text("tag"),
+  data: jsonb("data"),
+  status: varchar("status", { length: 50 }).default("pending"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const customFields = pgTable("custom_fields", {
   id: serial("id").primaryKey(),
   organizationId: integer("organization_id").references(() => organizations.id).notNull(),
@@ -2700,6 +2738,18 @@ export type InsertCustomMenuItem = z.infer<typeof insertCustomMenuItemSchema>;
 export const insertEmailTemplateSchema = createInsertSchema(emailTemplates).omit({ id: true, createdAt: true, updatedAt: true });
 export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type InsertEmailTemplate = z.infer<typeof insertEmailTemplateSchema>;
+
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({ id: true, createdAt: true, updatedAt: true });
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+
+export const insertNotificationPreferenceSchema = createInsertSchema(notificationPreferences).omit({ id: true, createdAt: true, updatedAt: true });
+export type NotificationPreference = typeof notificationPreferences.$inferSelect;
+export type InsertNotificationPreference = z.infer<typeof insertNotificationPreferenceSchema>;
+
+export const insertPushNotificationLogSchema = createInsertSchema(pushNotificationLogs).omit({ id: true, createdAt: true });
+export type PushNotificationLog = typeof pushNotificationLogs.$inferSelect;
+export type InsertPushNotificationLog = z.infer<typeof insertPushNotificationLogSchema>;
 
 export const insertCustomFieldSchema = createInsertSchema(customFields).omit({ id: true, createdAt: true, updatedAt: true });
 export type CustomField = typeof customFields.$inferSelect;

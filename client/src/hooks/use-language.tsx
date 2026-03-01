@@ -533,8 +533,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         setPreferences(data);
-        if (data.preferredLanguage && translations[data.preferredLanguage]) {
-          setLanguageState(data.preferredLanguage);
+        if (data.preferredLanguage && translations[data.preferredLanguage as Language]) {
+          setLanguageState(data.preferredLanguage as Language);
         }
       }
     } catch (error) {
@@ -561,8 +561,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const updated = await response.json();
         setPreferences(updated);
-        if (updated.preferredLanguage && translations[updated.preferredLanguage]) {
-          setLanguageState(updated.preferredLanguage);
+        if (updated.preferredLanguage && translations[updated.preferredLanguage as Language]) {
+          setLanguageState(updated.preferredLanguage as Language);
         }
       }
     } catch (error) {
