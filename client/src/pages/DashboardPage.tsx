@@ -44,6 +44,13 @@ export default function DashboardPage() {
     houseFellowship: user?.houseFellowship || "",
     parish: (user as any)?.parish || "",
     houseCellLocation: user?.houseCellLocation || "",
+    career: (user as any)?.career || "",
+    stateOfOrigin: (user as any)?.stateOfOrigin || "",
+    birthday: (user as any)?.birthday ? new Date((user as any).birthday).toISOString().split('T')[0] : "",
+    twitterHandle: (user as any)?.twitterHandle || "",
+    instagramHandle: (user as any)?.instagramHandle || "",
+    facebookHandle: (user as any)?.facebookHandle || "",
+    linkedinHandle: (user as any)?.linkedinHandle || "",
   });
 
   useEffect(() => {
@@ -56,6 +63,13 @@ export default function DashboardPage() {
         houseFellowship: user.houseFellowship || "",
         parish: (user as any)?.parish || "",
         houseCellLocation: user.houseCellLocation || "",
+        career: (user as any)?.career || "",
+        stateOfOrigin: (user as any)?.stateOfOrigin || "",
+        birthday: (user as any)?.birthday ? new Date((user as any).birthday).toISOString().split('T')[0] : "",
+        twitterHandle: (user as any)?.twitterHandle || "",
+        instagramHandle: (user as any)?.instagramHandle || "",
+        facebookHandle: (user as any)?.facebookHandle || "",
+        linkedinHandle: (user as any)?.linkedinHandle || "",
       });
     }
   }, [user]);
@@ -201,6 +215,74 @@ export default function DashboardPage() {
                     placeholder="Enter your house cell location"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="career">Career / Profession</Label>
+                  <Input
+                    id="career"
+                    value={formData.career}
+                    onChange={(e) => setFormData({ ...formData, career: e.target.value })}
+                    placeholder="e.g., Software Engineer, Teacher"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="stateOfOrigin">State of Origin</Label>
+                  <Input
+                    id="stateOfOrigin"
+                    value={formData.stateOfOrigin}
+                    onChange={(e) => setFormData({ ...formData, stateOfOrigin: e.target.value })}
+                    placeholder="Enter your state of origin"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="birthday">Birthday</Label>
+                  <Input
+                    id="birthday"
+                    type="date"
+                    value={formData.birthday}
+                    onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                  />
+                </div>
+                <div className="border-t pt-4">
+                  <Label className="text-sm font-medium mb-2 block">Social Media Handles</Label>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="twitterHandle">Twitter</Label>
+                    <Input
+                      id="twitterHandle"
+                      value={formData.twitterHandle}
+                      onChange={(e) => setFormData({ ...formData, twitterHandle: e.target.value })}
+                      placeholder="@username"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="instagramHandle">Instagram</Label>
+                    <Input
+                      id="instagramHandle"
+                      value={formData.instagramHandle}
+                      onChange={(e) => setFormData({ ...formData, instagramHandle: e.target.value })}
+                      placeholder="@username"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="facebookHandle">Facebook</Label>
+                    <Input
+                      id="facebookHandle"
+                      value={formData.facebookHandle}
+                      onChange={(e) => setFormData({ ...formData, facebookHandle: e.target.value })}
+                      placeholder="Facebook profile"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="linkedinHandle">LinkedIn</Label>
+                    <Input
+                      id="linkedinHandle"
+                      value={formData.linkedinHandle}
+                      onChange={(e) => setFormData({ ...formData, linkedinHandle: e.target.value })}
+                      placeholder="LinkedIn profile"
+                    />
+                  </div>
+                </div>
                 <Button type="submit" disabled={isUpdating} className="w-full">
                   {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes
@@ -297,6 +379,33 @@ export default function DashboardPage() {
                   <p className="font-medium text-gray-900">{(user as any).parish || "Not set"}</p>
                 </div>
               </div>
+              {(user as any).career && (
+                <div className="flex items-center gap-3">
+                  <Building className="h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-sm text-gray-500">Career</p>
+                    <p className="font-medium text-gray-900">{(user as any).career}</p>
+                  </div>
+                </div>
+              )}
+              {(user as any).stateOfOrigin && (
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-sm text-gray-500">State of Origin</p>
+                    <p className="font-medium text-gray-900">{(user as any).stateOfOrigin}</p>
+                  </div>
+                </div>
+              )}
+              {(user as any).birthday && (
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-sm text-gray-500">Birthday</p>
+                    <p className="font-medium text-gray-900">{new Date((user as any).birthday).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
