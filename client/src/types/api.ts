@@ -77,12 +77,22 @@ export interface Event {
   title: string;
   description: string;
   date: string;
+  endDate?: string;
   location: string;
   imageUrl?: string;
   creatorId?: string;
   createdAt?: string;
   rsvpCount?: number;
   hasRsvped?: boolean;
+  isRecurring?: boolean;
+  recurrenceRule?: string;
+  recurrenceEndDate?: string;
+  category?: string;
+  tags?: string[];
+  allowFeedback?: boolean;
+  isVirtual?: boolean;
+  virtualLink?: string;
+  capacity?: number;
 }
 
 export interface Sermon {

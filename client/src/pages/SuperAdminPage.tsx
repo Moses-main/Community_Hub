@@ -221,7 +221,7 @@ export default function SuperAdminPage() {
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., WCCRM Lagos"
+                    placeholder="e.g., CHub"
                   />
                 </div>
                 <div>

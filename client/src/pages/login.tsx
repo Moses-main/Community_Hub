@@ -97,7 +97,7 @@ export default function AuthPage() {
   return (
     <>
       <Helmet>
-        <title>{mode === "login" ? "Sign In" : "Create Account"} | WCCRM Lagos</title>
+        <title>{mode === "login" ? "Sign In" : "Create Account"} | CHub</title>
       </Helmet>
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-3 py-8 sm:px-6 lg:px-8">
         <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-6 shadow-md sm:p-8">

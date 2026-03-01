@@ -175,7 +175,7 @@ export default function AdminLiveStreamPage() {
                       id="channelName"
                       value={youtubeChannelName}
                       onChange={(e) => setYoutubeChannelName(e.target.value)}
-                      placeholder="WCCRM Lagos"
+                      placeholder="CHub"
                     />
                   </div>
                 </div>

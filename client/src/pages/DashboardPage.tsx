@@ -105,7 +105,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50/50 py-6">
       <Helmet>
-        <title>Dashboard | WCCRM Lagos</title>
+        <title>Dashboard | CHub</title>
       </Helmet>
 
       <div className="container px-3 md:px-8 max-w-5xl mx-auto">
@@ -731,7 +731,7 @@ export default function DashboardPage() {
                                       userId: member.userId,
                                       type: 'GENERAL',
                                       title: 'We Miss You!',
-                                      content: `Dear ${member.firstName || 'Brother/Sister'},\n\nWe noticed you haven't been with us for the past ${member.missedCount} services. We truly miss seeing you!\n\nPlease know that you are always welcome. Let us know if there's anything we can do to support you.\n\nLooking forward to seeing you soon!\n\nGrace and Peace,\nWCCRM`,
+                                      content: `Dear ${member.firstName || 'Brother/Sister'},\n\nWe noticed you haven't been with us for the past ${member.missedCount} services. We truly miss seeing you!\n\nPlease know that you are always welcome. Let us know if there's anything we can do to support you.\n\nLooking forward to seeing you soon!\n\nGrace and Peace,\nCHub`,
                                       priority: 'normal'
                                     });
                                     console.log('Message sent successfully:', result);

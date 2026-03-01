@@ -76,11 +76,11 @@ export function Navbar() {
         <Link href="/" className="flex items-center gap-3">
           <img 
             src="/church_logo.jpeg" 
-            alt="WCCRM Lagos" 
+            alt="CHub" 
             className="h-9 md:h-10 w-auto rounded-full object-contain"
           />
           <span className="hidden sm:block text-base font-semibold text-slate-900">
-            WCCRM<span className="text-indigo-600"> Lagos</span>
+            CHub
           </span>
         </Link>
 
@@ -280,11 +280,11 @@ export function Navbar() {
                   <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
                     <img 
                       src="/church_logo.jpeg" 
-                      alt="WCCRM Lagos" 
+                      alt="CHub" 
                       className="h-8 w-auto rounded-full object-contain"
                     />
                     <span className="font-semibold text-slate-900">
-                      WCCRM<span className="text-indigo-600"> Lagos</span>
+                      CHub
                     </span>
                   </Link>
                   <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>

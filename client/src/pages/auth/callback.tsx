@@ -33,7 +33,7 @@ export default function AuthCallbackPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center">
       <Helmet>
-        <title>Signing in... | WCCRM Lagos</title>
+        <title>Signing in... | CHub</title>
       </Helmet>
       <div className="flex flex-col items-center space-y-4">
         {error ? (

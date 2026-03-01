@@ -52,7 +52,7 @@ export default function MessagesPage() {
   return (
     <div className="min-h-screen bg-gray-50/50 py-8">
       <Helmet>
-        <title>Messages | WCCRM Lagos</title>
+        <title>Messages | CHub</title>
       </Helmet>
 
       <div className="container px-4 md:px-8 max-w-4xl mx-auto">

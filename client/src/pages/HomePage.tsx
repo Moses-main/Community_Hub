@@ -37,7 +37,7 @@ export default function HomePage() {
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-xs font-medium mb-6 border border-white/10">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-              Welcome to WCCRM Lagos
+              Welcome to CHub
             </div>
             
             <h1 className="font-semibold text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white mb-6 leading-[1.15]">
@@ -232,7 +232,7 @@ export default function HomePage() {
               <div className="relative min-h-[300px] md:min-h-full">
                 <img 
                   src="/church_building.avif" 
-                  alt="WCCRM Lagos Church Building" 
+                  alt="CHub Church Building" 
                   className="absolute inset-0 w-full h-full object-cover"
                 />
               </div>
@@ -242,7 +242,7 @@ export default function HomePage() {
                 </h2>
                 <p className="text-gray-500 mb-8 leading-relaxed">
                   We welcome you to join us for worship, fellowship, and community. 
-                  Experience the warmth of God's love at WCCRM Lagos.
+                  Experience the warmth of God's love at CHub.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button

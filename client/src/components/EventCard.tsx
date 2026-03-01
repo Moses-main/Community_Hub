@@ -1,11 +1,11 @@
 import { Link } from "wouter";
 import { format } from "date-fns";
-import { MapPin, Clock, Calendar, Check, CalendarPlus, Share2, Facebook, Twitter, Linkedin, Instagram, Link as LinkIcon } from "lucide-react";
+import { MapPin, Clock, Calendar, Check, CalendarPlus, Share2, Facebook, Twitter, Linkedin, Instagram, Link as LinkIcon, ChevronDown, Download } from "lucide-react";
 import type { Event } from "@/types/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useRsvpEvent, useUserRsvps, useAddToCalendar } from "@/hooks/use-events";
+import { useRsvpEvent, useUserRsvps, useAddToCalendar, useCalendarLinks } from "@/hooks/use-events";
 import { useToast } from "@/hooks/use-toast";
 import { apiRoutes } from "@/lib/api-routes";
 import { buildApiUrl } from "@/lib/api-config";
@@ -16,16 +16,98 @@ interface EventCardProps {
   event: Event & { rsvpCount?: number };
 }
 
-function generateCalendarLink(event: Event): string {
-  const eventDate = new Date(event.date);
-  const startDate = eventDate.toISOString().replace(/-|:|\.\d{3}/g, "").slice(0, 15);
-  const endDate = new Date(eventDate.getTime() + 2 * 60 * 60 * 1000).toISOString().replace(/-|:|\.\d{3}/g, "").slice(0, 15);
-  
-  const title = encodeURIComponent(event.title);
-  const description = encodeURIComponent(event.description);
-  const location = encodeURIComponent(event.location);
-  
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${description}&location=${location}`;
+function CalendarDropdown({ event, onClose }: { event: Event; onClose: () => void }) {
+  const { data: calendarLinks, isLoading } = useCalendarLinks(event.id);
+  const { toast } = useToast();
+
+  const handleDownloadICS = () => {
+    if (calendarLinks?.ics) {
+      const blob = new Blob([calendarLinks.ics], { type: 'text/calendar' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${event.title.replace(/[^a-z0-9]/gi, '_')}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: "Calendar file downloaded" });
+      onClose();
+    }
+  };
+
+  const calendarOptions = [
+    { 
+      name: 'Google Calendar', 
+      color: 'bg-blue-600 hover:bg-blue-700',
+      icon: '📅',
+      url: calendarLinks?.google,
+      requiresDownload: false
+    },
+    { 
+      name: 'Outlook', 
+      color: 'bg-blue-800 hover:bg-blue-900',
+      icon: '📧',
+      url: calendarLinks?.outlook,
+      requiresDownload: false
+    },
+    { 
+      name: 'Apple Calendar', 
+      color: 'bg-gray-600 hover:bg-gray-700',
+      icon: '🍎',
+      action: handleDownloadICS,
+      requiresDownload: true
+    },
+    { 
+      name: 'Yahoo Calendar', 
+      color: 'bg-purple-600 hover:bg-purple-700',
+      icon: '📌',
+      url: calendarLinks?.yahoo,
+      requiresDownload: false
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="absolute bottom-full mb-2 right-0 bg-white border rounded-lg shadow-lg py-3 min-w-[200px] z-20">
+        <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute bottom-full mb-2 right-0 bg-white border rounded-lg shadow-lg py-2 min-w-[200px] z-20">
+      <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase">Add to Calendar</div>
+      {calendarOptions.map((option) => (
+        option.action ? (
+          <button
+            key={option.name}
+            onClick={option.action}
+            className={`w-full px-4 py-2 text-left text-sm text-white flex items-center gap-2 ${option.color} transition-colors`}
+          >
+            <span>{option.icon}</span>
+            <Download className="w-4 h-4" />
+            {option.name}
+          </button>
+        ) : (
+          <button
+            key={option.name}
+            onClick={() => {
+              if (option.url) {
+                window.open(option.url, '_blank');
+                onClose();
+              }
+            }}
+            disabled={!option.url}
+            className={`w-full px-4 py-2 text-left text-sm text-white flex items-center gap-2 ${option.url ? option.color : 'bg-gray-300 cursor-not-allowed'} transition-colors`}
+          >
+            <span>{option.icon}</span>
+            {option.name}
+          </button>
+        )
+      ))}
+    </div>
+  );
 }
 
 function SocialShareMenu({ event, onClose }: { event: Event; onClose: () => void }) {
@@ -116,6 +198,7 @@ export function EventCard({ event }: EventCardProps) {
   const { toast } = useToast();
   const eventDate = new Date(event.date);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showCalendarMenu, setShowCalendarMenu] = useState(false);
 
   // Check if user has RSVP'd to this event
   const userRsvp = userRsvps?.find((r: any) => Number(r.eventId) === Number(event.id));
@@ -145,9 +228,6 @@ export function EventCard({ event }: EventCardProps) {
   };
 
   const handleAddToCalendar = () => {
-    const calendarUrl = generateCalendarLink(event);
-    window.open(calendarUrl, "_blank");
-    
     addToCalendar(event.id, {
       onSuccess: () => {
         toast({
@@ -234,24 +314,19 @@ export function EventCard({ event }: EventCardProps) {
                   <SocialShareMenu event={event} onClose={() => setShowShareMenu(false)} />
                 )}
               </div>
-              {!isAddedToCalendar ? (
+              <div className="relative">
                 <Button 
                   variant="outline"
                   disabled={isAddingToCalendar}
                   className="flex-1 sm:flex-none text-sm md:text-base py-2 md:py-2.5"
-                  onClick={handleAddToCalendar}
+                  onClick={() => setShowCalendarMenu(!showCalendarMenu)}
                 >
-                  {isAddingToCalendar ? "Adding..." : <><CalendarPlus className="w-4 h-4 mr-1" /> Add to Calendar</>}
+                  {isAddingToCalendar ? "Adding..." : isAddedToCalendar ? <><Calendar className="w-4 h-4 mr-1" /> Calendar</> : <><CalendarPlus className="w-4 h-4 mr-1" /> Add to Calendar</>}
                 </Button>
-              ) : (
-                <Button 
-                  variant="outline"
-                  disabled
-                  className="flex-1 sm:flex-none text-sm md:text-base py-2 md:py-2.5 bg-green-50"
-                >
-                  <Calendar className="w-4 h-4 mr-1" /> Added
-                </Button>
-              )}
+                {showCalendarMenu && (
+                  <CalendarDropdown event={event} onClose={() => setShowCalendarMenu(false)} />
+                )}
+              </div>
             </>
           ) : (
             <>

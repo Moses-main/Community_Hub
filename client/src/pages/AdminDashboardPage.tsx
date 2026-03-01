@@ -533,7 +533,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50/50 py-8">
       <Helmet>
-        <title>Admin Dashboard | WCCRM Lagos</title>
+        <title>Admin Dashboard | CHub</title>
       </Helmet>
 
       <div className="container px-4 md:px-8 max-w-[95%] mx-auto">

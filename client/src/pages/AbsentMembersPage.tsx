@@ -152,11 +152,11 @@ function AbsentMemberCard({ member }: { member: AbsentMember }) {
       const templates = {
         REMINDER: {
           title: "We Miss You!",
-          content: `Dear ${member.firstName || "Brother/Sister"},\n\nWe noticed you haven't been with us for the past ${member.missedCount} services. We truly miss seeing you!\n\nPlease know that you are always welcome. Let us know if there's anything we can do to support you.\n\nLooking forward to seeing you soon!\n\nGrace and Peace,\nWCCRM Lagos`
+          content: `Dear ${member.firstName || "Brother/Sister"},\n\nWe noticed you haven't been with us for the past ${member.missedCount} services. We truly miss seeing you!\n\nPlease know that you are always welcome. Let us know if there's anything we can do to support you.\n\nLooking forward to seeing you soon!\n\nGrace and Peace,\nCHub`
         },
         CONCERN: {
           title: "Pastoral Care Follow-up",
-          content: `Dear ${member.firstName || "Brother/Sister"},\n\nWe have noticed your absence from our recent services and wanted to check in with you.\n\nWe care about your wellbeing and would love to hear from you. Please feel free to reach out if there's anything we can pray about or help with.\n\nGod Bless,\nWCCRM Pastoral Team`
+          content: `Dear ${member.firstName || "Brother/Sister"},\n\nWe have noticed your absence from our recent services and wanted to check in with you.\n\nWe care about your wellbeing and would love to hear from you. Please feel free to reach out if there's anything we can pray about or help with.\n\nGod Bless,\nCHub Pastoral Team`
         },
         PASTORAL: {
           title: "Pastoral Visit Request",

@@ -59,11 +59,11 @@ export function AppInstallBanner() {
         <div className="flex items-center gap-3">
           <img 
             src="/church_logo.jpeg" 
-            alt="WCCRM" 
+            alt="CHub" 
             className="w-10 h-10 rounded-lg object-contain"
           />
           <div>
-            <p className="font-medium text-sm text-slate-900">Install WCCRM Lagos</p>
+            <p className="font-medium text-sm text-slate-900">Install CHub</p>
             <p className="text-xs text-slate-500">Add to home screen for offline access</p>
           </div>
         </div>

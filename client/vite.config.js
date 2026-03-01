@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'church_logo.jpeg'],
       manifest: {
-        name: 'WCCRM Lagos',
-        short_name: 'WCCRM',
-        description: 'Watchman Catholic Charismatic Renewal Movement, Lagos',
+        name: 'CHub - Church Management',
+        short_name: 'CHub',
+        description: 'CHub - Your Church Management Solution',
         theme_color: '#000000',
         background_color: '#ffffff',
         display: 'standalone',
