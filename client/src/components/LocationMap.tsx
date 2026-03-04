@@ -58,7 +58,7 @@ export function LocationMap({ className = "" }: LocationMapProps) {
                   className="rounded-xl bg-white text-gray-900 hover:bg-gray-100 font-medium"
                 >
                   <a
-                    href="https://maps.app.goo.gl/qx1yzypda6xP4s5U8"
+                    href="https://maps.app.goo.gl/y3i7wpYWtsvKCxZN9"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
