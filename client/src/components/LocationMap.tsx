@@ -16,7 +16,7 @@ export function LocationMap({ className = "" }: LocationMapProps) {
   const address = branding?.churchAddress || "7 Silverbird Road, Jakande First Gate, Lekki, Lagos State, Nigeria";
   const phone = branding?.churchPhone || "+2348000000000";
   
-  const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`;
+  const mapEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3962.917509925093!2d3.580738575561501!3d6.453098693353798!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x103bfc2234a70223%3A0x6d9291f2e1c05d9b!2sWATCHMAN%20CATHOLIC%20CHARISMATIC%20RENEWAL%20MOVEMENT%20WORLDWIDE!5e0!3m2!1sen!2sng!4v1706284800000!5m2!1sen!2sng";
 
   return (
     <div className={`w-full ${className} bg-white`}>
@@ -32,7 +32,7 @@ export function LocationMap({ className = "" }: LocationMapProps) {
 
         <div className="bg-white rounded-2xl shadow-soft-md overflow-hidden">
           <iframe
-            src={mapSrc}
+            src={mapEmbedUrl}
             className="w-full h-80 md:h-96 border-0"
             allowFullScreen
             loading="lazy"
@@ -53,12 +53,12 @@ export function LocationMap({ className = "" }: LocationMapProps) {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <Button
+                    <Button
                   asChild
                   className="rounded-xl bg-white text-gray-900 hover:bg-gray-100 font-medium"
                 >
                   <a
-                    href={`https://maps.google.com/search/${encodeURIComponent(address)}`}
+                    href="https://maps.app.goo.gl/qx1yzypda6xP4s5U8"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
