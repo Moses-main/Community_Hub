@@ -5,53 +5,31 @@ import { z } from "zod";
 import { useCreateDonation } from "@/hooks/use-donations";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Heart, CreditCard, ShieldCheck, Target, Loader2, Calendar, TrendingUp } from "lucide-react";
 import { buildApiUrl } from "@/lib/api-config";
+import { useLanguage } from "@/hooks/use-language";
 
 const donationFormSchema = z.object({
   amount: z.coerce.number().min(1, "Minimum donation is $1"),
 });
 
 interface FundraisingCampaign {
-  id: number;
-  title: string;
-  description: string | null;
-  goalAmount: number;
-  currentAmount: number;
-  imageUrl: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  isActive: boolean;
+  id: number; title: string; description: string | null; goalAmount: number;
+  currentAmount: number; imageUrl: string | null; startDate: string | null;
+  endDate: string | null; isActive: boolean;
 }
 
 interface Donation {
-  id: number;
-  amount: number;
-  status: string;
-  createdAt: string;
+  id: number; amount: number; status: string; createdAt: string;
 }
 
-const formatCurrency = (cents: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
-};
+const formatCurrency = (cents: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return 'Ongoing';
@@ -61,6 +39,7 @@ const formatDate = (dateStr: string | null) => {
 export default function GivePage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const { mutate: donate, isPending } = useCreateDonation();
   const [givingType, setGivingType] = useState("one-time");
   const [campaigns, setCampaigns] = useState<FundraisingCampaign[]>([]);
@@ -73,76 +52,48 @@ export default function GivePage() {
     async function fetchCampaigns() {
       try {
         const res = await fetch(buildApiUrl("/api/fundraising?active=true"), { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          setCampaigns(data);
-        }
-      } catch (err) {
-        console.error("Error fetching campaigns:", err);
-      } finally {
-        setLoadingCampaigns(false);
-      }
+        if (res.ok) setCampaigns(await res.json());
+      } catch (err) { console.error("Error fetching campaigns:", err); }
+      finally { setLoadingCampaigns(false); }
     }
     fetchCampaigns();
   }, []);
 
   useEffect(() => {
     if (!user) return;
-    
     async function fetchDonations() {
       setLoadingDonations(true);
       try {
         const res = await fetch(buildApiUrl("/api/donations/history"), { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          setDonations(data);
-        }
-      } catch (err) {
-        console.error("Error fetching donations:", err);
-      } finally {
-        setLoadingDonations(false);
-      }
+        if (res.ok) setDonations(await res.json());
+      } catch (err) { console.error("Error fetching donations:", err); }
+      finally { setLoadingDonations(false); }
     }
     fetchDonations();
   }, [user]);
 
   const form = useForm<{ amount: number }>({
     resolver: zodResolver(donationFormSchema),
-    defaultValues: {
-      amount: 50,
-    },
+    defaultValues: { amount: 50 },
   });
 
   const onSubmit = (data: { amount: number }) => {
     const payload = {
-      amount: Math.round(data.amount * 100),
-      currency: "usd",
-      status: "succeeded",
-      userId: user?.id || null,
-      campaignId: selectedCampaign,
+      amount: Math.round(data.amount * 100), currency: "usd", status: "succeeded",
+      userId: user?.id || null, campaignId: selectedCampaign,
     };
-
     donate(payload, {
       onSuccess: () => {
-        toast({
-          title: "Thank You!",
-          description: "Your generosity makes a difference.",
-        });
+        toast({ title: t("thankYou"), description: t("donationSuccess") });
         form.reset();
         if (selectedCampaign) {
-          setCampaigns(prev => prev.map(c => 
-            c.id === selectedCampaign 
-              ? { ...c, currentAmount: c.currentAmount + Math.round(data.amount * 100) }
-              : c
+          setCampaigns(prev => prev.map(c =>
+            c.id === selectedCampaign ? { ...c, currentAmount: c.currentAmount + Math.round(data.amount * 100) } : c
           ));
         }
       },
       onError: () => {
-        toast({
-          title: "Error",
-          description: "Could not process donation. Please try again.",
-          variant: "destructive",
-        });
+        toast({ title: t("error"), description: t("donationError"), variant: "destructive" });
       },
     });
   };
@@ -150,77 +101,63 @@ export default function GivePage() {
   const predefinedAmounts = [25, 50, 100, 250, 500];
 
   return (
-    <div className="min-h-screen bg-background pb-16 md:pb-24">
-      <div className="relative py-16 md:py-28 overflow-hidden">
+    <div className="min-h-screen bg-background pb-10 sm:pb-16 md:pb-24">
+      {/* Hero */}
+      <div className="relative py-12 sm:py-20 md:py-32 overflow-hidden">
+        <div className="absolute inset-0 gradient-hero" />
         <div className="absolute inset-0">
-          <img 
-            src="/card-verticle.avif" 
-            alt="Background" 
-            className="w-full h-full object-cover"
-          />
+          <img src="/card-verticle.avif" alt="Background" className="w-full h-full object-cover opacity-10" />
         </div>
-        <div className="absolute inset-0 bg-white/40" />
-        <div className="container px-6 md:px-8 text-center relative z-10">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-5 md:mb-8 text-gray-900">
-            Generosity
+        <div className="orb orb-gold w-48 sm:w-80 h-48 sm:h-80 top-0 right-0 animate-float" />
+        <div className="orb orb-purple w-32 sm:w-56 h-32 sm:h-56 bottom-10 left-10" style={{ animationDelay: '2s' }} />
+        <div className="container px-4 sm:px-6 md:px-8 text-center relative z-10">
+          <span className="text-accent font-bold text-xs sm:text-sm uppercase tracking-wider mb-2 sm:mb-4 block">{t("generosity")}</span>
+          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-6 text-white font-[--font-display] tracking-tight">
+            {t("giveGenerously")} <span className="text-gradient-gold">{t("generouslyHighlight")}</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-700 max-w-2xl mx-auto mb-5">
-            "Each of you should give what you have decided in your heart to
-            give, not reluctantly or under compulsion, for God loves a cheerful
-            giver."
+          <p className="text-xs sm:text-lg md:text-xl text-white/40 max-w-2xl mx-auto mb-2 sm:mb-4">
+            {t("giveVerse")}
           </p>
-          <p className="mt-4 text-gray-600 text-base md:text-lg">2 Corinthians 9:7</p>
+          <p className="text-white/25 text-[10px] sm:text-sm font-medium">{t("giveVerseRef")}</p>
         </div>
       </div>
 
-      <div className="container px-6 md:px-10 mt-12 md:mt-20 relative z-10">
-        <Tabs defaultValue="give" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="give">Give</TabsTrigger>
-            <TabsTrigger value="campaigns">
-              <Target className="w-5 h-5 mr-2" />
-              Campaigns
+      <div className="container px-4 sm:px-6 md:px-10 mt-6 sm:mt-12 md:mt-20 relative z-10">
+        <Tabs defaultValue="give" className="space-y-5 sm:space-y-8">
+          <TabsList className="grid w-full grid-cols-3 glass-card-strong rounded-xl sm:rounded-2xl p-1 sm:p-1.5 h-auto">
+            <TabsTrigger value="give" className="rounded-lg sm:rounded-xl font-semibold py-1.5 sm:py-2.5 text-xs sm:text-sm data-[state=active]:shadow-lg">{t("give")}</TabsTrigger>
+            <TabsTrigger value="campaigns" className="rounded-lg sm:rounded-xl font-semibold py-1.5 sm:py-2.5 text-xs sm:text-sm data-[state=active]:shadow-lg">
+              <Target className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> {t("campaigns")}
             </TabsTrigger>
-            <TabsTrigger value="history">
-              <Calendar className="w-5 h-5 mr-2" />
-              History
+            <TabsTrigger value="history" className="rounded-lg sm:rounded-xl font-semibold py-1.5 sm:py-2.5 text-xs sm:text-sm data-[state=active]:shadow-lg">
+              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> {t("history")}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="give" className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-10">
+          <TabsContent value="give" className="space-y-5 sm:space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 md:gap-10">
               <div className="lg:col-span-7">
-                <Card className="shadow-xl border-none">
-                  <CardHeader className="pb-5">
-                    <CardTitle className="text-2xl md:text-3xl">Make a Donation</CardTitle>
-                    <CardDescription className="text-base md:text-lg">
-                      Secure, simple, and impactful.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <div className="glass-card-strong rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden">
+                  <div className="p-4 sm:p-8">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold font-[--font-display] mb-1 sm:mb-2">{t("makeADonation")}</h2>
+                    <p className="text-muted-foreground text-xs sm:text-base mb-4 sm:mb-6">{t("secureSimple")}</p>
+
                     <Tabs defaultValue="one-time" onValueChange={setGivingType}>
-                      <TabsList className="grid w-full grid-cols-2 mb-8">
-                        <TabsTrigger value="one-time" className="text-base md:text-lg">One-Time</TabsTrigger>
-                        <TabsTrigger value="recurring" className="text-base md:text-lg">Recurring</TabsTrigger>
+                      <TabsList className="grid w-full grid-cols-2 mb-5 sm:mb-8 rounded-xl sm:rounded-2xl bg-muted/50 p-1">
+                        <TabsTrigger value="one-time" className="rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm">{t("oneTime")}</TabsTrigger>
+                        <TabsTrigger value="recurring" className="rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm">{t("recurring")}</TabsTrigger>
                       </TabsList>
 
                       <Form {...form}>
-                        <form
-                          onSubmit={form.handleSubmit(onSubmit)}
-                          className="space-y-5 md:space-y-6"
-                        >
-                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 md:gap-3 mb-4 md:mb-6">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2 md:gap-3 mb-4 sm:mb-6">
                             {predefinedAmounts.map((amt) => (
                               <Button
                                 key={amt}
                                 type="button"
-                                variant={
-                                  form.watch("amount") === amt
-                                    ? "default"
-                                    : "outline"
-                                }
+                                variant={form.watch("amount") === amt ? "default" : "outline"}
                                 onClick={() => form.setValue("amount", amt)}
-                                className="h-10 md:h-12 text-sm md:text-lg"
+                                className={`h-9 sm:h-12 text-xs sm:text-base rounded-xl sm:rounded-2xl font-bold ${form.watch("amount") === amt ? "gradient-accent text-primary-foreground shadow-lg shadow-primary/20" : "border-border/50 bg-card/50"}`}
                               >
                                 ${amt}
                               </Button>
@@ -232,17 +169,11 @@ export default function GivePage() {
                             name="amount"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-sm md:text-base">Custom Amount ($)</FormLabel>
+                                <FormLabel className="font-semibold text-foreground/70">{t("customAmount")}</FormLabel>
                                 <FormControl>
                                   <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                      $
-                                    </span>
-                                    <Input
-                                      type="number"
-                                      className="pl-7 md:pl-8 text-base md:text-lg h-10 md:h-12"
-                                      {...field}
-                                    />
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
+                                    <Input type="number" className="pl-9 text-lg h-12 rounded-2xl border-border/50 bg-card/50 backdrop-blur-sm" {...field} />
                                   </div>
                                 </FormControl>
                                 <FormMessage />
@@ -253,45 +184,41 @@ export default function GivePage() {
                           <Button
                             type="submit"
                             size="lg"
-                            className="w-full text-base md:text-lg h-12 md:h-14"
+                            className="w-full text-base h-14 rounded-2xl gradient-accent text-primary-foreground font-bold shadow-xl shadow-primary/20 hover:shadow-2xl hover:-translate-y-0.5 transition-all"
                             disabled={isPending}
                           >
-                            {isPending
-                              ? "Processing..."
-                              : `Give $${form.watch("amount") || 0} ${givingType === "recurring" ? "Monthly" : "Now"}`}
+                            {isPending ? t("processing") : `${t("give")} $${form.watch("amount") || 0} ${givingType === "recurring" ? t("monthly") : t("giveNow")}`}
                           </Button>
                         </form>
                       </Form>
 
-                      <div className="mt-4 md:mt-6 flex items-center justify-center gap-2 text-xs md:text-sm text-muted-foreground">
-                        <ShieldCheck className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                        <span>Secure 256-bit SSL Encryption</span>
+                      <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        <ShieldCheck className="w-4 h-4 text-primary" />
+                        <span>{t("secureEncryption")}</span>
                       </div>
                     </Tabs>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
 
-              <div className="lg:col-span-5 space-y-4 md:space-y-6">
-                <div className="bg-secondary/50 p-4 md:p-6 rounded-xl border border-border">
-                  <h3 className="text-base md:text-xl font-bold mb-2 md:mb-4 flex items-center gap-2">
-                    <Heart className="w-4 h-4 md:w-5 md:h-5 text-primary" /> Why We Give
+              <div className="lg:col-span-5 space-y-6">
+                <div className="glass-card rounded-3xl p-6 shimmer-border">
+                  <h3 className="text-base font-bold mb-3 flex items-center gap-2 font-[--font-display]">
+                    <Heart className="w-5 h-5 text-primary" /> {t("whyWeGive")}
                   </h3>
-                  <p className="text-muted-foreground text-sm md:text-base mb-3 md:mb-4">
-                    Giving is an act of worship. It's a way to show God that He is
-                    first in our lives and to support the work He is doing through
-                    our church.
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {t("whyWeGiveDesc")}
                   </p>
                 </div>
 
-                <div className="bg-secondary/50 p-4 md:p-6 rounded-xl border border-border">
-                  <h3 className="text-base md:text-xl font-bold mb-2 md:mb-4 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 md:w-5 md:h-5 text-primary" /> Other Ways to Give
+                <div className="glass-card rounded-3xl p-6 shimmer-border">
+                  <h3 className="text-base font-bold mb-3 flex items-center gap-2 font-[--font-display]">
+                    <CreditCard className="w-5 h-5 text-accent" /> {t("otherWaysToGive")}
                   </h3>
-                  <ul className="space-y-2 md:space-y-3 text-muted-foreground text-sm md:text-base">
-                    <li>• Text "GIVE" to 555-1234</li>
-                    <li>• Mail checks to 123 Faith Ave</li>
-                    <li>• Drop in offering buckets on Sunday</li>
+                  <ul className="space-y-2.5 text-muted-foreground text-sm">
+                    <li>• {t("textToGive") || 'Text "GIVE" to 555-1234'}</li>
+                    <li>• {t("mailChecks") || "Mail checks to 123 Faith Ave"}</li>
+                    <li>• {t("sundayOffering") || "Drop in offering buckets on Sunday"}</li>
                   </ul>
                 </div>
               </div>
@@ -304,72 +231,52 @@ export default function GivePage() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : campaigns.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No active campaigns at the moment.</p>
-                  <p className="text-sm text-muted-foreground mt-2">Check back soon!</p>
-                </CardContent>
-              </Card>
+              <div className="glass-card rounded-3xl p-12 text-center">
+                <Target className="h-12 w-12 mx-auto text-muted-foreground/20 mb-4" />
+                <p className="text-muted-foreground">{t("noCampaigns")}</p>
+                <p className="text-sm text-muted-foreground mt-2">{t("checkBackSoon")}</p>
+              </div>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {campaigns.map((campaign) => {
-                  const progress = campaign.goalAmount > 0 
-                    ? Math.min((campaign.currentAmount / campaign.goalAmount) * 100, 100) 
-                    : 0;
-                  
+                  const progress = campaign.goalAmount > 0 ? Math.min((campaign.currentAmount / campaign.goalAmount) * 100, 100) : 0;
                   return (
-                    <Card key={campaign.id} className="overflow-hidden">
+                    <div key={campaign.id} className="glass-card-strong rounded-3xl overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-1">
                       {campaign.imageUrl && (
                         <div className="h-48 overflow-hidden">
-                          <img 
-                            src={campaign.imageUrl} 
-                            alt={campaign.title}
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={campaign.imageUrl} alt={campaign.title} className="w-full h-full object-cover" />
                         </div>
                       )}
-                      <CardHeader>
-                        <CardTitle className="text-lg">{campaign.title}</CardTitle>
-                        {campaign.description && (
-                          <CardDescription>{campaign.description}</CardDescription>
-                        )}
-                      </CardHeader>
-                      <CardContent className="space-y-4">
+                      <div className="p-6 space-y-4">
+                        <h3 className="text-lg font-bold font-[--font-display]">{campaign.title}</h3>
+                        {campaign.description && <p className="text-sm text-muted-foreground">{campaign.description}</p>}
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Raised</span>
-                            <span className="font-medium">{formatCurrency(campaign.currentAmount)}</span>
+                            <span className="text-muted-foreground">{t("raised")}</span>
+                            <span className="font-bold text-primary">{formatCurrency(campaign.currentAmount)}</span>
                           </div>
-                          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-green-500 rounded-full transition-all"
-                              style={{ width: `${progress}%` }}
-                            />
+                          <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                            <div className="h-full gradient-accent rounded-full transition-all" style={{ width: `${progress}%` }} />
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Goal</span>
-                            <span className="font-medium">{formatCurrency(campaign.goalAmount)}</span>
+                            <span className="text-muted-foreground">{t("goal")}</span>
+                            <span className="font-bold">{formatCurrency(campaign.goalAmount)}</span>
                           </div>
                         </div>
-                        
-                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>Ends {formatDate(campaign.endDate)}</span>
-                          </div>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Calendar className="w-4 h-4 mr-1.5" />
+                          <span>{t("ends")} {formatDate(campaign.endDate)}</span>
                         </div>
-                        
-                        <Button 
-                          className="w-full" 
+                        <Button
+                          className={`w-full rounded-2xl font-bold ${selectedCampaign === campaign.id ? "gradient-accent text-primary-foreground shadow-lg" : "border-border/50"}`}
                           variant={selectedCampaign === campaign.id ? "default" : "outline"}
                           onClick={() => setSelectedCampaign(campaign.id)}
                         >
                           <Heart className="w-4 h-4 mr-2" />
-                          {selectedCampaign === campaign.id ? "Selected" : "Give to Campaign"}
+                          {selectedCampaign === campaign.id ? t("selected") : t("giveToCampaign")}
                         </Button>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -378,54 +285,35 @@ export default function GivePage() {
 
           <TabsContent value="history" className="space-y-6">
             {!user ? (
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <p className="text-muted-foreground">Please log in to view your donation history.</p>
-                </CardContent>
-              </Card>
+              <div className="glass-card rounded-3xl p-12 text-center"><p className="text-muted-foreground">{t("loginToViewHistory")}</p></div>
             ) : loadingDonations ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
+              <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
             ) : donations.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">You haven't made any donations yet.</p>
-                </CardContent>
-              </Card>
+              <div className="glass-card rounded-3xl p-12 text-center"><Heart className="h-12 w-12 mx-auto text-muted-foreground/20 mb-4" /><p className="text-muted-foreground">{t("noDonations")}</p></div>
             ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Your Donation History</CardTitle>
-                  <CardDescription>Thank you for your generosity!</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {donations.map((donation) => (
-                      <div key={donation.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{formatCurrency(donation.amount)}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(donation.createdAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
-                          </p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs ${
-                          donation.status === 'succeeded' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {donation.status === 'succeeded' ? 'Completed' : donation.status}
-                        </span>
+              <div className="glass-card-strong rounded-3xl overflow-hidden">
+                <div className="p-6 border-b border-border/20">
+                  <h3 className="text-xl font-bold font-[--font-display]">{t("donationHistory")}</h3>
+                  <p className="text-muted-foreground text-sm mt-1">{t("thankYouGenerosity")}</p>
+                </div>
+                <div className="p-4 space-y-3">
+                  {donations.map((donation) => (
+                    <div key={donation.id} className="flex items-center justify-between p-4 glass-card rounded-2xl hover:shadow-md transition-all">
+                      <div>
+                        <p className="font-bold text-foreground">{formatCurrency(donation.amount)}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(donation.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        donation.status === 'succeeded' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent'
+                      }`}>
+                        {donation.status === 'succeeded' ? t("completed") : donation.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </TabsContent>
         </Tabs>

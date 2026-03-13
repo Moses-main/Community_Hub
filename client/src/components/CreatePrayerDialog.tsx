@@ -65,8 +65,9 @@ export function CreatePrayerDialog() {
     // Convert user.id to string to match the expected type
     const payload = {
       ...data,
+      content: data.content || "",
       userId: user?.id ? String(user.id) : undefined,
-    };
+    } as any;
 
     createRequest(payload, {
       onSuccess: () => {

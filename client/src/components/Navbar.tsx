@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, ChevronDown, LogOut, LayoutDashboard, CalendarCheck, QrCode, Shield, Bell, Music, Mic, Users, Heart, BookOpen, Video, X, MessageCircle, Compass, Search, Sparkles } from "lucide-react";
+import { Menu, ChevronDown, LogOut, LayoutDashboard, CalendarCheck, QrCode, Shield, Bell, Music, Mic, Users, Heart, BookOpen, Video, X, MessageCircle, Compass, Sparkles, PartyPopper } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -62,176 +62,187 @@ export function Navbar() {
   const communityLinks = [
     { href: "/feed", label: t("feed") || "Feed", icon: MessageCircle },
     { href: "/house-cells", label: t("houseCells"), icon: Heart },
+    { href: "/celebrations", label: "Celebrations", icon: PartyPopper },
   ];
 
   const isActive = (path: string) => location === path;
 
   return (
     <nav
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        scrolled 
-          ? "bg-white/95 backdrop-blur-xl shadow-sm border-b border-slate-100" 
-          : "bg-white border-b border-slate-100"
+      className={`sticky top-0 z-50 w-full transition-all duration-500 ${
+        scrolled
+          ? "glass-card-strong shadow-lg"
+          : "bg-background/80 backdrop-blur-md border-b border-border/20"
       }`}
     >
-      <div className="max-w-[1600px] mx-auto px-6 md:px-10 h-16 md:h-18 flex items-center justify-between">
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-6 md:px-10 h-14 sm:h-16 md:h-[72px] flex items-center justify-between">
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
-          <img 
-            src={branding?.logoUrl || "/church_logo.jpeg"} 
-            alt={branding?.churchName || "CHub"} 
-            className="h-9 md:h-10 w-auto rounded-full object-contain"
-          />
-          <span className="hidden sm:block text-base font-semibold text-slate-900">
-            {branding?.churchName || "CHub"}
-          </span>
+          <div className="relative">
+            <img
+              src={branding?.logoUrl || "/church_logo.jpeg"}
+              alt={branding?.churchName || "CHub"}
+              className="h-8 sm:h-10 md:h-11 w-auto rounded-xl sm:rounded-2xl object-contain ring-2 ring-primary/15 shadow-lg shadow-primary/10"
+            />
+          </div>
+          <div className="hidden sm:block">
+            <span className="text-base font-bold font-[--font-display] text-foreground tracking-tight">
+              {branding?.churchName || "CHub"}
+            </span>
+          </div>
         </Link>
 
+        {/* Tablet nav (md to xl) */}
+        <div className="hidden md:flex xl:hidden items-center gap-0.5">
+          {[
+            { label: t("home"), links: navLinks },
+            { label: t("media"), links: mediaLinks },
+            { label: t("community"), links: communityLinks },
+            { label: "Discover", links: discoverLinks },
+          ].map((group) => (
+            <div key={group.label} className="relative group">
+              <button className="px-3 py-2 text-[13px] font-semibold text-foreground/60 hover:text-primary rounded-xl flex items-center gap-1 transition-all duration-200">
+                {group.label} <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              <div className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="glass-card-strong shadow-2xl rounded-2xl py-2 w-52 overflow-hidden">
+                  {group.links.map((link) => {
+                    const Icon = 'icon' in link ? (link as any).icon : null;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className={`flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-colors ${
+                          isActive(link.href)
+                            ? "bg-primary/10 text-primary"
+                            : "text-foreground/60 hover:bg-primary/5 hover:text-primary"
+                        }`}
+                      >
+                        {Icon && <Icon className="w-4 h-4" />}
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop nav (xl+) */}
         <div className="hidden xl:flex items-center gap-1">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`px-4 py-2.5 text-[15px] font-medium rounded-lg transition-all duration-200 ${
+              className={`px-4 py-2 text-[14px] font-semibold rounded-xl transition-all duration-200 ${
                 isActive(link.href)
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-600 hover:text-indigo-600 hover:bg-slate-50"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                  : "text-foreground/55 hover:text-primary hover:bg-primary/5"
               }`}
             >
               {link.label}
             </Link>
           ))}
-          
-          <div className="relative group">
-            <button className="px-4 py-2.5 text-[15px] font-medium text-slate-600 hover:text-indigo-600 hover:bg-slate-50 rounded-lg flex items-center gap-1.5 transition-all duration-200">
-              {t("media")} <ChevronDown className="w-4 h-4" />
-            </button>
-            <div className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <div className="bg-white border border-slate-100 shadow-xl rounded-xl py-2 w-52 overflow-hidden">
-                {mediaLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="flex items-center gap-3 px-4 py-2.5 text-[15px] text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                  >
-                    <link.icon className="w-4 h-4" />
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          <div className="relative group">
-            <button className="px-4 py-2.5 text-[15px] font-medium text-slate-600 hover:text-indigo-600 hover:bg-slate-50 rounded-lg flex items-center gap-1.5 transition-all duration-200">
-              {t("community")} <ChevronDown className="w-4 h-4" />
-            </button>
-            <div className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <div className="bg-white border border-slate-100 shadow-xl rounded-xl py-2 w-52 overflow-hidden">
-                {communityLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="flex items-center gap-3 px-4 py-2.5 text-[15px] text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                  >
-                    <link.icon className="w-4 h-4" />
-                    {link.label}
-                  </Link>
-                ))}
+          {/* Dropdowns */}
+          {[
+            { label: t("media"), links: mediaLinks },
+            { label: t("community"), links: communityLinks },
+            { label: "Discover", links: discoverLinks },
+          ].map((group) => (
+            <div key={group.label} className="relative group">
+              <button className="px-4 py-2 text-[14px] font-semibold text-foreground/55 hover:text-primary rounded-xl flex items-center gap-1.5 transition-all duration-200">
+                {group.label} <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              <div className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="glass-card-strong shadow-2xl rounded-2xl py-2 w-56 overflow-hidden">
+                  {group.links.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="flex items-center gap-3 px-4 py-3 text-[14px] text-foreground/60 hover:bg-primary/5 hover:text-primary transition-colors"
+                    >
+                      <link.icon className="w-4 h-4" />
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="relative group">
-            <button className="px-4 py-2.5 text-[15px] font-medium text-slate-600 hover:text-indigo-600 hover:bg-slate-50 rounded-lg flex items-center gap-1.5 transition-all duration-200">
-              Discover <ChevronDown className="w-4 h-4" />
-            </button>
-            <div className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <div className="bg-white border border-slate-100 shadow-xl rounded-xl py-2 w-52 overflow-hidden">
-                {discoverLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="flex items-center gap-3 px-4 py-2.5 text-[15px] text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                  >
-                    <link.icon className="w-4 h-4" />
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
+        {/* Right side */}
         <div className="flex items-center gap-2">
           <LanguageSelector variant="navbar" />
-          
+
           {user ? (
             <div className="hidden md:block">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 px-2 py-1.5 h-auto rounded-xl hover:bg-slate-50 transition-all relative">
+                  <Button variant="ghost" className="flex items-center gap-2 px-2 py-1.5 h-auto rounded-2xl hover:bg-muted/50 transition-all relative">
                     <div className="relative">
-                      <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-sm font-medium shadow-sm">
+                      <div className="w-9 h-9 rounded-2xl gradient-accent flex items-center justify-center text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20">
                         {user.firstName ? user.firstName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                       </div>
                       {unreadCount?.count ? (
-                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white">
-                        </span>
+                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-accent rounded-full flex items-center justify-center text-accent-foreground text-[10px] font-bold border-2 border-card"></span>
                       ) : null}
                     </div>
-                    <span className="hidden md:block text-sm font-medium text-slate-700">
+                    <span className="hidden md:block text-sm font-semibold text-foreground/70">
                       {user.firstName || user.email.split('@')[0]}
                     </span>
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                    <ChevronDown className="w-4 h-4 text-foreground/30" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64 z-50 bg-white border-slate-100 shadow-xl rounded-xl p-1">
-                  <div className="px-4 py-3.5 border-b border-slate-100 rounded-t-xl">
-                    <p className="text-sm font-semibold text-slate-900">{user.firstName} {user.lastName}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{user.email}</p>
+                <DropdownMenuContent align="end" className="w-64 z-50 glass-card-strong shadow-2xl rounded-2xl p-1">
+                  <div className="px-4 py-3.5 border-b border-border/30 rounded-t-xl">
+                    <p className="text-sm font-bold text-foreground">{user.firstName} {user.lastName}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>
                   </div>
                   <div className="py-1.5">
                     {user.isAdmin ? (
                       <>
-                        <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-slate-50 rounded-lg mx-1">
-                          <Link href="/admin" className="flex items-center gap-3 text-slate-700">
-                            <LayoutDashboard className="w-4.5 h-4.5 text-indigo-600" />
+                        <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-primary/5 rounded-xl mx-1">
+                          <Link href="/admin" className="flex items-center gap-3 text-foreground/70">
+                            <LayoutDashboard className="w-4.5 h-4.5 text-primary" />
                             <span className="text-sm font-medium">Admin Dashboard</span>
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-slate-50 rounded-lg mx-1">
-                          <Link href="/admin/sermon-clips" className="flex items-center gap-3 text-slate-700">
-                            <Video className="w-4.5 h-4.5 text-indigo-600" />
+                        <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-primary/5 rounded-xl mx-1">
+                          <Link href="/admin/sermon-clips" className="flex items-center gap-3 text-foreground/70">
+                            <Video className="w-4.5 h-4.5 text-primary" />
                             <span className="text-sm font-medium">Sermon Clips</span>
                           </Link>
                         </DropdownMenuItem>
                       </>
                     ) : (
-                      <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-slate-50 rounded-lg mx-1">
-                        <Link href="/dashboard" className="flex items-center gap-3 text-slate-700">
-                          <LayoutDashboard className="w-4.5 h-4.5 text-indigo-600" />
+                      <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-primary/5 rounded-xl mx-1">
+                        <Link href="/dashboard" className="flex items-center gap-3 text-foreground/70">
+                          <LayoutDashboard className="w-4.5 h-4.5 text-primary" />
                           <span className="text-sm font-medium">My Dashboard</span>
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-slate-50 rounded-lg mx-1">
-                      <Link href="/attendance" className="flex items-center gap-3 text-slate-700">
-                        <CalendarCheck className="w-4.5 h-4.5 text-indigo-600" />
+                    <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-primary/5 rounded-xl mx-1">
+                      <Link href="/attendance" className="flex items-center gap-3 text-foreground/70">
+                        <CalendarCheck className="w-4.5 h-4.5 text-primary" />
                         <span className="text-sm font-medium">My Attendance</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-slate-50 rounded-lg mx-1">
-                      <Link href="/privacy" className="flex items-center gap-3 text-slate-700">
-                        <Shield className="w-4.5 h-4.5 text-indigo-600" />
+                    <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-primary/5 rounded-xl mx-1">
+                      <Link href="/privacy" className="flex items-center gap-3 text-foreground/70">
+                        <Shield className="w-4.5 h-4.5 text-primary" />
                         <span className="text-sm font-medium">Privacy & Data</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-slate-50 rounded-lg mx-1">
-                      <Link href="/messages" className="flex items-center gap-3 text-slate-700 w-full">
+                    <DropdownMenuItem asChild className="cursor-pointer px-3 py-2.5 hover:bg-primary/5 rounded-xl mx-1">
+                      <Link href="/messages" className="flex items-center gap-3 text-foreground/70 w-full">
                         <div className="relative">
-                          <Bell className="w-4.5 h-4.5 text-indigo-600" />
+                          <Bell className="w-4.5 h-4.5 text-primary" />
                           {unreadCount?.count ? (
-                            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold px-0.5">
+                            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-accent rounded-full flex items-center justify-center text-accent-foreground text-[10px] font-bold px-0.5">
                               {unreadCount.count > 9 ? '9+' : unreadCount.count}
                             </span>
                           ) : null}
@@ -240,9 +251,9 @@ export function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                   </div>
-                  <DropdownMenuSeparator className="my-1" />
+                  <DropdownMenuSeparator className="my-1 bg-border/30" />
                   <div className="py-1.5">
-                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer px-3 py-2.5 hover:bg-red-50 rounded-lg mx-1 text-red-600">
+                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer px-3 py-2.5 hover:bg-destructive/10 rounded-xl mx-1 text-destructive">
                       <LogOut className="w-4.5 h-4.5 mr-3" />
                       <span className="text-sm font-medium">Sign out</span>
                     </DropdownMenuItem>
@@ -256,222 +267,117 @@ export function Navbar() {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="text-slate-600 hover:text-indigo-600 hover:bg-slate-50 px-4 h-10 rounded-lg"
+                className="text-foreground/55 hover:text-primary px-4 h-10 rounded-xl font-semibold"
               >
                 <Link href="/login">Log In</Link>
               </Button>
               <Button
                 asChild
                 size="sm"
-                className="h-10 px-5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all"
+                className="h-10 px-5 gradient-accent text-primary-foreground font-bold rounded-2xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all hover:-translate-y-0.5"
               >
                 <Link href="/login">Get Started</Link>
               </Button>
             </div>
           )}
 
+          {/* Mobile menu trigger */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-lg xl:hidden">
-                <Menu className="h-5 w-5 text-slate-600" />
+              <Button variant="ghost" size="icon" className="rounded-xl md:hidden">
+                <Menu className="h-5 w-5 text-foreground/60" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[320px] sm:w-[380px] p-0 bg-white">
+            <SheetContent side="right" className="w-[280px] sm:w-[320px] p-0 glass-card-strong border-l border-border/20">
               <div className="flex flex-col h-full">
-                <div className="flex items-center justify-between p-5 border-b border-slate-100">
+                <div className="flex items-center justify-between p-3 sm:p-5 border-b border-border/20">
                   <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
-                    <img 
-                      src="/church_logo.jpeg" 
-                      alt="CHub" 
-                      className="h-8 w-auto rounded-full object-contain"
-                    />
-                    <span className="font-semibold text-slate-900">
-                      CHub
-                    </span>
+                    <img src="/church_logo.jpeg" alt="CHub" className="h-8 w-auto rounded-xl object-contain" />
+                    <span className="font-bold text-foreground">CHub</span>
                   </Link>
                   <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
-                    <X className="h-5 w-5 text-slate-500" />
+                    <X className="h-5 w-5 text-muted-foreground" />
                   </Button>
                 </div>
-                
-                <div className="flex-1 overflow-y-auto p-4 space-y-1">
+
+                <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-0.5">
                   {navLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
+                      className={`block px-3 py-2.5 sm:px-4 sm:py-4 min-h-[40px] sm:min-h-[48px] rounded-xl sm:rounded-2xl text-[13px] sm:text-[15px] font-semibold transition-all ${
                         isActive(link.href)
-                          ? "bg-indigo-50 text-indigo-700"
-                          : "text-slate-600 hover:bg-slate-50"
+                          ? "bg-primary/10 text-primary"
+                          : "text-foreground/60 hover:bg-muted/50"
                       }`}
                     >
                       {link.label}
                     </Link>
                   ))}
-                  
-                  <Collapsible open={mediaOpen} onOpenChange={setMediaOpen} className="pt-4 mt-2">
-                    <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 min-h-[48px] rounded-xl text-[15px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Media</span>
-                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${mediaOpen ? 'rotate-180' : ''}`} />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1 mt-1">
-                      {mediaLinks.map((link) => (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
-                            isActive(link.href)
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-slate-600 hover:bg-slate-50"
-                          }`}
-                        >
-                          <link.icon className="w-5 h-5" />
-                          {link.label}
-                        </Link>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
 
-                  <Collapsible open={communityOpen} onOpenChange={setCommunityOpen} className="pt-2 mt-2">
-                    <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 min-h-[48px] rounded-xl text-[15px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Community</span>
-                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${communityOpen ? 'rotate-180' : ''}`} />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1 mt-1">
-                      {communityLinks.map((link) => (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
-                            isActive(link.href)
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-slate-600 hover:bg-slate-50"
-                          }`}
-                        >
-                          <link.icon className="w-5 h-5" />
-                          {link.label}
-                        </Link>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  <Collapsible open={discoverOpen} onOpenChange={setDiscoverOpen} className="pt-2 mt-2">
-                    <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 min-h-[48px] rounded-xl text-[15px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Discover</span>
-                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${discoverOpen ? 'rotate-180' : ''}`} />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-1 mt-1">
-                      {discoverLinks.map((link) => (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
-                            isActive(link.href)
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-slate-600 hover:bg-slate-50"
-                          }`}
-                        >
-                          <link.icon className="w-5 h-5" />
-                          {link.label}
-                        </Link>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
-                  
-                  {user && (
-                    <>
-                      <div className="pt-4 mt-2 border-t border-slate-100">
-                        {(user.isAdmin || user.isSuperAdmin) && (
+                  {[
+                    { label: t("media"), links: mediaLinks, open: mediaOpen, setOpen: setMediaOpen },
+                    { label: t("community"), links: communityLinks, open: communityOpen, setOpen: setCommunityOpen },
+                    { label: "Discover", links: discoverLinks, open: discoverOpen, setOpen: setDiscoverOpen },
+                  ].map(({ label, links, open, setOpen }) => (
+                    <Collapsible key={label} open={open} onOpenChange={setOpen}>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2.5 sm:px-4 sm:py-4 min-h-[40px] sm:min-h-[48px] rounded-xl sm:rounded-2xl text-[13px] sm:text-[15px] font-semibold text-foreground/60 hover:bg-muted/50 transition-all">
+                        {label}
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pl-2 sm:pl-3 space-y-0.5 mt-0.5">
+                        {links.map((link) => (
                           <Link
-                            href="/super-admin"
+                            key={link.href}
+                            href={link.href}
                             onClick={() => setMobileMenuOpen(false)}
-                            className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
-                              isActive("/super-admin")
-                                ? "bg-indigo-50 text-indigo-700"
-                                : "text-slate-600 hover:bg-slate-50"
-                            }`}
+                            className="flex items-center gap-2.5 px-3 py-2 sm:px-4 sm:py-3 min-h-[36px] sm:min-h-[44px] rounded-lg sm:rounded-xl text-[12px] sm:text-[14px] text-foreground/55 hover:text-primary hover:bg-primary/5 transition-colors"
                           >
-                            <Shield className="w-5 h-5" />
-                            Super Admin
+                            <link.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            {link.label}
                           </Link>
-                        )}
-                        <Link
-                          href={user.isAdmin ? "/admin" : "/dashboard"}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
-                            isActive("/dashboard") || isActive("/admin")
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-slate-600 hover:bg-slate-50"
-                          }`}
-                        >
-                          <LayoutDashboard className="w-5 h-5" />
-                          {user.isAdmin ? "Admin Dashboard" : "My Dashboard"}
-                        </Link>
-                        <Link
-                          href="/attendance"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
-                            isActive("/attendance")
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-slate-600 hover:bg-slate-50"
-                          }`}
-                        >
-                          <CalendarCheck className="w-5 h-5" />
-                          My Attendance
-                        </Link>
-                        <Link
-                          href="/attendance/scan"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
-                            isActive("/attendance/scan")
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-slate-600 hover:bg-slate-50"
-                          }`}
-                        >
-                          <QrCode className="w-5 h-5" />
-                          Scan QR
-                        </Link>
-                        <Link
-                          href="/messages"
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors ${
-                            isActive("/messages")
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-slate-600 hover:bg-slate-50"
-                          }`}
-                        >
-                          <Bell className="w-5 h-5" />
-                          Messages
-                        </Link>
-                        <button
-                          onClick={() => {
-                            setMobileMenuOpen(false);
-                            logout();
-                          }}
-                          className="flex items-center gap-3 px-4 py-4 min-h-[48px] rounded-xl text-[15px] font-medium transition-colors text-red-600 hover:bg-red-50 w-full"
-                        >
-                          <LogOut className="w-5 h-5" />
-                          Sign out
-                        </button>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
+                </div>
+
+                <div className="p-4 border-t border-border/20">
+                  {user ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 px-4 py-3 glass-card rounded-2xl">
+                        <div className="w-10 h-10 rounded-2xl gradient-accent flex items-center justify-center text-primary-foreground font-bold shadow-md">
+                          {user.firstName ? user.firstName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-foreground">{user.firstName || user.email.split('@')[0]}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                        </div>
                       </div>
-                    </>
+                      <Link
+                        href={user.isAdmin ? "/admin" : "/dashboard"}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block px-4 py-3 min-h-[48px] rounded-xl text-sm font-semibold text-foreground/60 hover:bg-muted/50 flex items-center gap-3"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-primary" />
+                        {user.isAdmin ? "Admin Dashboard" : "My Dashboard"}
+                      </Link>
+                      <button
+                        onClick={() => { logout(); setMobileMenuOpen(false); }}
+                        className="w-full px-4 py-3 min-h-[48px] rounded-xl text-sm font-semibold text-destructive hover:bg-destructive/10 flex items-center gap-3 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" /> Sign Out
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Button asChild className="w-full h-12 rounded-2xl gradient-accent text-primary-foreground font-bold shadow-lg">
+                        <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Get Started</Link>
+                      </Button>
+                    </div>
                   )}
                 </div>
-                
-                {!user && (
-                  <div className="p-4 border-t border-slate-100 space-y-2">
-                    <Button asChild variant="outline" className="w-full h-11 rounded-xl border-slate-200" onClick={() => setMobileMenuOpen(false)}>
-                      <Link href="/login">Log In</Link>
-                    </Button>
-                    <Button asChild className="w-full h-11 rounded-xl bg-slate-900" onClick={() => setMobileMenuOpen(false)}>
-                      <Link href="/login">Get Started</Link>
-                    </Button>
-                  </div>
-                )}
               </div>
             </SheetContent>
           </Sheet>

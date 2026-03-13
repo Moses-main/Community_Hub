@@ -1,6 +1,8 @@
 import { type Express } from "express";
 import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
@@ -30,6 +32,13 @@ export async function setupVite(server: Server, app: Express) {
     },
     server: serverOptions,
     appType: "custom",
+    plugins: [react(), tailwindcss()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "../client/src"),
+        "@shared": path.resolve(__dirname, "../shared"),
+      },
+    },
   });
 
   app.use(vite.middlewares);

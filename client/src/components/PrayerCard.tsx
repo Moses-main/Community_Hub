@@ -29,26 +29,27 @@ export function PrayerCard({ request }: PrayerCardProps) {
       transition={{ duration: 0.2 }}
     >
       <Card className="h-full flex flex-col border-border/50 hover:shadow-md transition-shadow rounded-none">
-      <CardContent className="p-8 flex-1">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-            <User size={18} />
+      <CardContent className="p-4 sm:p-8 flex-1">
+        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-5">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <User size={14} className="sm:hidden" />
+            <User size={18} className="hidden sm:block" />
           </div>
           <div>
-            <div className="font-semibold text-base">
+            <div className="font-semibold text-xs sm:text-base">
               {request.isAnonymous ? "Anonymous" : (request.authorName || "Community Member")}
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-[10px] sm:text-sm text-muted-foreground">
               {formatDistanceToNow(new Date(request.createdAt || new Date()), { addSuffix: true })}
             </div>
           </div>
         </div>
-        <p className="text-foreground/90 leading-relaxed italic text-base">
+        <p className="text-foreground/90 leading-relaxed italic text-xs sm:text-base">
           "{request.content}"
         </p>
       </CardContent>
-      <CardFooter className="p-5 bg-secondary/30 border-t border-border/50 flex justify-between items-center">
-        <div className="text-base text-muted-foreground">
+      <CardFooter className="p-3 sm:p-5 bg-secondary/30 border-t border-border/50 flex justify-between items-center">
+        <div className="text-xs sm:text-base text-muted-foreground">
           <span className="font-semibold text-primary">{request.prayCount}</span> prayed
         </div>
         <Button 
@@ -57,11 +58,11 @@ export function PrayerCard({ request }: PrayerCardProps) {
           onClick={handlePray}
           disabled={isPending || hasPrayed}
           className={cn(
-            "gap-2 transition-all rounded-lg",
+            "gap-1.5 transition-all rounded-lg text-xs sm:text-sm",
             hasPrayed && "text-destructive bg-destructive/10 hover:bg-destructive/20 border-destructive/20"
           )}
         >
-          <Heart size={16} className={cn(hasPrayed && "fill-current")} />
+          <Heart size={14} className={cn(hasPrayed && "fill-current")} />
           {hasPrayed ? "Prayed" : "I Prayed"}
         </Button>
       </CardFooter>
