@@ -94,7 +94,7 @@ export async function processVideoClip(options: ProcessingOptions): Promise<Proc
         ]);
 
       if (overlayText || verseReference) {
-        const drawText = [];
+        const drawText: string[] = [];
         if (verseReference) {
           drawText.push(`text='${verseReference}':fontsize=36:fontcolor=white:x=(w-text_w)/2:y=h-100:box=1:boxcolor=black@0.5:boxborderw=10`);
         }

@@ -996,7 +996,7 @@ export async function registerRoutes(
       const canViewRsvps = isCreator || isAdmin;
       
       // If can view RSVPs, get user details
-      let rsvpsWithUsers = undefined;
+      let rsvpsWithUsers: any[] | undefined = undefined;
       if (canViewRsvps) {
         rsvpsWithUsers = await Promise.all(
           rsvps.map(async (rsvp) => {
@@ -1281,8 +1281,8 @@ export async function registerRoutes(
     if (!sermon) return res.status(404).json({ message: "Sermon not found" });
     
     const { type } = req.query;
-    let downloadUrl = null;
-    let filename = '';
+    let downloadUrl: string | null = null;
+    let filename: string = '';
     
     if (type === 'video' && sermon.videoUrl) {
       downloadUrl = sermon.videoUrl;
@@ -7072,6 +7072,8 @@ async function seedDatabase() {
       title: "Sunday Service",
       description: "Join us for worship and a message.",
       date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      endDate: undefined,
+      recurrenceEndDate: undefined,
       location: "Main Sanctuary",
       imageUrl:
         "https://images.unsplash.com/photo-1478147427282-58a87a120781?w=800&auto=format&fit=crop&q=60",
@@ -7080,6 +7082,8 @@ async function seedDatabase() {
       title: "Youth Group Night",
       description: "Fun, games, and fellowship for teens.",
       date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      endDate: undefined,
+      recurrenceEndDate: undefined,
       location: "Youth Hall",
       imageUrl:
         "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&auto=format&fit=crop&q=60",
@@ -7271,97 +7275,4 @@ async function seedDatabase() {
     });
   }
 
-  // === Super Admin Routes ===
-  
-  // Get all organizations (super admin only)
-  app.get("/api/super-admin/organizations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
-    try {
-      if (!req.user?.isSuperAdmin) {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-      const organizations = await storage.getOrganizations();
-      res.json(organizations);
-    } catch (err) {
-      console.error("Error fetching organizations:", err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Create organization (super admin only)
-  app.post("/api/super-admin/organizations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
-    try {
-      if (!req.user?.isSuperAdmin) {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-      const { name, slug, description, logoUrl, churchName, churchEmail, churchPhone, churchAddress, churchCity, churchState, churchCountry, isActive } = req.body;
-      
-      if (!name || !slug) {
-        return res.status(400).json({ message: "Name and slug are required" });
-      }
-
-      const org = await storage.createOrganization({
-        name,
-        slug,
-        description: description || null,
-        logoUrl: logoUrl || null,
-        churchName: churchName || null,
-        churchEmail: churchEmail || null,
-        churchPhone: churchPhone || null,
-        churchAddress: churchAddress || null,
-        churchCity: churchCity || null,
-        churchState: churchState || null,
-        churchCountry: churchCountry || null,
-        isActive: isActive ?? true,
-      });
-      res.status(201).json(org);
-    } catch (err) {
-      console.error("Error creating organization:", err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Update organization (super admin only)
-  app.put("/api/super-admin/organizations/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
-    try {
-      if (!req.user?.isSuperAdmin) {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-      const id = req.params.id;
-      const { name, slug, description, logoUrl, churchName, churchEmail, churchPhone, churchAddress, churchCity, churchState, churchCountry, isActive } = req.body;
-
-      const org = await storage.updateOrganization(id, {
-        name,
-        slug,
-        description: description || null,
-        logoUrl: logoUrl || null,
-        churchName: churchName || null,
-        churchEmail: churchEmail || null,
-        churchPhone: churchPhone || null,
-        churchAddress: churchAddress || null,
-        churchCity: churchCity || null,
-        churchState: churchState || null,
-        churchCountry: churchCountry || null,
-        isActive,
-      });
-      res.json(org);
-    } catch (err) {
-      console.error("Error updating organization:", err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Delete organization (super admin only)
-  app.delete("/api/super-admin/organizations/:id", isAuthenticated, async (req: AuthenticatedRequest, res) => {
-    try {
-      if (!req.user?.isSuperAdmin) {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-      const id = req.params.id;
-      await storage.deleteOrganization(id);
-      res.json({ message: "Organization deleted" });
-    } catch (err) {
-      console.error("Error deleting organization:", err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
 }
