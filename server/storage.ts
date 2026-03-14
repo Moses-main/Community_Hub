@@ -131,12 +131,58 @@ export interface IStorage {
   updateUserHouseCell(id: string, houseCellLocation: string): Promise<User>;
   verifyUser(id: string): Promise<User>;
 
-  // Organizations (Super Admin)
-  getOrganizations(): Promise<any[]>;
-  getOrganization(id: string): Promise<any | undefined>;
-  createOrganization(org: any): Promise<any>;
-  updateOrganization(id: string, updates: any): Promise<any>;
-  deleteOrganization(id: string): Promise<void>;
+  // Organizations
+  createOrganization(org: InsertOrganization): Promise<Organization>;
+  getOrganization(id: number): Promise<Organization | undefined>;
+  getOrganizationBySlug(slug: string): Promise<Organization | undefined>;
+  getOrganizations(includeInactive?: boolean): Promise<Organization[]>;
+  updateOrganization(id: number, updates: Partial<Organization>): Promise<Organization>;
+  deleteOrganization(id: number): Promise<void>;
+
+  // Organization Themes
+  createTheme(theme: InsertOrganizationTheme): Promise<OrganizationTheme>;
+  getOrganizationThemes(orgId: number): Promise<OrganizationTheme[]>;
+  getDefaultTheme(orgId: number): Promise<OrganizationTheme | undefined>;
+
+  // Custom Pages
+  createCustomPage(page: InsertCustomPage): Promise<CustomPage>;
+  getCustomPage(id: number): Promise<CustomPage | undefined>;
+  getOrganizationPages(orgId: number): Promise<CustomPage[]>;
+  updateCustomPage(id: number, updates: Partial<CustomPage>): Promise<CustomPage>;
+  deleteCustomPage(id: number): Promise<void>;
+
+  // Custom Menu Items
+  createMenuItem(item: InsertCustomMenuItem): Promise<CustomMenuItem>;
+  getMenuItems(orgId: number, location: string): Promise<CustomMenuItem[]>;
+  updateMenuItem(id: number, updates: Partial<CustomMenuItem>): Promise<CustomMenuItem>;
+  deleteMenuItem(id: number): Promise<void>;
+
+  // Email Templates
+  createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
+  getOrganizationEmailTemplates(orgId: number): Promise<EmailTemplate[]>;
+  updateEmailTemplate(id: number, updates: Partial<EmailTemplate>): Promise<EmailTemplate>;
+
+  // Custom Fields
+  createCustomField(field: InsertCustomField): Promise<CustomField>;
+  getCustomFields(orgId: number, entityType: string): Promise<CustomField[]>;
+  deleteCustomField(id: number): Promise<void>;
+
+  // Organization Members
+  addOrganizationMember(member: InsertOrganizationMember): Promise<OrganizationMember>;
+  getOrganizationMembers(orgId: number): Promise<OrganizationMember[]>;
+
+  // Organization Settings
+  getOrganizationSettings(orgId: number): Promise<OrganizationSetting | undefined>;
+  updateOrganizationSettings(orgId: number, settings: Record<string, any>): Promise<OrganizationSetting>;
+
+  // Custom Domains
+  addCustomDomain(domain: InsertCustomDomain): Promise<CustomDomain>;
+  getCustomDomain(domain: string): Promise<CustomDomain | undefined>;
+  verifyCustomDomain(id: number): Promise<CustomDomain>;
+
+  // Organization Analytics
+  recordOrganizationMetric(metric: InsertOrganizationAnalytic): Promise<OrganizationAnalytic>;
+  getOrganizationMetrics(orgId: number, metricType?: string): Promise<OrganizationAnalytic[]>;
 
   // Branding
   getBranding(): Promise<Branding | undefined>;
@@ -437,6 +483,21 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Privacy & Moderation
+  async createOrUpdatePrivacySettings(settings: InsertPrivacySettings): Promise<PrivacySettings> {
+    const existing = await this.getPrivacySettings(settings.userId);
+    if (!existing) {
+      const [created] = await db.insert(privacySettings).values(settings).returning();
+      return created;
+    }
+    const [updated] = await db
+      .update(privacySettings)
+      .set(settings)
+      .where(eq(privacySettings.userId, settings.userId))
+      .returning();
+    return updated;
+  }
+
   // Users
   async getUserById(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -522,33 +583,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Organizations (Super Admin)
-  async getOrganizations() {
-    return db.select().from(organizations).orderBy(desc(organizations.createdAt));
-  }
 
-  async getOrganization(id: string) {
-    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
-    return org;
-  }
-
-  async createOrganization(org: any) {
-    const [created] = await db.insert(organizations).values(org).returning();
-    return created;
-  }
-
-  async updateOrganization(id: string, updates: any) {
-    const [updated] = await db
-      .update(organizations)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(organizations.id, id))
-      .returning();
-    return updated;
-  }
-
-  async deleteOrganization(id: string) {
-    await db.delete(organizations).where(eq(organizations.id, id));
-  }
 
   async markUserContacted(id: string): Promise<void> {
     await db
@@ -612,7 +647,7 @@ export class DatabaseStorage implements IStorage {
   // Sermons
   async getSermons(filter?: ISermonFilter): Promise<Sermon[]> {
     if (filter) {
-      const conditions = [];
+      const conditions: any[] = [];
       if (filter.speaker) {
         conditions.push(like(sermons.speaker, `%${filter.speaker}%`));
       }
@@ -2863,7 +2898,7 @@ export class DatabaseStorage implements IStorage {
 
   // Counseling Requests
   async getCounselingRequests(filters?: { status?: string; assignedTo?: string; userId?: string }): Promise<CounselingRequest[]> {
-    let conditions = [];
+    let conditions: any[] = [];
     if (filters?.status) conditions.push(eq(counselingRequests.status, filters.status));
     if (filters?.assignedTo) conditions.push(eq(counselingRequests.assignedTo, filters.assignedTo));
     if (filters?.userId) conditions.push(eq(counselingRequests.userId, filters.userId));
@@ -2948,7 +2983,7 @@ export class DatabaseStorage implements IStorage {
 
   // Pastoral Visits
   async getPastoralVisits(filters?: { visitorId?: string; visitedUserId?: string }): Promise<PastoralVisit[]> {
-    let conditions = [];
+    let conditions: any[] = [];
     if (filters?.visitorId) conditions.push(eq(pastoralVisits.visitorId, filters.visitorId));
     if (filters?.visitedUserId) conditions.push(eq(pastoralVisits.visitedUserId, filters.visitedUserId));
     
