@@ -2426,7 +2426,7 @@ export class DatabaseStorage implements IStorage {
           const tagName = tag.slice(1).toLowerCase();
           const [hashtag] = await db.select().from(hashtags).where(eq(hashtags.name, tagName));
           if (hashtag) {
-            await db.update(hashtags).set({ postsCount: hashtag.postsCount + 1 }).where(eq(hashtags.id, hashtag.id));
+            await db.update(hashtags).set({ postsCount: (hashtag.postsCount || 0) + 1 }).where(eq(hashtags.id, hashtag.id));
           } else {
             await db.insert(hashtags).values({ name: tagName, postsCount: 1 });
           }
@@ -3264,7 +3264,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createChatbotIntent(intent: InsertChatbotIntent): Promise<ChatbotIntent> {
-    const [created] = await db.insert(chatbotIntents).values(intent).returning();
+    const [created] = await db.insert(chatbotIntents).values({ ...intent, patterns: intent.patterns as string[], keywords: intent.keywords as string[], responses: intent.responses as string[] }).returning();
     return created;
   }
 
@@ -3477,11 +3477,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBranchesByCampus(campusId: number, includeInactive = false): Promise<Branch[]> {
-    const query = db.select().from(branches).where(eq(branches.campusId, campusId));
     if (!includeInactive) {
-      return query.where(eq(branches.isActive, true));
+      return db.select().from(branches).where(and(eq(branches.campusId, campusId), eq(branches.isActive, true)));
     }
-    return query;
+    return db.select().from(branches).where(eq(branches.campusId, campusId));
   }
 
   async getAllBranches(): Promise<Branch[]> {
@@ -3896,7 +3895,7 @@ export class DatabaseStorage implements IStorage {
 
   // Custom Fields
   async createCustomField(field: InsertCustomField): Promise<CustomField> {
-    const [created] = await db.insert(customFields).values(field).returning();
+    const [created] = await db.insert(customFields).values({ ...field, options: (field.options as string[]) || null }).returning();
     return created;
   }
 

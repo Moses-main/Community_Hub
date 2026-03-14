@@ -150,7 +150,7 @@ export default function AttendanceHistoryPage() {
             <div key={monthYear}>
               <h2 className="text-lg font-semibold mb-4">{monthYear}</h2>
               <div className="space-y-3">
-                {records?.map((record) => (
+                {((records as any[]) || []).map((record) => (
                   <Card key={record.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="pt-4">
                       <div className="flex items-start justify-between gap-4">
