@@ -32,6 +32,7 @@ export async function setupVite(server: Server, app: Express) {
     },
     server: serverOptions,
     appType: "custom",
+    root: path.resolve(__dirname, "../client"),
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
