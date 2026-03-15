@@ -124,21 +124,35 @@ export default function LiveStreamPage() {
             {currentStream.youtubeVideoId ? (
               <div className="relative w-full bg-[hsl(var(--teal-dark))]" style={{ height: "calc(100vh - 57px)" }}>
                 <iframe
-                  src={`https://www.youtube.com/embed/${currentStream.youtubeVideoId}?autoplay=1&live=1&rel=0&modestbranding=1`}
+                  src={`https://www.youtube.com/embed/${currentStream.youtubeVideoId}?autoplay=1&mute=1&live=1&rel=0&modestbranding=1`}
                   className="absolute top-0 left-0 w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen title={currentStream.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  allowFullScreen
+                  title={currentStream.title}
                 />
               </div>
             ) : currentStream.embedUrl ? (
               <div className="relative w-full" style={{ height: "calc(100vh - 57px)" }}>
-                <iframe src={currentStream.embedUrl} className="absolute top-0 left-0 w-full" style={{ height: "100%" }} allow="autoplay; encrypted-media" allowFullScreen title={currentStream.title} />
+                <iframe 
+                  src={currentStream.embedUrl} 
+                  className="absolute top-0 left-0 w-full" 
+                  style={{ height: "100%" }} 
+                  allow="autoplay; encrypted-media; fullscreen" 
+                  allowFullScreen 
+                  title={currentStream.title}
+                />
               </div>
             ) : currentStream.streamUrl ? (
               <div className="w-full flex items-center justify-center gradient-hero" style={{ height: "calc(100vh - 57px)" }}>
-                <a href={currentStream.streamUrl} target="_blank" rel="noopener noreferrer">
-                  <Button size="lg" className="rounded-2xl font-bold gradient-accent text-primary-foreground shadow-2xl"><Play className="mr-2 h-5 w-5" /> Watch Live Stream</Button>
-                </a>
+                <video 
+                  src={currentStream.streamUrl} 
+                  controls 
+                  autoPlay 
+                  playsInline
+                  className="w-full h-full max-h-[calc(100vh-57px)]"
+                >
+                  Your browser does not support video playback.
+                </video>
               </div>
             ) : (
               <div className="w-full flex items-center justify-center gradient-hero" style={{ height: "calc(100vh - 57px)" }}>
@@ -155,7 +169,6 @@ export default function LiveStreamPage() {
               <div>
                 <h2 className="text-xl font-bold mb-1 font-[--font-display]">{currentStream.title}</h2>
                 {currentStream.description && <p className="text-muted-foreground text-sm mb-2">{currentStream.description}</p>}
-                {currentStream.youtubeChannelName && <p className="text-muted-foreground text-xs flex items-center gap-1"><Youtube className="w-3 h-3" /> {currentStream.youtubeChannelName}</p>}
                 {currentStream.startedAt && <p className="text-muted-foreground/50 text-xs mt-1">Started {format(new Date(currentStream.startedAt), "MMM d, yyyy 'at' h:mm a")}</p>}
               </div>
               {isAdmin && (
