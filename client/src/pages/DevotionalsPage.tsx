@@ -20,6 +20,15 @@ import {
 } from "lucide-react";
 import { buildApiUrl } from "@/lib/api-config";
 
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 interface DailyDevotional {
   id: number; title: string; content: string; author: string | null;
   bibleVerse: string | null; theme: string | null; imageUrl: string | null; publishDate: string;
@@ -57,9 +66,10 @@ export default function DevotionalsPage() {
   useEffect(() => {
     async function fetchData() {
       try {
+        const authHeaders = getAuthHeaders();
         const [devotionalRes, plansRes] = await Promise.all([
-          fetch(buildApiUrl("/api/devotionals?published=true"), { credentials: "include" }),
-          fetch(buildApiUrl("/api/reading-plans?active=true"), { credentials: "include" }),
+          fetch(buildApiUrl("/api/devotionals?published=true"), { credentials: "include", headers: authHeaders }),
+          fetch(buildApiUrl("/api/reading-plans?active=true"), { credentials: "include", headers: authHeaders }),
         ]);
         if (devotionalRes.ok) {
           const devotionalData = await devotionalRes.json();
@@ -82,7 +92,7 @@ export default function DevotionalsPage() {
     async function fetchProgress() {
       if (!selectedPlan) return;
       try {
-        const res = await fetch(buildApiUrl(`/api/reading-plans/${selectedPlan.id}/progress`), { credentials: "include" });
+        const res = await fetch(buildApiUrl(`/api/reading-plans/${selectedPlan.id}/progress`), { credentials: "include", headers: getAuthHeaders() });
         if (res.ok) setProgress(await res.json());
       } catch (err) { console.error("Error fetching progress:", err); }
     }
@@ -93,7 +103,7 @@ export default function DevotionalsPage() {
     if (!user || !selectedPlan) return;
     try {
       const res = await fetch(buildApiUrl(`/api/reading-plans/${selectedPlan.id}/progress`), {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
         credentials: "include", body: JSON.stringify({ dayNumber }),
       });
       if (res.ok) {
@@ -113,12 +123,12 @@ export default function DevotionalsPage() {
     }
     setIsCreating(true);
     try {
-      const res = await fetch(buildApiUrl("/api/devotionals"), { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(newDevotional) });
+      const res = await fetch(buildApiUrl("/api/devotionals"), { method: "POST", headers: { ...getAuthHeaders(), "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(newDevotional) });
       if (res.ok) {
         toast({ title: "Success", description: "Devotional created successfully!" });
         setShowCreateDialog(false);
         setNewDevotional({ title: "", content: "", author: "", bibleVerse: "", theme: "", publishDate: "" });
-        const devotionalRes = await fetch(buildApiUrl("/api/devotionals?published=true"));
+        const devotionalRes = await fetch(buildApiUrl("/api/devotionals?published=true"), { headers: getAuthHeaders() });
         if (devotionalRes.ok) setDevotionals(await devotionalRes.json());
       }
     } catch (err) { toast({ title: "Error", description: "Failed to create devotional", variant: "destructive" }); }
@@ -129,7 +139,7 @@ export default function DevotionalsPage() {
     if (!aiPrompt) { toast({ title: "Error", description: "Please enter a topic or theme", variant: "destructive" }); return; }
     setIsGenerating(true);
     try {
-      const res = await fetch(buildApiUrl("/api/devotionals/ai-generate"), { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ prompt: aiPrompt }) });
+      const res = await fetch(buildApiUrl("/api/devotionals/ai-generate"), { method: "POST", headers: { ...getAuthHeaders(), "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ prompt: aiPrompt }) });
       if (res.ok) {
         const data = await res.json();
         setNewDevotional({ title: data.title || "", content: data.content || "", author: data.author || "", bibleVerse: data.bibleVerse || "", theme: data.theme || "", publishDate: data.publishDate || "" });
