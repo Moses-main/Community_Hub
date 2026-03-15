@@ -264,6 +264,20 @@ export default function AuthPage() {
                 </button>
               </p>
             </div>
+
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-sm text-center text-muted-foreground mb-3">
+                Is your church not on our platform yet?
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-2xl font-bold"
+                onClick={() => navigate("/register-church")}
+              >
+                Register Your Church
+              </Button>
+            </div>
           </div>
         </div>
       </div>

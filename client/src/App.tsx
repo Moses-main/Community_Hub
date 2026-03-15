@@ -19,6 +19,7 @@ import PrayerPage from "@/pages/PrayerPage";
 import GivePage from "@/pages/GivePage";
 import AuthPage from "@/pages/login"; // This is our combined auth page
 import LogoutPage from "@/pages/logout";
+import RegisterChurchPage from "@/pages/RegisterChurchPage";
 import AuthCallbackPage from "@/pages/auth/callback";
 import DashboardPage from "@/pages/DashboardPage";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
@@ -95,6 +96,7 @@ function Router() {
               <Route path="/prayer" component={PrayerPage} />
               <Route path="/give" component={GivePage} />
               <Route path="/login" component={AuthPage} />
+              <Route path="/register-church" component={RegisterChurchPage} />
               <Route path="/auth/callback" component={AuthCallbackPage} />
               <Route path="/dashboard" component={DashboardPage} />
               <Route path="/admin" component={AdminDashboardPage} />
