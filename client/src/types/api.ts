@@ -58,6 +58,26 @@ export interface User {
   isVerified?: boolean;
   profileImage?: string | null;
   organizationId?: string | null;
+  organization?: Organization | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  churchName?: string | null;
+  churchEmail?: string | null;
+  churchPhone?: string | null;
+  churchAddress?: string | null;
+  churchCity?: string | null;
+  churchState?: string | null;
+  churchCountry?: string | null;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -39,6 +39,7 @@ interface AuthenticatedRequest extends Request {
     isAdmin?: boolean;
     isSuperAdmin?: boolean;
     role?: string;
+    organizationId?: string | null;
   };
 }
 
@@ -90,7 +91,8 @@ const isAuthenticated = async (req: AuthenticatedRequest, res: any, next: any) =
       lastName: user.lastName || undefined,
       isAdmin: user.email === 'admin@wccrm.com' || user.isAdmin === true, // Simple admin check
       isSuperAdmin: user.email === 'superadmin@wccrm.com' || user.isSuperAdmin === true,
-      role: user.role || undefined
+      role: user.role || undefined,
+      organizationId: user.organizationId
     };
     
     next();
@@ -122,6 +124,81 @@ const isSuperAdmin = async (req: AuthenticatedRequest, res: any, next: any) => {
     return res.status(403).json({ message: "Super admin access required" });
   }
   next();
+};
+
+// Subdomain detection middleware - extracts organization from subdomain
+const detectSubdomain = async (req: AuthenticatedRequest, res: any, next: any) => {
+  try {
+    const host = req.headers.host || '';
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // For local development, check X-Forwarded-Host or custom header
+    const forwardedHost = req.headers['x-forwarded-host'] as string;
+    const effectiveHost = forwardedHost || host;
+    
+    // Split host to get subdomain
+    const hostParts = effectiveHost.split(':')[0].split('.');
+    
+    // Default base domain (change for production)
+    const baseDomain = isProduction ? 'chub.app' : 'chub.local';
+    
+    let subdomain = null;
+    
+    // Check if this is a subdomain request
+    if (hostParts.length > 2 && hostParts[hostParts.length - 2] === 'chub') {
+      // This is a subdomain like grace-chapel.chub.local or grace-chapel.chub.app
+      subdomain = hostParts[0];
+    } else if (hostParts.length > 2 && !isProduction && hostParts[hostParts.length - 2] === 'local') {
+      // Local development: grace-chapel.localhost
+      subdomain = hostParts[0];
+    }
+    
+    // If subdomain detected, look up the organization
+    if (subdomain) {
+      const orgs = await storage.getOrganizations();
+      const org = orgs.find(o => o.slug === subdomain && o.isActive);
+      
+      if (org) {
+        (req as any).organizationId = org.id;
+        (req as any).organization = org;
+        console.log(`Subdomain detected: ${subdomain}, Organization: ${org.name}`);
+      } else {
+        console.log(`Subdomain not found: ${subdomain}`);
+      }
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Subdomain detection error:', error);
+    next();
+  }
+};
+
+// Helper to get organization ID from request context
+// Priority: 1. Subdomain 2. User's org (if not super admin) 3. Query param (explicit)
+const getOrganizationId = (req: AuthenticatedRequest): string | undefined => {
+  // Priority 1: Subdomain detection (already set on req)
+  if ((req as any).organizationId) {
+    return (req as any).organizationId;
+  }
+  
+  // Priority 2: User's organization (if authenticated and not super admin)
+  if (req.user?.organizationId && !req.user?.isSuperAdmin) {
+    return req.user.organizationId || undefined;
+  }
+  
+  // Priority 3: Explicit query parameter (for super admins)
+  const queryOrgId = req.query.orgId as string | undefined;
+  if (queryOrgId) {
+    return queryOrgId;
+  }
+  
+  return undefined;
+};
+
+// Helper to check if user can access all organizations (super admin)
+const canAccessAllOrganizations = (req: AuthenticatedRequest): boolean => {
+  return req.user?.isSuperAdmin === true;
 };
 
 // Roles that can view absent members
@@ -173,6 +250,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express,
 ): Promise<Server> {
+  // Apply subdomain detection middleware to all API routes
+  app.use('/api', detectSubdomain);
+
   // === AUTHENTICATION ROUTES ===
 
   // Get current user
@@ -198,11 +278,11 @@ export async function registerRoutes(
       instagramHandle: user.instagramHandle,
       facebookHandle: user.facebookHandle,
       linkedinHandle: user.linkedinHandle,
-      role: user.role,
-      isAdmin: user.email === 'admin@wccrm.com' || user.isAdmin === true,
-      isSuperAdmin: user.email === 'superadmin@wccrm.com' || user.isSuperAdmin === true,
-      createdAt: user.createdAt,
-    });
+        role: user.role,
+        isAdmin: user.email === 'admin@wccrm.com' || user.isAdmin === true,
+        isSuperAdmin: user.email === 'superadmin@wccrm.com' || user.isSuperAdmin === true,
+        organizationId: user.organizationId,
+      });
   });
 
   // === GDPR ROUTES ===
@@ -353,7 +433,10 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ 
+        userId: user.id,
+        organizationId: user.organizationId 
+      }, JWT_SECRET, { expiresIn: '7d' });
       
       const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('token', token, {
@@ -362,6 +445,23 @@ export async function registerRoutes(
         sameSite: isProduction ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
       });
+
+      // Get organization details if user has one
+      let organization = null;
+      if (user.organizationId) {
+        const org = await storage.getOrganization(user.organizationId);
+        if (org) {
+          organization = {
+            id: org.id,
+            name: org.name,
+            slug: org.slug,
+            description: org.description,
+            logoUrl: org.logoUrl,
+            churchName: org.churchName,
+            churchEmail: org.churchEmail,
+          };
+        }
+      }
 
       res.json({
         token, // Return token for cross-origin auth
@@ -384,6 +484,8 @@ export async function registerRoutes(
         role: user.role,
         isAdmin: user.email === 'admin@wccrm.com' || user.isAdmin === true,
         isSuperAdmin: user.email === 'superadmin@wccrm.com' || user.isSuperAdmin === true,
+        organizationId: user.organizationId,
+        organization,
       });
     } catch (err) {
       console.error("Login error:", err);
@@ -418,7 +520,10 @@ export async function registerRoutes(
         isSuperAdmin: !!isSuperAdmin,
       });
 
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ 
+        userId: user.id,
+        organizationId: user.organizationId 
+      }, JWT_SECRET, { expiresIn: '7d' });
       
       const isProduction = process.env.NODE_ENV === 'production';
       res.cookie('token', token, {
@@ -873,8 +978,8 @@ export async function registerRoutes(
   });
 
   // Events
-  app.get(api.events.list.path, async (req, res) => {
-    const orgId = req.query.orgId as string | undefined;
+  app.get(api.events.list.path, async (req: AuthenticatedRequest, res) => {
+    const orgId = getOrganizationId(req);
     const events = await storage.getEvents(orgId);
     const eventsWithRsvpCount = await Promise.all(
       events.map(async (event) => {
@@ -887,7 +992,7 @@ export async function registerRoutes(
 
   app.get("/api/events/list-with-rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     const userId = req.user!.id;
-    const orgId = req.query.orgId as string | undefined;
+    const orgId = getOrganizationId(req);
     const events = await storage.getEvents(orgId);
     const userRsvps = await storage.getUserRsvps(userId);
     const userRsvpEventIds = new Set(userRsvps.map(r => r.eventId));
@@ -930,17 +1035,24 @@ export async function registerRoutes(
     }
   });
 
-  app.get(api.events.get.path, async (req, res) => {
+  app.get(api.events.get.path, async (req: AuthenticatedRequest, res) => {
     const event = await storage.getEvent(Number(req.params.id));
     if (!event) return res.status(404).json({ message: "Event not found" });
+    
+    // Check organization access
+    const orgId = getOrganizationId(req);
+    if (orgId && event.organizationId !== orgId) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+    
     res.json(event);
   });
 
-  app.post(api.events.create.path, isAuthenticated, async (req, res) => {
+  app.post(api.events.create.path, isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const input = api.events.create.input.parse(req.body);
       // Convert date string to Date object
-      const orgId = req.body.organizationId || req.query.orgId as string || undefined;
+      const orgId = getOrganizationId(req);
       const eventData = {
         ...input,
         date: new Date(input.date),
@@ -1255,8 +1367,9 @@ export async function registerRoutes(
   });
 
   // Sermons
-  app.get(api.sermons.list.path, async (req, res) => {
+  app.get(api.sermons.list.path, async (req: AuthenticatedRequest, res) => {
     const { speaker, series, status, search } = req.query;
+    const orgId = getOrganizationId(req);
     const filter: ISermonFilter = {};
     
     if (speaker) filter.speaker = speaker as string;
@@ -1264,6 +1377,7 @@ export async function registerRoutes(
     if (search) filter.search = search as string;
     if (status === 'upcoming') filter.isUpcoming = true;
     if (status === 'past') filter.isUpcoming = false;
+    if (orgId) filter.organizationId = orgId;
     
     const sermons = await storage.getSermons(filter);
     res.json(sermons);
@@ -3185,9 +3299,10 @@ export async function registerRoutes(
   // === DAILY DEVOTIONAL ROUTES ===
 
   // Get today's devotional (public)
-  app.get("/api/devotionals/today", async (req, res) => {
+  app.get("/api/devotionals/today", async (req: AuthenticatedRequest, res) => {
     try {
-      const devotional = await storage.getTodayDevotional();
+      const orgId = getOrganizationId(req);
+      const devotional = await storage.getTodayDevotional(orgId);
       res.json(devotional);
     } catch (err) {
       console.error("Error fetching today's devotional:", err);
@@ -3196,10 +3311,11 @@ export async function registerRoutes(
   });
 
   // Get all devotionals (public)
-  app.get("/api/devotionals", async (req, res) => {
+  app.get("/api/devotionals", async (req: AuthenticatedRequest, res) => {
     try {
       const publishedOnly = req.query.published === "true";
-      const devotionals = await storage.getDailyDevotionals(publishedOnly);
+      const orgId = getOrganizationId(req);
+      const devotionals = await storage.getDailyDevotionals(publishedOnly, orgId);
       res.json(devotionals);
     } catch (err) {
       console.error("Error fetching devotionals:", err);
@@ -3208,7 +3324,7 @@ export async function registerRoutes(
   });
 
   // Get single devotional (public)
-  app.get("/api/devotionals/:id", async (req, res) => {
+  app.get("/api/devotionals/:id", async (req: AuthenticatedRequest, res) => {
     try {
       const idParam = req.params.id;
       const id = Array.isArray(idParam) ? parseInt(idParam[0]) : parseInt(idParam);
@@ -3216,6 +3332,13 @@ export async function registerRoutes(
       if (!devotional) {
         return res.status(404).json({ message: "Devotional not found" });
       }
+      
+      // Check organization access
+      const orgId = getOrganizationId(req);
+      if (orgId && devotional.organizationId !== orgId) {
+        return res.status(404).json({ message: "Devotional not found" });
+      }
+      
       res.json(devotional);
     } catch (err) {
       console.error("Error fetching devotional:", err);
@@ -3228,6 +3351,7 @@ export async function registerRoutes(
     try {
       console.log("Creating devotional with body:", req.body);
       const { title, content, author, bibleVerse, theme, imageUrl, publishDate } = req.body;
+      const orgId = getOrganizationId(req);
       const devotional = await storage.createDailyDevotional({
         title,
         content,
@@ -3237,6 +3361,7 @@ export async function registerRoutes(
         imageUrl,
         publishDate: new Date(publishDate),
         createdBy: req.user!.id,
+        organizationId: orgId || undefined,
       });
       res.status(201).json(devotional);
     } catch (err) {

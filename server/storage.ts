@@ -117,6 +117,7 @@ export interface ISermonFilter {
   series?: string;
   isUpcoming?: boolean;
   search?: string;
+  organizationId?: string;
 }
 
 export interface IStorage {
@@ -318,9 +319,9 @@ export interface IStorage {
   getDonationHistory(userId: string): Promise<Donation[]>;
 
   // Daily Devotionals
-  getDailyDevotionals(publishedOnly?: boolean): Promise<DailyDevotional[]>;
+  getDailyDevotionals(publishedOnly?: boolean, organizationId?: string): Promise<DailyDevotional[]>;
   getDailyDevotional(id: number): Promise<DailyDevotional | undefined>;
-  getTodayDevotional(): Promise<DailyDevotional | undefined>;
+  getTodayDevotional(organizationId?: string): Promise<DailyDevotional | undefined>;
   createDailyDevotional(devotional: Partial<DailyDevotional>): Promise<DailyDevotional>;
   updateDailyDevotional(id: number, devotional: Partial<DailyDevotional>): Promise<DailyDevotional>;
   deleteDailyDevotional(id: number): Promise<void>;
@@ -709,6 +710,9 @@ export class DatabaseStorage implements IStorage {
           like(sermons.title, searchTerm),
           like(sermons.speaker, searchTerm)
         ));
+      }
+      if (filter.organizationId) {
+        conditions.push(eq(sermons.organizationId, filter.organizationId));
       }
       
       if (conditions.length > 0) {
@@ -1400,7 +1404,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Daily Devotionals
-  async getDailyDevotionals(publishedOnly: boolean = false): Promise<DailyDevotional[]> {
+  async getDailyDevotionals(publishedOnly: boolean = false, organizationId?: string): Promise<DailyDevotional[]> {
+    if (organizationId) {
+      const conditions = [eq(dailyDevotionals.organizationId, organizationId)];
+      if (publishedOnly) {
+        conditions.push(eq(dailyDevotionals.isPublished, true));
+      }
+      return db.select().from(dailyDevotionals).where(and(...conditions)).orderBy(desc(dailyDevotionals.publishDate));
+    }
     if (publishedOnly) {
       return db.select().from(dailyDevotionals).where(eq(dailyDevotionals.isPublished, true)).orderBy(desc(dailyDevotionals.publishDate));
     }
@@ -1412,11 +1423,25 @@ export class DatabaseStorage implements IStorage {
     return devotional;
   }
 
-  async getTodayDevotional(): Promise<DailyDevotional | undefined> {
+  async getTodayDevotional(organizationId?: string): Promise<DailyDevotional | undefined> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const conditions = [
+      gte(dailyDevotionals.publishDate, today),
+      lt(dailyDevotionals.publishDate, tomorrow),
+      eq(dailyDevotionals.isPublished, true)
+    ];
+    
+    if (organizationId) {
+      conditions.push(eq(dailyDevotionals.organizationId, organizationId));
+    }
+    
+    const [devotional] = await db.select().from(dailyDevotionals).where(and(...conditions));
+    return devotional;
+  }
     
     const [devotional] = await db
       .select()
