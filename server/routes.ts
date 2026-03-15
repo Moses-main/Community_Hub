@@ -7097,6 +7097,65 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
     }
   });
 
+  // Public organization signup (for churches to register themselves)
+  app.post("/api/organizations/register", async (req, res) => {
+    try {
+      const { name, slug, description, churchName, churchEmail, churchPhone, churchAddress, churchCity, churchState, churchCountry } = req.body;
+      
+      if (!name || !slug) {
+        return res.status(400).json({ message: "Organization name and slug are required" });
+      }
+
+      // Check if slug already exists
+      const existingOrgs = await storage.getOrganizations();
+      const slugExists = existingOrgs.some(org => org.slug === slug);
+      if (slugExists) {
+        return res.status(400).json({ message: "This URL slug is already taken. Please choose another." });
+      }
+
+      const org = await storage.createOrganization({
+        name,
+        slug,
+        description: description || null,
+        logoUrl: null,
+        churchName: churchName || null,
+        churchEmail: churchEmail || null,
+        churchPhone: churchPhone || null,
+        churchAddress: churchAddress || null,
+        churchCity: churchCity || null,
+        churchState: churchState || null,
+        churchCountry: churchCountry || null,
+        isActive: false, // Requires super admin approval
+      });
+      
+      res.status(201).json({ 
+        message: "Organization submitted for approval. We'll contact you shortly.",
+        organization: org 
+      });
+    } catch (err) {
+      console.error("Error registering organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get organization by slug (public)
+  app.get("/api/organizations/by-slug/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const orgs = await storage.getOrganizations();
+      const org = orgs.find(o => o.slug === slug && o.isActive);
+      
+      if (!org) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      
+      res.json(org);
+    } catch (err) {
+      console.error("Error fetching organization:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Create organization (super admin only)
   app.post("/api/super-admin/organizations", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
