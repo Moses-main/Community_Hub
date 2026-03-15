@@ -114,7 +114,8 @@ app.use((req, res, next) => {
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
-  } else {
+  } else if (process.env.VERCEL !== "true") {
+    // Only load vite in local development, not on Vercel or Render
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
