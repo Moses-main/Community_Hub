@@ -5,6 +5,11 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
+// Force production if not explicitly development
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = "production";
+}
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -112,10 +117,12 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
+  const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "true" || process.env.RENDER === "true";
+  
+  if (isProduction) {
     serveStatic(app);
-  } else if (process.env.VERCEL !== "true") {
-    // Only load vite in local development, not on Vercel or Render
+  } else {
+    // Only load vite in local development
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
