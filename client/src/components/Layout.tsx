@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { useAuth } from "@/hooks/use-auth";
 
 interface LayoutProps {
   children: ReactNode;

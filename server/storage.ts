@@ -162,21 +162,21 @@ export interface IStorage {
 
   // Email Templates
   createEmailTemplate(template: InsertEmailTemplate): Promise<EmailTemplate>;
-  getOrganizationEmailTemplates(orgId: number): Promise<EmailTemplate[]>;
+  getOrganizationEmailTemplates(orgId: string): Promise<EmailTemplate[]>;
   updateEmailTemplate(id: number, updates: Partial<EmailTemplate>): Promise<EmailTemplate>;
 
   // Custom Fields
   createCustomField(field: InsertCustomField): Promise<CustomField>;
-  getCustomFields(orgId: number, entityType: string): Promise<CustomField[]>;
+  getCustomFields(orgId: string, entityType: string): Promise<CustomField[]>;
   deleteCustomField(id: number): Promise<void>;
 
   // Organization Members
   addOrganizationMember(member: InsertOrganizationMember): Promise<OrganizationMember>;
-  getOrganizationMembers(orgId: number): Promise<OrganizationMember[]>;
+  getOrganizationMembers(orgId: string): Promise<OrganizationMember[]>;
 
   // Organization Settings
-  getOrganizationSettings(orgId: number): Promise<OrganizationSetting | undefined>;
-  updateOrganizationSettings(orgId: number, settings: Record<string, any>): Promise<OrganizationSetting>;
+  getOrganizationSettings(orgId: string): Promise<OrganizationSetting | undefined>;
+  updateOrganizationSettings(orgId: string, settings: Record<string, any>): Promise<OrganizationSetting>;
 
   // Custom Domains
   addCustomDomain(domain: InsertCustomDomain): Promise<CustomDomain>;
@@ -185,7 +185,7 @@ export interface IStorage {
 
   // Organization Analytics
   recordOrganizationMetric(metric: InsertOrganizationAnalytic): Promise<OrganizationAnalytic>;
-  getOrganizationMetrics(orgId: number, metricType?: string): Promise<OrganizationAnalytic[]>;
+  getOrganizationMetrics(orgId: string, metricType?: string): Promise<OrganizationAnalytic[]>;
 
   // Branding
   getBranding(): Promise<Branding | undefined>;
@@ -3964,12 +3964,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Organization Settings
-  async getOrganizationSettings(orgId: number): Promise<OrganizationSetting | undefined> {
+  async getOrganizationSettings(orgId: string): Promise<OrganizationSetting | undefined> {
     const [settings] = await db.select().from(organizationSettings).where(eq(organizationSettings.organizationId, orgId));
     return settings;
   }
 
-  async updateOrganizationSettings(orgId: number, settings: Record<string, any>): Promise<OrganizationSetting> {
+  async updateOrganizationSettings(orgId: string, settings: Record<string, any>): Promise<OrganizationSetting> {
     const existing = await this.getOrganizationSettings(orgId);
     if (existing) {
       const [updated] = await db
@@ -4012,7 +4012,7 @@ export class DatabaseStorage implements IStorage {
     return recorded;
   }
 
-  async getOrganizationMetrics(orgId: number, metricType?: string): Promise<OrganizationAnalytic[]> {
+  async getOrganizationMetrics(orgId: string, metricType?: string): Promise<OrganizationAnalytic[]> {
     const conditions = [eq(organizationAnalytics.organizationId, orgId)];
     if (metricType) {
       conditions.push(eq(organizationAnalytics.metricType, metricType));

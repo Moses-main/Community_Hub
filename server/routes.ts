@@ -386,7 +386,7 @@ export async function registerRoutes(
   // Signup
   app.post("/api/auth/signup", async (req, res) => {
     try {
-      const { email, password, firstName, lastName, isAdmin } = signupSchema.parse(req.body);
+      const { email, password, firstName, lastName, isAdmin, isSuperAdmin } = signupSchema.parse(req.body);
       
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
@@ -2624,7 +2624,16 @@ export async function registerRoutes(
     try {
       const { name, slug, domain, primaryColor, secondaryColor, accentColor, contactEmail, contactPhone, address, city, state, country, timezone, plan } = req.body;
       const org = await storage.createOrganization({
-        name, slug, domain, primaryColor, secondaryColor, accentColor, contactEmail, contactPhone, address, city, state, country, timezone, plan
+        name, 
+        slug, 
+        churchEmail: contactEmail,
+        churchPhone: contactPhone,
+        churchAddress: address,
+        churchCity: city,
+        churchState: state,
+        churchCountry: country,
+        colors: JSON.stringify({ primary: primaryColor, secondary: secondaryColor, accent: accentColor }),
+        isActive: true
       });
       
       // Create default theme and settings
@@ -2641,7 +2650,7 @@ export async function registerRoutes(
   // Update organization (admin)
   app.put("/api/organizations/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const id = req.params.id;
+      const id = req.params.id as string;
       const org = await storage.updateOrganization(id, req.body);
       res.json(org);
     } catch (err) {
@@ -2653,7 +2662,7 @@ export async function registerRoutes(
   // Delete organization (admin)
   app.delete("/api/organizations/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const id = Number(req.params.id);
+      const id = req.params.id as string;
       await storage.deleteOrganization(id);
       res.json({ message: "Organization deleted" });
     } catch (err) {
@@ -2677,7 +2686,7 @@ export async function registerRoutes(
   // Create theme (admin)
   app.post("/api/organizations/:id/themes", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const { name, isDefault, config } = req.body;
       const theme = await storage.createTheme({ organizationId: orgId, name, isDefault: isDefault || false, config });
       res.json(theme);
@@ -2702,7 +2711,7 @@ export async function registerRoutes(
   // Create custom page (admin)
   app.post("/api/organizations/:id/pages", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const { title, slug, content, metaTitle, metaDescription, isPublished, showInNav, orderIndex } = req.body;
       const page = await storage.createCustomPage({ organizationId: orgId, title, slug, content, metaTitle, metaDescription, isPublished: isPublished || false, showInNav: showInNav || false, orderIndex: orderIndex || 0 });
       res.json(page);
@@ -2752,7 +2761,7 @@ export async function registerRoutes(
   // Create menu item (admin)
   app.post("/api/organizations/:id/menu", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const { menuLocation, label, url, pageId, icon, orderIndex, isVisible } = req.body;
       const item = await storage.createMenuItem({ organizationId: orgId, menuLocation, label, url, pageId, icon, orderIndex: orderIndex || 0, isVisible: isVisible !== false });
       res.json(item);
@@ -2789,7 +2798,7 @@ export async function registerRoutes(
   // Get email templates (admin)
   app.get("/api/organizations/:id/emails", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const templates = await storage.getOrganizationEmailTemplates(orgId);
       res.json(templates);
     } catch (err) {
@@ -2801,7 +2810,7 @@ export async function registerRoutes(
   // Create email template (admin)
   app.post("/api/organizations/:id/emails", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const { name, subject, body, type, isActive } = req.body;
       const template = await storage.createEmailTemplate({ organizationId: orgId, name, subject, body, type, isActive: isActive !== false });
       res.json(template);
@@ -2827,7 +2836,7 @@ export async function registerRoutes(
   // Create custom field (admin)
   app.post("/api/organizations/:id/fields", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const { entityType, name, fieldType, label, placeholder, isRequired, options, orderIndex, isActive } = req.body;
       const field = await storage.createCustomField({ organizationId: orgId, entityType, name, fieldType, label, placeholder, isRequired: isRequired || false, options, orderIndex: orderIndex || 0, isActive: isActive !== false });
       res.json(field);
@@ -2852,7 +2861,7 @@ export async function registerRoutes(
   // Get organization settings
   app.get("/api/organizations/:id/settings", async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const settings = await storage.getOrganizationSettings(orgId);
       res.json(settings || { organizationId: orgId, settings: {}, features: {} });
     } catch (err) {
@@ -2864,7 +2873,7 @@ export async function registerRoutes(
   // Update organization settings (admin)
   app.put("/api/organizations/:id/settings", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const settings = await storage.updateOrganizationSettings(orgId, req.body);
       res.json(settings);
     } catch (err) {
@@ -2876,7 +2885,7 @@ export async function registerRoutes(
   // Add custom domain (admin)
   app.post("/api/organizations/:id/domains", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const { domain } = req.body;
       const verificationCode = Math.random().toString(36).substring(2, 15);
       const customDomain = await storage.addCustomDomain({ organizationId: orgId, domain, verificationCode });
@@ -2909,7 +2918,7 @@ export async function registerRoutes(
   // Record organization analytics
   app.post("/api/organizations/:id/analytics", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const { metricType, metricValue, metadata } = req.body;
       const analytic = await storage.recordOrganizationMetric({ organizationId: orgId, metricType, metricValue, metadata });
       res.json(analytic);
@@ -2922,7 +2931,7 @@ export async function registerRoutes(
   // Get organization analytics
   app.get("/api/organizations/:id/analytics", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const orgId = req.params.id;
+      const orgId = req.params.id as string;
       const metricType = req.query.type as string;
       const analytics = await storage.getOrganizationMetrics(orgId, metricType);
       res.json(analytics);
@@ -4190,7 +4199,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
 
     if (!existingSuperAdmin && !anySuperAdmin) {
       console.log(`Creating default super admin (${adminEmail})...`);
-      const passwordHash = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD || "admin123", 10);
+      const passwordHash = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD || "superadmin123", 10);
       await storage.createUser({
         email: adminEmail,
         passwordHash,
@@ -7104,7 +7113,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       if (!req.user?.isSuperAdmin) {
         return res.status(403).json({ message: "Super admin access required" });
       }
-      const id = req.params.id;
+      const id = req.params.id as string;
       const { name, slug, description, logoUrl, churchName, churchEmail, churchPhone, churchAddress, churchCity, churchState, churchCountry, isActive } = req.body;
 
       const org = await storage.updateOrganization(id, {
@@ -7134,7 +7143,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       if (!req.user?.isSuperAdmin) {
         return res.status(403).json({ message: "Super admin access required" });
       }
-      const id = req.params.id;
+      const id = req.params.id as string;
       await storage.deleteOrganization(id);
       res.json({ message: "Organization deleted" });
     } catch (err) {
@@ -7149,7 +7158,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       if (!req.user?.isSuperAdmin) {
         return res.status(403).json({ message: "Super admin access required" });
       }
-      const users = await storage.getOrganizationUsers(req.params.id);
+      const users = await storage.getOrganizationUsers(req.params.id as string);
       res.json(users);
     } catch (err) {
       console.error("Error fetching organization users:", err);
@@ -7164,7 +7173,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
         return res.status(403).json({ message: "Super admin access required" });
       }
       const { role } = req.body;
-      const user = await storage.updateUserOrganizationRole(req.params.userId, req.params.id, role);
+      const user = await storage.updateUserOrganizationRole(req.params.userId as string, req.params.id as string, role);
       res.json(user);
     } catch (err) {
       console.error("Error updating organization user role:", err);
@@ -7178,7 +7187,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       if (!req.user?.isSuperAdmin) {
         return res.status(403).json({ message: "Super admin access required" });
       }
-      await storage.removeUserFromOrganization(req.params.userId, req.params.id);
+      await storage.removeUserFromOrganization(req.params.userId as string, req.params.id as string);
       res.json({ message: "User removed from organization" });
     } catch (err) {
       console.error("Error removing user from organization:", err);
@@ -7192,7 +7201,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       if (!req.user?.isSuperAdmin) {
         return res.status(403).json({ message: "Super admin access required" });
       }
-      const branding = await storage.getOrganizationBranding(req.params.id);
+      const branding = await storage.getOrganizationBranding(req.params.id as string);
       res.json(branding || {});
     } catch (err) {
       console.error("Error fetching organization branding:", err);
@@ -7206,7 +7215,7 @@ Prayer: Thank You, Lord, for Your amazing grace and mercy. Help me to extend the
       if (!req.user?.isSuperAdmin) {
         return res.status(403).json({ message: "Super admin access required" });
       }
-      const branding = await storage.updateOrganizationBranding(req.params.id, req.body);
+      const branding = await storage.updateOrganizationBranding(req.params.id as string, req.body);
       res.json(branding);
     } catch (err) {
       console.error("Error updating organization branding:", err);

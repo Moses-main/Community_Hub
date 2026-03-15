@@ -169,3 +169,66 @@ export interface DownloadInfo {
   filename: string;
   title: string;
 }
+
+export interface Branding {
+  id: number;
+  colors: { primary: string; secondary: string; accent: string };
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  fonts: { heading: string; body: string };
+  churchName?: string | null;
+  churchAddress?: string | null;
+  churchCity?: string | null;
+  churchState?: string | null;
+  churchCountry?: string | null;
+  churchZipCode?: string | null;
+  churchPhone?: string | null;
+  churchEmail?: string | null;
+  churchLatitude?: string | null;
+  churchLongitude?: string | null;
+  serviceTimes: { sunday: string; wednesday: string; friday: string };
+  youtubeUrl?: string | null;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  twitterUrl?: string | null;
+  organizationId?: string | null;
+  updatedAt?: string;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  colors?: string | null;
+  fonts?: string | null;
+  churchName?: string | null;
+  churchAddress?: string | null;
+  churchCity?: string | null;
+  churchState?: string | null;
+  churchCountry?: string | null;
+  churchZipCode?: string | null;
+  churchPhone?: string | null;
+  churchEmail?: string | null;
+  churchLatitude?: string | null;
+  churchLongitude?: string | null;
+  serviceTimes?: string | null;
+  youtubeUrl?: string | null;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  twitterUrl?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  organizationId: string;
+  userId: string;
+  role: string;
+  status: string;
+  joinedAt: string;
+}

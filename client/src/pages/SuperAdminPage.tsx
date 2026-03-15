@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Edit, Trash2, Eye, Building2, Users, Calendar, Loader2, Search, Palette, UserMinus, ShieldAlert, ArrowLeft, Mail as MailIcon } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Building2, Users, Calendar, Loader2, Search, Palette, UserMinus, ShieldAlert, ArrowLeft, Mail as MailIcon, LogOut } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { User, Branding } from "@/types/api";
@@ -100,6 +100,12 @@ async function updateOrgBranding(orgId: string, data: Partial<Branding>) {
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to update branding");
+}
+
+async function logoutUser() {
+  const res = await fetch(buildApiUrl("/api/logout"), { method: "GET", credentials: "include" });
+  if (!res.ok) throw new Error("Logout failed");
+  window.location.href = "/login";
 }
 
 export default function SuperAdminPage() {
@@ -252,16 +258,21 @@ export default function SuperAdminPage() {
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">Super Admin Dashboard</h1>
           <p className="text-gray-500">Global platform management and organization whitelisting</p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={(open) => {
-          setShowCreateDialog(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Organization
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={logoutUser} className="h-11 rounded-xl border-gray-200 hover:bg-red-50 hover:text-red-600 transition-all">
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+          <Dialog open={showCreateDialog} onOpenChange={(open) => {
+            setShowCreateDialog(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5 h-11">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Organization
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold">Create New Organization</DialogTitle>
@@ -345,6 +356,7 @@ export default function SuperAdminPage() {
           </DialogContent>
         </Dialog>
       </div>
+    </div>
 
       <div className="mb-8 relative max-w-md">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -608,9 +620,9 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
     churchPhone: branding?.churchPhone || "",
     churchAddress: branding?.churchAddress || "",
     logoUrl: branding?.logoUrl || "",
-    primaryColor: branding?.primaryColor || "#3b82f6",
-    secondaryColor: branding?.secondaryColor || "#1e40af",
-    accentColor: branding?.accentColor || "#f59e0b",
+    primaryColor: branding?.colors?.primary || "#3b82f6",
+    secondaryColor: branding?.colors?.secondary || "#1e40af",
+    accentColor: branding?.colors?.accent || "#f59e0b",
   });
 
   // Update local state when branding data is fetched
@@ -621,9 +633,9 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
       churchPhone: branding.churchPhone || "",
       churchAddress: branding.churchAddress || "",
       logoUrl: branding.logoUrl || "",
-      primaryColor: branding.primaryColor || "#3b82f6",
-      secondaryColor: branding.secondaryColor || "#1e40af",
-      accentColor: branding.accentColor || "#f59e0b",
+      primaryColor: branding.colors?.primary || "#3b82f6",
+      secondaryColor: branding.colors?.secondary || "#1e40af",
+      accentColor: branding.colors?.accent || "#f59e0b",
     });
   });
 
@@ -676,7 +688,18 @@ function BrandingForm({ branding, onSubmit, isLoading }: { branding: Branding | 
       </div>
 
       <div className="pt-10 flex justify-end">
-        <Button onClick={() => onSubmit(data)} disabled={isLoading} className="h-16 px-12 rounded-[2rem] gradient-accent text-primary-foreground font-black text-lg shadow-2xl shadow-primary/30 hover:shadow-primary/40 hover:-translate-y-1 transition-all">
+        <Button 
+          onClick={() => onSubmit({
+            ...data,
+            colors: {
+              primary: data.primaryColor,
+              secondary: data.secondaryColor,
+              accent: data.accentColor
+            }
+          } as any)} 
+          disabled={isLoading} 
+          className="h-16 px-12 rounded-[2rem] gradient-accent text-primary-foreground font-black text-lg shadow-2xl shadow-primary/30 hover:shadow-primary/40 hover:-translate-y-1 transition-all"
+        >
           {isLoading && <Loader2 className="mr-3 h-6 w-6 animate-spin" />}
           Apply Brand Identity
         </Button>

@@ -118,14 +118,12 @@ export default function HomePage() {
         variants={stagger}
       >
         <div className="container px-4 sm:px-6 md:px-8 relative z-10">
-          <motion.div variants={fadeUp} custom={0} className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 sm:gap-6 mb-6 sm:mb-12">
-            <div>
-              <span className="text-primary font-bold text-xs sm:text-sm uppercase tracking-wider mb-2 sm:mb-3 block">{t("whatsHappening")}</span>
-              <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-foreground tracking-tight font-[--font-display]">
-                {t("upcomingEvents")}
-              </h2>
-            </div>
-            <Button variant="ghost" asChild className="gap-2 self-start md:self-auto text-muted-foreground hover:text-primary font-semibold text-xs sm:text-sm">
+          <motion.div variants={fadeUp} custom={0} className="text-center mb-6 sm:mb-12">
+            <span className="text-primary font-bold text-xs sm:text-sm uppercase tracking-wider mb-2 sm:mb-3 block">{t("whatsHappening")}</span>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-foreground tracking-tight font-[--font-display]">
+              {t("upcomingEvents")}
+            </h2>
+            <Button variant="ghost" asChild className="gap-2 mt-4 text-muted-foreground hover:text-primary font-semibold text-xs sm:text-sm">
               <Link href="/events">{t("viewAllSmall")} <ChevronRight size={14} /></Link>
             </Button>
           </motion.div>
@@ -165,14 +163,12 @@ export default function HomePage() {
         variants={stagger}
       >
         <div className="container px-4 sm:px-6 md:px-8 relative z-10">
-          <motion.div variants={fadeUp} custom={0} className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 sm:gap-6 mb-6 sm:mb-12">
-            <div>
-              <span className="text-secondary font-bold text-xs sm:text-sm uppercase tracking-wider mb-2 sm:mb-3 block">{t("listenAndLearn")}</span>
-              <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-foreground tracking-tight font-[--font-display]">
-                {t("latestSermons")}
-              </h2>
-            </div>
-            <Button variant="ghost" asChild className="gap-2 self-start md:self-auto text-muted-foreground hover:text-primary font-semibold text-xs sm:text-sm">
+          <motion.div variants={fadeUp} custom={0} className="text-center mb-6 sm:mb-12">
+            <span className="text-secondary font-bold text-xs sm:text-sm uppercase tracking-wider mb-2 sm:mb-3 block">{t("listenAndLearn")}</span>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-foreground tracking-tight font-[--font-display]">
+              {t("latestSermons")}
+            </h2>
+            <Button variant="ghost" asChild className="gap-2 mt-4 text-muted-foreground hover:text-primary font-semibold text-xs sm:text-sm">
               <Link href="/sermons">{t("viewAllSermons")} <ChevronRight size={14} /></Link>
             </Button>
           </motion.div>

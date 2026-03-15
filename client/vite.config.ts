@@ -15,6 +15,11 @@ export default defineConfig(({ mode }) => ({
       "@shared": path.resolve(__dirname, "../shared"),
     },
   },
+  server: {
+    hmr: {
+      clientPort: 3000,
+    },
+  },
   build: {
     outDir: "dist",
     sourcemap: false,

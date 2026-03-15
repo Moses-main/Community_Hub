@@ -112,16 +112,8 @@ export const createApp = (): { app: Express; httpServer: HttpServer } => {
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());
 
-  // Logging middleware
-  app.use((req, res, next) => {
-    const start = Date.now();
-    const { method, path } = req;
-
-    res.on('finish', () => {
-      const duration = Date.now() - start;
-      console.log(`${method} ${path} - ${res.statusCode} (${duration}ms)`);
-    });
-
+  // Request logging (errors only - kept minimal to reduce terminal noise)
+  app.use((_req, _res, next) => {
     next();
   });
 
