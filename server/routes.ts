@@ -874,7 +874,8 @@ export async function registerRoutes(
 
   // Events
   app.get(api.events.list.path, async (req, res) => {
-    const events = await storage.getEvents();
+    const orgId = req.query.orgId as string | undefined;
+    const events = await storage.getEvents(orgId);
     const eventsWithRsvpCount = await Promise.all(
       events.map(async (event) => {
         const rsvps = await storage.getEventRsvps(event.id);
@@ -886,7 +887,8 @@ export async function registerRoutes(
 
   app.get("/api/events/list-with-rsvps", isAuthenticated, async (req: AuthenticatedRequest, res) => {
     const userId = req.user!.id;
-    const events = await storage.getEvents();
+    const orgId = req.query.orgId as string | undefined;
+    const events = await storage.getEvents(orgId);
     const userRsvps = await storage.getUserRsvps(userId);
     const userRsvpEventIds = new Set(userRsvps.map(r => r.eventId));
     
@@ -938,10 +940,12 @@ export async function registerRoutes(
     try {
       const input = api.events.create.input.parse(req.body);
       // Convert date string to Date object
+      const orgId = req.body.organizationId || req.query.orgId as string || undefined;
       const eventData = {
         ...input,
         date: new Date(input.date),
         creatorId: req.user!.id,
+        organizationId: orgId,
       };
       const event = await storage.createEvent(eventData);
       res.status(201).json(event);

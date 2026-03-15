@@ -194,7 +194,7 @@ export interface IStorage {
   updateOrganizationBranding(orgId: string, branding: Partial<InsertBranding>): Promise<Branding>;
 
   // Events
-  getEvents(): Promise<Event[]>;
+  getEvents(orgId?: string): Promise<Event[]>;
   getEvent(id: number): Promise<Event | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event>;
@@ -660,7 +660,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Events
-  async getEvents(): Promise<Event[]> {
+  async getEvents(orgId?: string): Promise<Event[]> {
+    if (orgId) {
+      return await db.select().from(events).where(eq(events.organizationId, orgId)).orderBy(desc(events.date));
+    }
     return await db.select().from(events).orderBy(desc(events.date));
   }
 

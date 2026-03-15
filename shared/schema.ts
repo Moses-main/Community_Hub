@@ -273,6 +273,7 @@ export const insertEventSchema = z.object({
   isVirtual: z.boolean().optional(),
   virtualLink: z.string().optional(),
   capacity: z.number().optional(),
+  organizationId: z.string().uuid().optional(),
 }).transform(data => ({
   ...data,
   date: new Date(data.date),
