@@ -1255,6 +1255,44 @@ export async function registerRoutes(
     res.json(sermons);
   });
 
+  // Get sermon topics for filtering - must be BEFORE :id route
+  app.get("/api/sermons/topics", async (req, res) => {
+    try {
+      const sermons = await storage.getSermons({});
+      
+      // Extract unique topics
+      const topics = new Set<string>();
+      sermons.forEach(s => {
+        if (s.topic) {
+          s.topic.split(/[,\s]+/).forEach(t => {
+            if (t.trim()) topics.add(t.trim());
+          });
+        }
+      });
+
+      // Extract unique series
+      const series = new Set<string>();
+      sermons.forEach(s => {
+        if (s.series) series.add(s.series);
+      });
+
+      // Extract unique speakers
+      const speakers = new Set<string>();
+      sermons.forEach(s => {
+        if (s.speaker) speakers.add(s.speaker);
+      });
+
+      res.json({
+        topics: Array.from(topics).sort(),
+        series: Array.from(series).sort(),
+        speakers: Array.from(speakers).sort()
+      });
+    } catch (err) {
+      console.error("Error fetching sermon topics:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get(api.sermons.get.path, async (req, res) => {
     const sermon = await storage.getSermon(Number(req.params.id));
     if (!sermon) return res.status(404).json({ message: "Sermon not found" });
@@ -1547,44 +1585,6 @@ export async function registerRoutes(
       res.json(summary);
     } catch (err) {
       console.error("Error generating summary:", err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Get sermon topics for filtering
-  app.get("/api/sermons/topics", async (req, res) => {
-    try {
-      const sermons = await storage.getSermons({});
-      
-      // Extract unique topics
-      const topics = new Set<string>();
-      sermons.forEach(s => {
-        if (s.topic) {
-          s.topic.split(/[,\s]+/).forEach(t => {
-            if (t.trim()) topics.add(t.trim());
-          });
-        }
-      });
-
-      // Extract unique series
-      const series = new Set<string>();
-      sermons.forEach(s => {
-        if (s.series) series.add(s.series);
-      });
-
-      // Extract unique speakers
-      const speakers = new Set<string>();
-      sermons.forEach(s => {
-        if (s.speaker) speakers.add(s.speaker);
-      });
-
-      res.json({
-        topics: Array.from(topics).sort(),
-        series: Array.from(series).sort(),
-        speakers: Array.from(speakers).sort()
-      });
-    } catch (err) {
-      console.error("Error fetching sermon topics:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });
