@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { buildApiUrl } from "@/lib/api-config";
+import { getAuthHeader } from "./use-auth";
 
 export interface MemberMessage {
   id: number;
@@ -16,11 +17,18 @@ export interface MemberMessage {
   createdAt: string;
 }
 
+function getHeaders() {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const authHeader = getAuthHeader();
+  if (authHeader) headers["Authorization"] = authHeader;
+  return headers;
+}
+
 export function useMyMessages() {
   return useQuery<MemberMessage[]>({
     queryKey: ["my-messages"],
     queryFn: async (): Promise<MemberMessage[]> => {
-      const res = await fetch(buildApiUrl("/api/messages/me"), { credentials: "include" });
+      const res = await fetch(buildApiUrl("/api/messages/me"), { credentials: "include", headers: getHeaders() });
       if (!res.ok) throw new Error("Failed to fetch messages");
       return res.json();
     },
@@ -31,7 +39,7 @@ export function useUnreadCount() {
   return useQuery<{ count: number }>({
     queryKey: ["unread-count"],
     queryFn: async (): Promise<{ count: number }> => {
-      const res = await fetch(buildApiUrl("/api/messages/unread-count"), { credentials: "include" });
+      const res = await fetch(buildApiUrl("/api/messages/unread-count"), { credentials: "include", headers: getHeaders() });
       if (!res.ok) throw new Error("Failed to fetch unread count");
       return res.json();
     },
@@ -51,7 +59,7 @@ export function useSendMessage() {
     }): Promise<MemberMessage> => {
       const res = await fetch(buildApiUrl("/api/messages/send"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify(data),
         credentials: "include",
       });
@@ -76,6 +84,7 @@ export function useMarkAsRead() {
       const res = await fetch(buildApiUrl(`/api/messages/${messageId}/read`), {
         method: "PUT",
         credentials: "include",
+        headers: getHeaders(),
       });
       if (!res.ok) throw new Error("Failed to mark as read");
     },
@@ -92,7 +101,7 @@ export function useReplyToMessage() {
     mutationFn: async (data: { messageId: number; content: string }): Promise<MemberMessage> => {
       const res = await fetch(buildApiUrl(`/api/messages/${data.messageId}/reply`), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ content: data.content }),
         credentials: "include",
       });
@@ -111,7 +120,7 @@ export function useMessageThread(messageId: number | null) {
     queryKey: ["message-thread", messageId],
     queryFn: async (): Promise<MemberMessage[]> => {
       if (!messageId) return [];
-      const res = await fetch(buildApiUrl(`/api/messages/${messageId}/thread`), { credentials: "include" });
+      const res = await fetch(buildApiUrl(`/api/messages/${messageId}/thread`), { credentials: "include", headers: getHeaders() });
       if (!res.ok) throw new Error("Failed to fetch thread");
       return res.json();
     },
