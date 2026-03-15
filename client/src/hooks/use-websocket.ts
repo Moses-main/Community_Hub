@@ -22,14 +22,16 @@ export function useWebSocket() {
   const connect = useCallback(() => {
     if (!user) return;
 
-    const token = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('token='))
-      ?.split('=')[1];
+    // Get token from localStorage (where we store it for cross-origin auth)
+    const token = localStorage.getItem('auth_token');
 
     if (!token) return;
 
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws?token=${token}`;
+    // Determine WebSocket URL based on environment
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // In development, use localhost:3000 for WebSocket, in production use same host
+    const wsHost = import.meta.env.DEV ? 'localhost:3000' : window.location.host;
+    const wsUrl = `${wsProtocol}//${wsHost}/ws?token=${token}`;
 
     try {
       const ws = new WebSocket(wsUrl);
